@@ -29,20 +29,18 @@ def main():
             # Reset index to make Date a column
             df = df.reset_index()
             
-            # Check column names: yfinance sometimes returns multi-index columns if download is called in specific ways.
-            # Flatten columns if necessary
+            # Standardize column names if MultiIndex
             if isinstance(df.columns, pd.MultiIndex):
-                df.columns = [col[0] if col[1] == '' else f"{col[0]}_{col[1]}" for col in df.columns]
-                # If yfinance returned MultiIndex like ('Close', 'SPY')
-                # Let's inspect or normalize
-                # Normally yf.download('SPY') returns standard columns: Date, Open, High, Low, Close, Adj Close, Volume.
-                # But when downloading a single ticker, standard download has simple columns.
-                pass
-            
-            # Ensure column names are standard
-            # We want Date, Open, High, Low, Close, Adj Close, Volume
-            # Let's check what we have
-            print(f"Columns for {ticker}: {list(df.columns)}")
+                df.columns = [col[0] for col in df.columns]
+                
+            # Clean column names by removing _TICKER suffix if present
+            new_cols = []
+            for col in df.columns:
+                col_str = str(col)
+                if "_" in col_str and not col_str.startswith("^"):
+                    col_str = col_str.split("_")[0]
+                new_cols.append(col_str)
+            df.columns = new_cols
             
             # Save to CSV
             file_path = os.path.join(data_dir, f"{ticker}.csv")
