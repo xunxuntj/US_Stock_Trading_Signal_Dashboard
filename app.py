@@ -457,7 +457,7 @@ st.dataframe(df_us_monthly, use_container_width=True)
 st.divider()
 
 # ─── Section 4: Advanced Analytics — Beyond Excel ────────────────────────────
-st.subheader("📊 深度分析仪 (超越 Excel 的量化统计)")
+st.subheader("📊 数据明细 & 量化分析看板")
 
 tab_trades, tab_nav, tab_hk, tab_cash, tab_stats = st.tabs([
     "📋 全部交易记录 (Trades)",
@@ -579,13 +579,13 @@ with tab_cash:
         c1, c2, c3 = st.columns(3)
         c1.metric("总入金笔数", f"{len(df_cash_full)} 笔")
         c2.metric("累计追加入金", f"${total_deposit:,.2f}")
-        c3.metric("初始本金", f"${INITIAL_CAPITAL:,.2f}")
+        c3.metric("初始本金 (2026-01-15)", "$99,215.41")
     else:
         st.info("暂无出入金记录。")
 
 # ── Tab 5: Quant Analytics ────────────────────────────────────────────────────
 with tab_stats:
-    st.markdown("#### 🔬 量化统计分析 — 超越 Excel 的专业级指标")
+    st.markdown("#### 🔬 量化统计分析")
 
     df_trades_q = get_trades_history()
     df_nav_q = get_nav_history()
@@ -626,12 +626,14 @@ with tab_stats:
                 marker_color=sell_trades["pnl"].apply(lambda x: "#10B981" if x >= 0 else "#EF4444"),
                 text=[f"${v:+,.0f}" for v in sell_trades["pnl"]],
                 textposition="outside",
+                textfont=dict(size=13, color="white"),
                 hovertemplate="<b>%{x}</b><br>PnL: $%{y:,.2f}<extra></extra>"
             ))
             fig_pnl.add_hline(y=0, line_dash="dash", line_color="gray")
             fig_pnl.update_layout(
                 title="每笔卖出交易已实现盈亏 (绿色=盈利 | 红色=亏损)",
-                margin=dict(t=40, b=20),
+                margin=dict(t=50, b=60),
+                height=420,
                 xaxis_title="交易日期", yaxis_title="盈亏 ($USD)"
             )
             st.plotly_chart(fig_pnl, use_container_width=True)
@@ -654,36 +656,52 @@ with tab_stats:
         )
         st.plotly_chart(fig_attr, use_container_width=True)
 
-        # ── 4. NAV Drawdown ────────────────────────────────────────────────
-        if not df_nav_q.empty:
-            st.markdown("##### 📉 资产净值回撤分析 (Drawdown Analysis)")
-            df_nav_q = df_nav_q.sort_values("date").reset_index(drop=True)
-            nav_series = df_nav_q["nav"]
-            running_max = nav_series.cummax()
-            drawdown = (nav_series - running_max) / running_max * 100
-            max_dd = drawdown.min()
-            max_dd_date = df_nav_q["date"].iloc[drawdown.idxmin()]
+        # ── 4. NAV Drawdown — computed from SPY/JEPQ price data ──────────────
+        st.markdown("##### 📉 资产净值回撤分析 (Drawdown Analysis)")
+        try:
+            from config import DATA_DIR as _DATA_DIR
+            _spy_path = os.path.join(_DATA_DIR, "SPY.csv")
+            _jepq_path = os.path.join(_DATA_DIR, "JEPQ.csv")
+            _df_spy_dd = pd.read_csv(_spy_path)
+            _df_spy_dd["Date"] = pd.to_datetime(_df_spy_dd["Date"])
+            _df_spy_dd = _df_spy_dd[_df_spy_dd["Date"] >= "2026-01-15"].reset_index(drop=True)
+            # Build approximate strategy NAV: 60% JEPQ + 40% SGOV (flat)
+            _df_jepq_dd = pd.read_csv(_jepq_path)
+            _df_jepq_dd["Date"] = pd.to_datetime(_df_jepq_dd["Date"])
+            _df_jepq_dd = _df_jepq_dd[_df_jepq_dd["Date"] >= "2026-01-15"].reset_index(drop=True)
+            _merged = pd.merge(_df_spy_dd[["Date","Close"]], _df_jepq_dd[["Date","Close"]], on="Date", suffixes=("_spy","_jepq"))
+            _jepq0 = _merged["Close_jepq"].iloc[0]
+            # Approx NAV: 60% in JEPQ (market-priced) + 40% flat SGOV
+            _approx_nav = 99215.41 * (0.60 * (_merged["Close_jepq"] / _jepq0) + 0.40)
+            _running_max = _approx_nav.cummax()
+            _drawdown = (_approx_nav - _running_max) / _running_max * 100
+            _max_dd = _drawdown.min()
+            _max_dd_date = _merged["Date"].iloc[_drawdown.idxmin()].strftime("%Y-%m-%d")
 
             dd1, dd2 = st.columns(2)
-            dd1.metric("📉 历史最大回撤 (Max Drawdown)", f"{max_dd:.2f}%", delta="回测期望 -10.75%", delta_color="inverse")
-            dd2.metric("📅 最大回撤发生日", str(max_dd_date))
+            dd1.metric("📉 历史最大回撤 (Max Drawdown)", f"{_max_dd:.2f}%", delta="回测期望 -10.75%", delta_color="inverse")
+            dd2.metric("📅 最大回撤发生日", _max_dd_date)
 
             fig_dd = go.Figure()
             fig_dd.add_trace(go.Scatter(
-                x=df_nav_q["date"], y=drawdown,
+                x=_merged["Date"], y=_drawdown,
                 fill="tozeroy",
                 fillcolor="rgba(239,68,68,0.18)",
                 line=dict(color="#EF4444", width=1.5),
-                name="回撤 (%)"
+                name="回撤 (%)",
+                hovertemplate="%{x|%Y-%m-%d}<br>回撤: %{y:.2f}%<extra></extra>"
             ))
             fig_dd.add_hline(y=-10.75, line_dash="dash", line_color="#F59E0B",
                              annotation_text="回测最大回撤基准 -10.75%", annotation_position="top right")
             fig_dd.update_layout(
-                title="账户净值逐日回撤曲线 (%)",
-                margin=dict(t=40, b=20),
+                title="策略净值估算逐日回撤曲线 (基于 JEPQ 60% + SGOV 40% 持仓结构)",
+                margin=dict(t=50, b=20),
+                height=380,
                 yaxis_title="回撤幅度 (%)", xaxis_title="日期"
             )
             st.plotly_chart(fig_dd, use_container_width=True)
+        except Exception as _e:
+            st.warning(f"回撤计算暂时不可用（市场数据未加载）: {_e}")
 
         # ── 5. Fee Analysis ────────────────────────────────────────────────
         st.markdown("##### 💸 手续费支出分析 (Transaction Cost Analysis)")
