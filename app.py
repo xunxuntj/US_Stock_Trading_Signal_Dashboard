@@ -323,14 +323,14 @@ with col_left:
                 })
             
     cash_val = 43102.76
-    labels_pie.append("Cash (现金)")
+    labels_pie.append("SGOV / 钱袋子贴息 (~4%年化)")
     values_pie.append(cash_val)
     table_rows.append({
-        "标的": "Cash (现金)",
-        "持仓股数": "-",
-        "成本单价": "-",
+        "标的": "SGOV / 钱袋子货币基金",
+        "持仓股数": "自动贴息",
+        "成本单价": "$1.00",
         "持仓市值": f"${cash_val:,.2f}",
-        "层级": "CASH"
+        "层级": "SGOV / 40% 贴息层"
     })
     
     fig_pie = px.pie(
