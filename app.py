@@ -58,8 +58,14 @@ st.markdown("""
 st.markdown('<div class="main-title">🚀 v2.29 半自动交易指挥台 (Modern Trading Command Center)</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">策略架构：L0 底仓 60% JEPQ + 40% SGOV 闲置贴息 + 55% 跨资产趋势容量 (CAGR 31.75% / MaxDD -10.75%)</div>', unsafe_allow_html=True)
 
+# Streamlit Cache for Instant Load Speed (0.1s)
+@st.cache_data(ttl=1800)
+def cached_signals():
+    return generate_v229_signals()
+
 # Run Live Signal Scan
-date_str, nav, s5fi_val, actions = generate_v229_signals()
+with st.spinner("正在加载最新行情与策略数据..."):
+    date_str, nav, s5fi_val, actions = cached_signals()
 
 # Top Metric Banner
 col1, col2, col3, col4 = st.columns(4)
