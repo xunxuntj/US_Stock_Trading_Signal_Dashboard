@@ -1,11 +1,15 @@
 import os
 import sys
 import datetime
+import hashlib
 import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+
+# Encrypted SHA-256 Hash of Password '790323'
+HK_IPO_PWD_HASH = "3524c12e3f2ac91563a82dedde6816f0310b9c543dcbc0dac383220069e2c2d9"
 
 # Streamlit Page Config
 st.set_page_config(
@@ -16,7 +20,11 @@ st.set_page_config(
 )
 
 from config import DATA_DIR, INITIAL_CAPITAL
-from database import init_db, get_positions, get_nav_history, get_trades_history
+from database import (
+    init_db, get_positions, get_nav_history, get_trades_history,
+    get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum,
+    execute_live_us_trade, record_cash_transaction, get_cash_transactions
+)
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
 
@@ -182,7 +190,6 @@ with r2_col4:
         help="美股 v2.29 策略回测期望最大回撤 -10.75%"
     )
 
-from database import init_db, get_positions, get_nav_history, get_trades_history, get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum, execute_live_us_trade, record_cash_transaction, get_cash_transactions
 
 # Sidebar Section 1: US Live Trade Logging
 st.sidebar.markdown("### 🇺🇸 美股实盘交易登记 (US Trade Log)")
