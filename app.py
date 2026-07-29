@@ -158,19 +158,26 @@ with m_col6:
 # Sidebar HK IPO Profit Input Form
 st.sidebar.markdown("### 🇭🇰 港股打新收益登记")
 with st.sidebar.form("hk_ipo_form"):
-    ipo_date = st.date_input("登记日期", datetime.date.today())
+    col_y, col_m = st.sidebar.columns(2)
+    current_year = datetime.date.today().year
+    current_month = datetime.date.today().month
+    
+    ipo_year = st.selectbox("登记年份", [2026, 2025, 2024, 2023, 2022], index=0)
+    ipo_month = st.selectbox("登记月份", [f"{m:02d}月" for m in range(1, 13)], index=current_month - 1)
+    
     ipo_type = st.radio("登记类型", ["首次设定截止本月累计收益", "新增本月单月收益"])
     ipo_amt = st.number_input("收益金额 ($ USD)", value=0.0, step=100.0)
     ipo_notes = st.text_input("备注 (例如: 某某新股打新收益)", value="")
     submitted = st.form_submit_button("提交登记")
     if submitted and ipo_amt != 0:
-        date_str_ipo = ipo_date.strftime("%Y-%m-%d")
+        month_num = int(ipo_month.replace("月", ""))
+        date_str_ipo = f"{ipo_year}-{month_num:02d}"
         if "首次" in ipo_type:
             set_initial_hk_ipo_cum(date_str_ipo, ipo_amt, ipo_notes or "初始累计收益")
             st.sidebar.success(f"已设定初始港股打新累计收益: ${ipo_amt:,.2f}")
         else:
             new_cum = record_hk_ipo(date_str_ipo, ipo_amt, ipo_notes)
-            st.sidebar.success(f"已登记本月打新收益 ${ipo_amt:,.2f}！最新累计收益: ${new_cum:,.2f}")
+            st.sidebar.success(f"已登记 {date_str_ipo} 打新收益 ${ipo_amt:,.2f}！最新累计收益: ${new_cum:,.2f}")
         st.rerun()
 
 st.divider()
