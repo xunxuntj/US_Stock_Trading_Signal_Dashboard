@@ -155,30 +155,40 @@ with m_col6:
         help="左为仅美股 v2.29 策略回测期望 (-10.75%)，右为含港股打新全账户最大回撤"
     )
 
+import hashlib
+# Encrypted SHA-256 Hash of Password '790323'
+HK_IPO_PWD_HASH = "3524c12e3f2ac91563a82dedde6816f0310b9c543dcbc0dac383220069e2c2d9"
+
 # Sidebar HK IPO Profit Input Form
 st.sidebar.markdown("### 🇭🇰 港股打新收益登记")
 with st.sidebar.form("hk_ipo_form"):
-    col_y, col_m = st.sidebar.columns(2)
-    current_year = datetime.date.today().year
-    current_month = datetime.date.today().month
-    
     ipo_year = st.selectbox("登记年份", [2026, 2025, 2024, 2023, 2022], index=0)
-    ipo_month = st.selectbox("登记月份", [f"{m:02d}月" for m in range(1, 13)], index=current_month - 1)
+    ipo_month = st.selectbox("登记月份", [f"{m:02d}月" for m in range(1, 13)], index=datetime.date.today().month - 1)
     
     ipo_type = st.radio("登记类型", ["首次设定截止本月累计收益", "新增本月单月收益"])
     ipo_amt = st.number_input("收益金额 ($ USD)", value=0.0, step=100.0)
+    ipo_pwd = st.text_input("授权校验密码", type="password", help="输入正确密码方可提交登记")
     ipo_notes = st.text_input("备注 (例如: 某某新股打新收益)", value="")
-    submitted = st.form_submit_button("提交登记")
-    if submitted and ipo_amt != 0:
-        month_num = int(ipo_month.replace("月", ""))
-        date_str_ipo = f"{ipo_year}-{month_num:02d}"
-        if "首次" in ipo_type:
-            set_initial_hk_ipo_cum(date_str_ipo, ipo_amt, ipo_notes or "初始累计收益")
-            st.sidebar.success(f"已设定初始港股打新累计收益: ${ipo_amt:,.2f}")
+    
+    submitted = st.form_submit_button("🔒 确认提交登记")
+    
+    if submitted:
+        # Verify SHA-256 Hash of Entered Password
+        pwd_input_hash = hashlib.sha256(ipo_pwd.encode('utf-8')).hexdigest()
+        if pwd_input_hash != HK_IPO_PWD_HASH:
+            st.sidebar.error("❌ 密码错误！无法提交登记。")
+        elif ipo_amt == 0:
+            st.sidebar.warning("⚠️ 请输入非 0 的收益金额。")
         else:
-            new_cum = record_hk_ipo(date_str_ipo, ipo_amt, ipo_notes)
-            st.sidebar.success(f"已登记 {date_str_ipo} 打新收益 ${ipo_amt:,.2f}！最新累计收益: ${new_cum:,.2f}")
-        st.rerun()
+            month_num = int(ipo_month.replace("月", ""))
+            date_str_ipo = f"{ipo_year}-{month_num:02d}"
+            if "首次" in ipo_type:
+                set_initial_hk_ipo_cum(date_str_ipo, ipo_amt, ipo_notes or "初始累计收益")
+                st.sidebar.success(f"已授权设定初始港股打新累计收益: ${ipo_amt:,.2f}")
+            else:
+                new_cum = record_hk_ipo(date_str_ipo, ipo_amt, ipo_notes)
+                st.sidebar.success(f"已授权登记 {date_str_ipo} 打新收益 ${ipo_amt:,.2f}！最新累计收益: ${new_cum:,.2f}")
+            st.rerun()
 
 st.divider()
 
