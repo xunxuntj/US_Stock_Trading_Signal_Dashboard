@@ -454,5 +454,271 @@ us_monthly_data = {
 df_us_monthly = pd.DataFrame(us_monthly_data).set_index("Year")
 st.dataframe(df_us_monthly, use_container_width=True)
 
+st.divider()
+
+# ─── Section 4: Advanced Analytics — Beyond Excel ────────────────────────────
+st.subheader("📊 深度分析仪 (超越 Excel 的量化统计)")
+
+tab_trades, tab_nav, tab_hk, tab_cash, tab_stats = st.tabs([
+    "📋 全部交易记录 (Trades)",
+    "📈 逐日净资产 (NAV History)",
+    "🇭🇰 港股打新记录 (HK IPO)",
+    "💰 出入金记录 (Cash Flow)",
+    "🔬 量化统计分析 (Quant Analytics)"
+])
+
+# ── Tab 1: Trades ──────────────────────────────────────────────────────────────
+with tab_trades:
+    st.markdown("#### 📋 全量交易明细 (57 笔 | 含手续费)")
+    df_trades_full = get_trades_history()
+    if not df_trades_full.empty:
+        df_trades_full = df_trades_full.sort_values("id", ascending=False).reset_index(drop=True)
+        # Rename columns for display
+        df_display_trades = df_trades_full.rename(columns={
+            "id": "ID", "date": "交易日期", "ticker": "标的",
+            "action": "买卖", "shares": "股数", "price": "单价($)",
+            "total_val": "交易金额($)", "fee": "手续费($)",
+            "pnl": "已实现盈亏($)", "layer": "层级", "reason": "备注"
+        })
+        # Format numeric cols
+        for col in ["单价($)", "交易金额($)", "手续费($)", "已实现盈亏($)"]:
+            if col in df_display_trades.columns:
+                df_display_trades[col] = df_display_trades[col].apply(lambda x: f"{x:,.2f}" if pd.notnull(x) else "-")
+        df_display_trades["股数"] = df_display_trades["股数"].apply(lambda x: f"{x:,.5f}" if pd.notnull(x) else "-")
+
+        # Color-code buy/sell
+        def color_action(val):
+            if val == "BUY":
+                return "background-color: rgba(16,185,129,0.15); color: #10B981"
+            elif val == "SELL":
+                return "background-color: rgba(239,68,68,0.15); color: #EF4444"
+            return ""
+
+        st.dataframe(df_display_trades, use_container_width=True, height=500)
+
+        total_fee = df_trades_full["fee"].sum() if "fee" in df_trades_full.columns else 0
+        total_pnl = df_trades_full["pnl"].sum()
+        buy_count = len(df_trades_full[df_trades_full["action"] == "BUY"])
+        sell_count = len(df_trades_full[df_trades_full["action"] == "SELL"])
+        t1c1, t1c2, t1c3, t1c4 = st.columns(4)
+        t1c1.metric("总交易笔数", f"{len(df_trades_full)} 笔")
+        t1c2.metric("买入 / 卖出", f"{buy_count} / {sell_count}")
+        t1c3.metric("累计手续费支出", f"${total_fee:,.2f}")
+        t1c4.metric("累计已实现盈亏", f"${total_pnl:,.2f}", delta=f"{'↑' if total_pnl >= 0 else '↓'} 净{'' if total_pnl >= 0 else '亏'}")
+
+# ── Tab 2: NAV History ────────────────────────────────────────────────────────
+with tab_nav:
+    st.markdown("#### 📈 逐日净资产历史记录 (NAV History)")
+    df_nav_full = get_nav_history()
+    if not df_nav_full.empty:
+        df_nav_full["date"] = pd.to_datetime(df_nav_full["date"])
+        df_nav_full = df_nav_full.sort_values("date", ascending=False).reset_index(drop=True)
+        df_nav_disp = df_nav_full.rename(columns={
+            "date": "日期", "nav": "账户净值NAV($)",
+            "cash": "现金($)", "jepq_val": "JEPQ市值($)",
+            "sgov_val": "SGOV市值($)", "trend_val": "趋势层市值($)"
+        })
+        for col in ["账户净值NAV($)", "现金($)", "JEPQ市值($)", "SGOV市值($)", "趋势层市值($)"]:
+            if col in df_nav_disp.columns:
+                df_nav_disp[col] = df_nav_disp[col].apply(lambda x: f"${x:,.2f}")
+        st.dataframe(df_nav_disp, use_container_width=True, height=500)
+        st.caption(f"共 {len(df_nav_full)} 条日度净资产记录 | 起始日期：2026-01-15 | 初始净值：$99,215.41")
+
+# ── Tab 3: HK IPO ─────────────────────────────────────────────────────────────
+with tab_hk:
+    st.markdown("#### 🇭🇰 港股打新收益明细")
+    df_hk_full = get_hk_ipo_history()
+    if not df_hk_full.empty:
+        df_hk_full = df_hk_full.sort_values("date", ascending=False).reset_index(drop=True)
+        df_hk_disp = df_hk_full.rename(columns={
+            "id": "ID", "date": "结算日期",
+            "monthly_profit": "当月净收益($USD)",
+            "cum_profit": "累计总收益($USD)",
+            "notes": "备注"
+        })
+        df_hk_disp["当月净收益($USD)"] = df_hk_disp["当月净收益($USD)"].apply(lambda x: f"${x:+,.2f}")
+        df_hk_disp["累计总收益($USD)"] = df_hk_disp["累计总收益($USD)"].apply(lambda x: f"${x:+,.2f}")
+        st.dataframe(df_hk_disp, use_container_width=True)
+
+        hk1, hk2, hk3 = st.columns(3)
+        monthly_vals = df_hk_full["monthly_profit"]
+        best_month = monthly_vals.max()
+        worst_month = monthly_vals.min()
+        win_months = (monthly_vals > 0).sum()
+        hk1.metric("🏆 最佳单月收益", f"${best_month:,.2f}")
+        hk2.metric("📉 最差单月收益", f"${worst_month:,.2f}")
+        hk3.metric("✅ 盈利月数", f"{win_months} / {len(monthly_vals)-1} 月")
+
+        # Bar chart
+        df_hk_chart = df_hk_full[df_hk_full["date"] > "2026-01-15"].copy()
+        df_hk_chart["color"] = df_hk_chart["monthly_profit"].apply(lambda x: "#10B981" if x >= 0 else "#EF4444")
+        fig_hk = go.Figure(go.Bar(
+            x=df_hk_chart["date"], y=df_hk_chart["monthly_profit"],
+            marker_color=df_hk_chart["color"],
+            text=[f"${v:+,.0f}" for v in df_hk_chart["monthly_profit"]],
+            textposition="outside"
+        ))
+        fig_hk.update_layout(title="港股打新逐月收益柱状图 ($USD)", margin=dict(t=40, b=20))
+        st.plotly_chart(fig_hk, use_container_width=True)
+
+# ── Tab 4: Cash Flow ──────────────────────────────────────────────────────────
+with tab_cash:
+    st.markdown("#### 💰 账户出入金记录")
+    df_cash_full = get_cash_transactions()
+    if not df_cash_full.empty:
+        df_cash_full = df_cash_full.sort_values("date", ascending=False).reset_index(drop=True)
+        df_cash_disp = df_cash_full.rename(columns={
+            "id": "ID", "date": "日期", "type": "类型",
+            "amount": "金额($USD)", "notes": "备注"
+        })
+        df_cash_disp["金额($USD)"] = df_cash_disp["金额($USD)"].apply(lambda x: f"${x:,.2f}")
+        st.dataframe(df_cash_disp, use_container_width=True)
+
+        total_deposit = df_cash_full[df_cash_full["type"] == "DEPOSIT"]["amount"].sum()
+        total_withdraw = df_cash_full[df_cash_full["type"] == "WITHDRAW"]["amount"].sum() if "WITHDRAW" in df_cash_full["type"].values else 0
+        c1, c2, c3 = st.columns(3)
+        c1.metric("总入金笔数", f"{len(df_cash_full)} 笔")
+        c2.metric("累计追加入金", f"${total_deposit:,.2f}")
+        c3.metric("初始本金", f"${INITIAL_CAPITAL:,.2f}")
+    else:
+        st.info("暂无出入金记录。")
+
+# ── Tab 5: Quant Analytics ────────────────────────────────────────────────────
+with tab_stats:
+    st.markdown("#### 🔬 量化统计分析 — 超越 Excel 的专业级指标")
+
+    df_trades_q = get_trades_history()
+    df_nav_q = get_nav_history()
+
+    if not df_trades_q.empty:
+        # ── 1. Trade Stats ──────────────────────────────────────────────────
+        st.markdown("##### 📊 交易绩效统计 (Trade Performance)")
+        sell_trades = df_trades_q[df_trades_q["action"] == "SELL"].copy()
+        wins = sell_trades[sell_trades["pnl"] > 0]
+        losses = sell_trades[sell_trades["pnl"] < 0]
+        win_rate = len(wins) / len(sell_trades) * 100 if len(sell_trades) > 0 else 0
+        avg_win = wins["pnl"].mean() if len(wins) > 0 else 0
+        avg_loss = losses["pnl"].mean() if len(losses) > 0 else 0
+        profit_factor = abs(wins["pnl"].sum() / losses["pnl"].sum()) if losses["pnl"].sum() != 0 else float("inf")
+        total_pnl_q = sell_trades["pnl"].sum()
+        total_fee_q = df_trades_q["fee"].sum() if "fee" in df_trades_q.columns else 0
+        net_pnl = total_pnl_q - total_fee_q
+
+        qs1, qs2, qs3, qs4 = st.columns(4)
+        qs1.metric("胜率 (Win Rate)", f"{win_rate:.1f}%", delta=f"{len(wins)}W / {len(losses)}L")
+        qs2.metric("平均盈利", f"${avg_win:,.2f}", delta="每笔盈利交易")
+        qs3.metric("平均亏损", f"${avg_loss:,.2f}", delta="每笔亏损交易", delta_color="inverse")
+        qs4.metric("盈亏比 (Profit Factor)", f"{profit_factor:.2f}x", delta=">1.5 为优秀策略")
+
+        qs5, qs6, qs7, qs8 = st.columns(4)
+        qs5.metric("已实现总盈亏", f"${total_pnl_q:,.2f}")
+        qs6.metric("累计手续费支出", f"-${total_fee_q:,.2f}", delta_color="inverse")
+        qs7.metric("扣费后净实现盈亏", f"${net_pnl:,.2f}")
+        qs8.metric("卖出交易总笔数", f"{len(sell_trades)} 笔")
+
+        # ── 2. PnL Distribution ────────────────────────────────────────────
+        st.markdown("##### 📉 已实现盈亏分布图 (PnL Distribution)")
+        if len(sell_trades) > 0:
+            fig_pnl = go.Figure()
+            fig_pnl.add_trace(go.Bar(
+                x=sell_trades["date"],
+                y=sell_trades["pnl"],
+                marker_color=sell_trades["pnl"].apply(lambda x: "#10B981" if x >= 0 else "#EF4444"),
+                text=[f"${v:+,.0f}" for v in sell_trades["pnl"]],
+                textposition="outside",
+                hovertemplate="<b>%{x}</b><br>PnL: $%{y:,.2f}<extra></extra>"
+            ))
+            fig_pnl.add_hline(y=0, line_dash="dash", line_color="gray")
+            fig_pnl.update_layout(
+                title="每笔卖出交易已实现盈亏 (绿色=盈利 | 红色=亏损)",
+                margin=dict(t=40, b=20),
+                xaxis_title="交易日期", yaxis_title="盈亏 ($USD)"
+            )
+            st.plotly_chart(fig_pnl, use_container_width=True)
+
+        # ── 3. Ticker Attribution ─────────────────────────────────────────
+        st.markdown("##### 🏷️ 标的收益贡献归因 (PnL Attribution by Ticker)")
+        ticker_pnl = sell_trades.groupby("ticker")["pnl"].sum().sort_values(ascending=True)
+        fig_attr = go.Figure(go.Bar(
+            x=ticker_pnl.values,
+            y=ticker_pnl.index,
+            orientation="h",
+            marker_color=["#10B981" if v >= 0 else "#EF4444" for v in ticker_pnl.values],
+            text=[f"${v:+,.2f}" for v in ticker_pnl.values],
+            textposition="outside"
+        ))
+        fig_attr.update_layout(
+            title="各标的累计已实现盈亏贡献",
+            margin=dict(t=40, b=20),
+            xaxis_title="累计盈亏 ($USD)"
+        )
+        st.plotly_chart(fig_attr, use_container_width=True)
+
+        # ── 4. NAV Drawdown ────────────────────────────────────────────────
+        if not df_nav_q.empty:
+            st.markdown("##### 📉 资产净值回撤分析 (Drawdown Analysis)")
+            df_nav_q = df_nav_q.sort_values("date").reset_index(drop=True)
+            nav_series = df_nav_q["nav"]
+            running_max = nav_series.cummax()
+            drawdown = (nav_series - running_max) / running_max * 100
+            max_dd = drawdown.min()
+            max_dd_date = df_nav_q["date"].iloc[drawdown.idxmin()]
+
+            dd1, dd2 = st.columns(2)
+            dd1.metric("📉 历史最大回撤 (Max Drawdown)", f"{max_dd:.2f}%", delta="回测期望 -10.75%", delta_color="inverse")
+            dd2.metric("📅 最大回撤发生日", str(max_dd_date))
+
+            fig_dd = go.Figure()
+            fig_dd.add_trace(go.Scatter(
+                x=df_nav_q["date"], y=drawdown,
+                fill="tozeroy",
+                fillcolor="rgba(239,68,68,0.18)",
+                line=dict(color="#EF4444", width=1.5),
+                name="回撤 (%)"
+            ))
+            fig_dd.add_hline(y=-10.75, line_dash="dash", line_color="#F59E0B",
+                             annotation_text="回测最大回撤基准 -10.75%", annotation_position="top right")
+            fig_dd.update_layout(
+                title="账户净值逐日回撤曲线 (%)",
+                margin=dict(t=40, b=20),
+                yaxis_title="回撤幅度 (%)", xaxis_title="日期"
+            )
+            st.plotly_chart(fig_dd, use_container_width=True)
+
+        # ── 5. Fee Analysis ────────────────────────────────────────────────
+        st.markdown("##### 💸 手续费支出分析 (Transaction Cost Analysis)")
+        if "fee" in df_trades_q.columns:
+            fee_by_ticker = df_trades_q.groupby("ticker")["fee"].sum().sort_values(ascending=False)
+            fee_monthly = df_trades_q.copy()
+            fee_monthly["month"] = pd.to_datetime(fee_monthly["date"]).dt.to_period("M").astype(str)
+            fee_by_month = fee_monthly.groupby("month")["fee"].sum()
+
+            fc1, fc2 = st.columns(2)
+            with fc1:
+                fig_fee1 = go.Figure(go.Bar(
+                    x=fee_by_ticker.index, y=fee_by_ticker.values,
+                    marker_color="#8B5CF6",
+                    text=[f"${v:.2f}" for v in fee_by_ticker.values],
+                    textposition="outside"
+                ))
+                fig_fee1.update_layout(title="各标的累计手续费支出", margin=dict(t=40, b=20))
+                st.plotly_chart(fig_fee1, use_container_width=True)
+
+            with fc2:
+                fig_fee2 = go.Figure(go.Bar(
+                    x=fee_by_month.index, y=fee_by_month.values,
+                    marker_color="#F59E0B",
+                    text=[f"${v:.2f}" for v in fee_by_month.values],
+                    textposition="outside"
+                ))
+                fig_fee2.update_layout(title="逐月手续费支出趋势", margin=dict(t=40, b=20))
+                st.plotly_chart(fig_fee2, use_container_width=True)
+
+            fee_pct_of_pnl = (total_fee_q / total_pnl_q * 100) if total_pnl_q != 0 else 0
+            st.info(f"💡 累计手续费 **${total_fee_q:.2f}** 占已实现盈亏 **${total_pnl_q:.2f}** 的 **{fee_pct_of_pnl:.1f}%** — 手续费侵蚀率分析")
+
+st.divider()
+
 # Footer
 st.caption("v2.29 半自动交易指挥台 | 自动数据生成与分析引擎 | 100% 本地与云端双向同步")
+
