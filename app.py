@@ -184,7 +184,7 @@ with r2_col4:
 st.sidebar.markdown("### 🇺🇸 美股实盘交易登记 (US Trade Log)")
 with st.sidebar.form("us_trade_form"):
     t_date = st.date_input("交易日期", datetime.date.today())
-    t_ticker = st.selectbox("交易标的", ["BITO", "SOXX", "SPY", "QQQ", "QLD", "GLD", "TLT", "DBC", "JEPQ", "SGOV"])
+    t_ticker = st.selectbox("交易标的", ["BITO", "SOXX", "SPY", "QQQ", "QLD", "GLD", "TLT", "DBC", "JEPQ", "SGOV", "QUAL", "NVDA"])
     t_action = st.selectbox("买卖方向", ["BUY (买入)", "SELL (卖出)"])
     t_price = st.number_input("成交单价 ($/股)", value=100.0, step=0.1)
     t_shares = st.number_input("成交数量 (股数)", value=10.0, step=1.0)
@@ -310,16 +310,17 @@ with col_left:
             t = row['ticker']
             s = float(row['shares'])
             c = float(row['cost_basis'])
-            val = s * c
-            labels_pie.append(t)
-            values_pie.append(val)
-            table_rows.append({
-                "标的": t,
-                "持仓股数": f"{s:,.4f}",
-                "成本单价": f"${c:,.2f}",
-                "持仓市值": f"${val:,.2f}",
-                "层级": row['layer']
-            })
+            if s > 0.001:
+                val = s * c
+                labels_pie.append(t)
+                values_pie.append(val)
+                table_rows.append({
+                    "标的": t,
+                    "持仓股数": f"{s:,.4f}",
+                    "成本单价": f"${c:,.2f}",
+                    "持仓市值": f"${val:,.2f}",
+                    "层级": row['layer']
+                })
             
     cash_val = 5830.89
     labels_pie.append("Cash (现金)")
