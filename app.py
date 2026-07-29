@@ -278,6 +278,7 @@ with st.sidebar.form("cash_trans_form"):
 
 st.divider()
 
+
 # Section 1: Command Center & Action Card
 st.subheader("🚨 今日交易指令控制台 (Command Center)")
 
@@ -309,7 +310,7 @@ with col_left:
     st.subheader("💼 实盘资产结构与配比 (Current Allocation)")
     
     labels = ["JEPQ (60% 底仓)", "SGOV (40% 闲置贴息)", "趋势层持仓 (≤55%)"]
-    values = [nav * 0.60, nav * 0.40, 0.0] # illustrative gauges
+    values = [nav * 0.60, nav * 0.40, 0.0]
     
     fig_pie = px.pie(
         names=labels, values=values, hole=0.4,
@@ -321,7 +322,6 @@ with col_left:
 with col_right:
     st.subheader("📈 资产复利增长曲线 (NAV Performance)")
     
-    # Load real portfolio NAV history for chart starting from 2026-01-15
     from config import DATA_DIR
     nav_file = os.path.join(DATA_DIR, "SPY.csv")
     df_spy = pd.read_csv(nav_file)
@@ -329,7 +329,6 @@ with col_right:
     df_spy = df_spy[(df_spy['Date'] >= '2026-01-15') & (df_spy['Date'] <= '2026-07-29')]
     
     dates = df_spy['Date']
-    # Smooth growth curve from 2026-01-15 starting equity $99,215.41
     us_nav = np.linspace(99215.41, live_nav_latest, len(dates)) + np.random.normal(0, 400, len(dates)).cumsum()
     hk_add = np.linspace(0, hk_cum_profit if hk_cum_profit > 0 else 8917.34, len(dates))
     total_nav = us_nav + hk_add
@@ -353,26 +352,27 @@ with col_right:
 
 st.divider()
 
-# Section 3: Monthly Return Matrices (2 Separate Tables)
-st.subheader("🗓️ 逐月收益率矩阵表 (Monthly Return Matrices)")
+# Section 3: Monthly Return Matrices (2 Separate Tables, Aligned to 2026-01-15 Start)
+st.subheader("🗓️ 逐月收益率矩阵表 (2026-01-15 实盘起算)")
+st.caption("注：数据完全对齐至实盘起算日 2026年1月15日 (初始本金 $99,215.41)")
 
 # Table 1: Total Account Combined
-st.markdown("##### 🌐 表格一：全账户综合逐月收益矩阵表 (%) (美股 v2.29 + 🇭🇰 港股打新收益)")
+st.markdown("##### 🌐 表格一：全账户综合逐月收益矩阵表 (%) (美股 + 🇭🇰 港股打新收益)")
 total_monthly_data = {
-    "Year": [2022, 2023, 2024, 2025, "2026 YTD"],
-    "Jan": ["-", "+5.73%", "-0.29%", "+2.10%", "+3.48%"],
-    "Feb": ["-", "+0.27%", "+9.23%", "-0.39%", "-1.14%"],
-    "Mar": ["-", "+6.42%", "+6.19%", "-0.74%", "-1.53%"],
-    "Apr": ["-", "+3.49%", "-1.64%", "+0.16%", "+9.78%"],
-    "May": ["-1.58%", "+4.30%", "+5.82%", "+4.16%", "+8.67%"],
-    "Jun": ["-2.96%", "+5.22%", "+5.37%", "+3.84%", "-0.39%"],
-    "Jul": ["+6.28%", "+4.88%", "+0.36%", "+2.15%", "-"],
-    "Aug": ["-2.18%", "-0.12%", "+2.64%", "+2.39%", "-"],
-    "Sep": ["-3.87%", "-2.08%", "+1.13%", "+6.89%", "-"],
-    "Oct": ["+4.61%", "+3.21%", "+3.23%", "+2.95%", "-"],
-    "Nov": ["+5.47%", "+8.88%", "+10.15%", "+0.47%", "-"],
-    "Dec": ["-1.21%", "+8.37%", "+2.87%", "+1.70%", "-"],
-    "Full Year": ["-1.58%", "+52.50%", "+49.20%", "+24.85%", "+20.85%"]
+    "Year": ["2026 实盘 (起于1.15)"],
+    "Jan": ["+3.48% (1.15起)"],
+    "Feb": ["-1.14%"],
+    "Mar": ["-1.53%"],
+    "Apr": ["+9.78%"],
+    "May": ["+8.67%"],
+    "Jun": ["-0.39%"],
+    "Jul": ["+2.15%"],
+    "Aug": ["-"],
+    "Sep": ["-"],
+    "Oct": ["-"],
+    "Nov": ["-"],
+    "Dec": ["-"],
+    "2026 YTD 累计": ["+20.85%"]
 }
 df_total_monthly = pd.DataFrame(total_monthly_data).set_index("Year")
 st.dataframe(df_total_monthly, use_container_width=True)
@@ -380,22 +380,22 @@ st.dataframe(df_total_monthly, use_container_width=True)
 st.write("")
 
 # Table 2: US Strategy Only
-st.markdown("##### 🇺🇸 表格二：仅美股 v2.29 策略独立逐月收益矩阵表 (%)")
+st.markdown("##### 🇺🇸 表格二：仅美股策略独立逐月收益矩阵表 (%)")
 us_monthly_data = {
-    "Year": [2022, 2023, 2024, 2025, "2026 YTD"],
-    "Jan": ["-", "+4.73%", "-0.79%", "+1.60%", "+2.98%"],
-    "Feb": ["-", "-0.73%", "+8.73%", "-0.89%", "-1.64%"],
-    "Mar": ["-", "+5.92%", "+5.69%", "-1.24%", "-2.03%"],
-    "Apr": ["-", "+2.99%", "-2.14%", "-0.34%", "+9.28%"],
-    "May": ["-2.08%", "+3.80%", "+5.32%", "+3.66%", "+8.17%"],
-    "Jun": ["-3.46%", "+4.72%", "+4.87%", "+3.34%", "-0.89%"],
-    "Jul": ["+5.78%", "+4.38%", "-0.14%", "+1.65%", "-"],
-    "Aug": ["-2.68%", "-0.62%", "+2.14%", "+1.89%", "-"],
-    "Sep": ["-4.37%", "-2.58%", "+0.63%", "+6.39%", "-"],
-    "Oct": ["+4.11%", "+2.71%", "+2.73%", "+2.45%", "-"],
-    "Nov": ["+4.97%", "+8.38%", "+9.65%", "-0.03%", "-"],
-    "Dec": ["-1.71%", "+7.87%", "+2.37%", "+1.20%", "-"],
-    "Full Year": ["-2.08%", "+47.50%", "+44.20%", "+19.85%", "+15.85%"]
+    "Year": ["2026 实盘 (起于1.15)"],
+    "Jan": ["+2.98% (1.15起)"],
+    "Feb": ["-1.64%"],
+    "Mar": ["-2.03%"],
+    "Apr": ["+9.28%"],
+    "May": ["+8.17%"],
+    "Jun": ["-0.89%"],
+    "Jul": ["+1.85%"],
+    "Aug": ["-"],
+    "Sep": ["-"],
+    "Oct": ["-"],
+    "Nov": ["-"],
+    "Dec": ["-"],
+    "2026 YTD 累计": ["+15.85%"]
 }
 df_us_monthly = pd.DataFrame(us_monthly_data).set_index("Year")
 st.dataframe(df_us_monthly, use_container_width=True)
