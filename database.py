@@ -73,8 +73,35 @@ def init_db():
     )
     """)
     
+    # 6. Account Cash Deposit/Withdrawal Table (出入金明细)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cash_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        notes TEXT
+    )
+    """)
+    
     conn.commit()
     conn.close()
+
+def record_cash_transaction(date_str, trans_type, amount, notes=""):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO cash_transactions (date, type, amount, notes)
+    VALUES (?, ?, ?, ?)
+    """, (date_str, trans_type.upper(), amount, notes))
+    conn.commit()
+    conn.close()
+
+def get_cash_transactions():
+    conn = get_connection()
+    df = pd.read_sql_query("SELECT * FROM cash_transactions ORDER BY date ASC", conn)
+    conn.close()
+    return df
 
 def record_hk_ipo(date_str, monthly_profit, notes=""):
     conn = get_connection()

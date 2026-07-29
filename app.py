@@ -182,7 +182,7 @@ with r2_col4:
         help="美股 v2.29 策略回测期望最大回撤 -10.75%"
     )
 
-from database import init_db, get_positions, get_nav_history, get_trades_history, get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum, execute_live_us_trade
+from database import init_db, get_positions, get_nav_history, get_trades_history, get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum, execute_live_us_trade, record_cash_transaction, get_cash_transactions
 
 # Sidebar Section 1: US Live Trade Logging
 st.sidebar.markdown("### 🇺🇸 美股实盘交易登记 (US Trade Log)")
@@ -242,6 +242,31 @@ with st.sidebar.form("hk_ipo_form"):
             else:
                 new_cum = record_hk_ipo(date_str_ipo, ipo_amt, ipo_notes)
                 st.sidebar.success(f"已授权登记 {date_str_ipo} 打新收益 ${ipo_amt:,.2f}！最新累计收益: ${new_cum:,.2f}")
+            st.rerun()
+
+# Sidebar Section 3: Cash Deposit/Withdrawal Form
+st.sidebar.divider()
+st.sidebar.markdown("### 💰 账户出入金登记 (Cash In/Out)")
+with st.sidebar.form("cash_trans_form"):
+    c_date = st.date_input("变动日期", datetime.date.today())
+    c_type = st.radio("变动类型", ["DEPOSIT (入金/追加本金)", "WITHDRAWAL (出金/提取本金)"])
+    c_amt = st.number_input("变动金额 ($ USD)", value=1000.0, step=500.0)
+    c_notes = st.text_input("备注 (例如: 7月追加投资款)", value="")
+    c_pwd = st.text_input("授权校验密码  ", type="password", help="输入正确密码方可提交出入金")
+    
+    cash_submitted = st.form_submit_button("🔒 确认提交出入金")
+    
+    if cash_submitted:
+        pwd_hash = hashlib.sha256(c_pwd.encode('utf-8')).hexdigest()
+        if pwd_hash != HK_IPO_PWD_HASH:
+            st.sidebar.error("❌ 密码错误！无法提交出入金。")
+        elif c_amt <= 0:
+            st.sidebar.warning("⚠️ 金额必须大于 0。")
+        else:
+            trans_code = "DEPOSIT" if "DEPOSIT" in c_type else "WITHDRAWAL"
+            c_date_str = c_date.strftime("%Y-%m-%d")
+            record_cash_transaction(c_date_str, trans_code, c_amt, c_notes)
+            st.sidebar.success(f"已成功登记 {c_date_str} {trans_code} ${c_amt:,.2f}！")
             st.rerun()
 
 st.divider()
