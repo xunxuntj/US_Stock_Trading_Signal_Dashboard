@@ -13,12 +13,16 @@ from config import INITIAL_CAPITAL, JEPQ_TARGET_PCT, SGOV_TARGET_PCT, DATA_DIR
 
 
 def compute_hk_pnl_cum(date_str):
-    """Return latest HK IPO cumulative profit for the given date's month."""
+    """Return latest HK IPO cumulative profit as of date_str."""
     df_hk = get_hk_ipo_history()
+    if df_hk.empty:
+        return 0.0
     ym = date_str[:7]
-    candidates = [(r['date'][:7], float(r['cum_profit'])) for _, r in df_hk.iterrows()
-                  if pd.notnull(r['cum_profit']) and r['date'][:7] <= ym]
-    return max((v for _, v in candidates), default=0.0) if candidates else 0.0
+    # Filter records with month <= date_str's month, sorted by date ascending
+    valid = df_hk[df_hk['date'].str[:7] <= ym].sort_values('date', ascending=True)
+    if not valid.empty and pd.notnull(valid.iloc[-1]['cum_profit']):
+        return float(valid.iloc[-1]['cum_profit'])
+    return 0.0
 
 
 def load_latest_price(ticker):

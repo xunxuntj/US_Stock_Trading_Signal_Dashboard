@@ -569,7 +569,7 @@ with tab_nav:
         n1.metric("🏦 券商导出真实数据", f"{brokerage_count} 天")
         n2.metric("🔢 持仓估算数据", f"{calc_count} 天")
         n3.metric("📅 数据起始日期", "2026-01-15")
-        st.caption("💡 🏦=从老虎证券导出的真实净值 | 🔢=根据实时持仓×收盘价估算 | 📌=初始本金锚点")
+        st.caption("💡 🏦=从老虎证券导出的真实净值 | 🔢=根据实时持仓×收盘价估算 | 📌=初始本金锚点 | 港股打新收益7月已按确定的预录累计值 $8,917.34 扣算")
 
         # NAV curve chart using real data
         df_nav_chart = df_nav_full[df_nav_full["total_equity"].notnull()].sort_values("date")

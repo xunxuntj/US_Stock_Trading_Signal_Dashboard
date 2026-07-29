@@ -100,9 +100,8 @@ for _, r in df_hk.iterrows():
 
 def get_hk_cum(date_str):
     ym = date_str[:7]
-    # find most recent month <= ym
-    candidates = [v for k, v in hk_monthly.items() if k <= ym]
-    return max(candidates) if candidates else 0.0
+    valid_months = [k for k in sorted(hk_monthly.keys()) if k <= ym]
+    return hk_monthly[valid_months[-1]] if valid_months else 0.0
 
 # Load price CSVs
 price_cache = {}
