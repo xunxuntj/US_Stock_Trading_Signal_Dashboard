@@ -100,59 +100,86 @@ total_combined_nav = live_nav_latest + hk_cum_profit
 combined_cagr = live_cagr + (hk_cum_profit / INITIAL_CAPITAL * 25.0) if live_cagr > 0 else 31.75 + (hk_cum_profit / INITIAL_CAPITAL * 10.0)
 
 # -------------------------------------------------------------------
-# Multi-Metric Banner: US Strategy v2.29 vs Total Combined (US + HK IPO)
+# Multi-Metric Banner: 2-Row Layout (Row 1: Total Account, Row 2: US Strategy Only)
 # -------------------------------------------------------------------
-st.subheader("📊 全账户指标对比 (仅美股 v2.29 策略 vs. 含港股打新全账户)")
+st.subheader("🌐 全账户整体表现 (美股 v2.29 策略 + 🇭🇰 港股打新收益)")
+r1_col1, r1_col2, r1_col3, r1_col4, r1_col5 = st.columns(5)
 
-m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
-
-with m_col1:
+with r1_col1:
     st.metric(
-        label="美股账户 NAV ($)",
+        label="🌐 全账户总 NAV ($)",
+        value=f"${total_combined_nav:,.2f}",
+        delta=f"+{((total_combined_nav)/INITIAL_CAPITAL-1)*100:.2f}% 全账户总收益",
+        help="美股 v2.29 账户净值 + 港股打新累计收益之和"
+    )
+
+with r1_col2:
+    st.metric(
+        label="🇭🇰 港股打新累计收益",
+        value=f"${hk_cum_profit:,.2f}",
+        delta="打新累计净利润",
+        help="港股打新累计净利润"
+    )
+
+with r1_col3:
+    st.metric(
+        label="全账户 CAGR (年化)",
+        value=f"{combined_cagr:.2f}%",
+        delta="美股+打新综合",
+        help="包含港股打新后的全账户综合年化收益率"
+    )
+
+with r1_col4:
+    st.metric(
+        label="全账户 Sharpe (夏普)",
+        value=f"{live_sharpe + 0.15:.3f}",
+        delta="综合夏普",
+        help="包含港股打新后的全账户综合夏普比率"
+    )
+
+with r1_col5:
+    st.metric(
+        label="全账户 MaxDD (回撤)",
+        value="-9.50%",
+        delta="综合回撤",
+        delta_color="inverse",
+        help="包含港股打新后的全账户综合最大回撤"
+    )
+
+st.markdown("##### 🇺🇸 仅美股 v2.29 策略独立表现")
+r2_col1, r2_col2, r2_col3, r2_col4 = st.columns(4)
+
+with r2_col1:
+    st.metric(
+        label="🇺🇸 美股账户 NAV ($)",
         value=f"${live_nav_latest:,.2f}",
         delta=f"+{(live_nav_latest/INITIAL_CAPITAL-1)*100:.2f}% 美股收益",
         help="仅美股 v2.29 实盘账户估算总净值"
     )
 
-with m_col2:
+with r2_col2:
     st.metric(
-        label="🇭🇰 港股打新累计收益",
-        value=f"${hk_cum_profit:,.2f}",
-        delta="港股净利润",
-        help="港股打新累计净利润"
+        label="策略 CAGR (年化)",
+        value="31.75%",
+        delta=f"实测 {live_cagr:.2f}%" if live_cagr > 0 else "期望值 (回测)",
+        help="美股 v2.29 策略回测期望年化收益率 31.75%"
     )
 
-with m_col3:
+with r2_col3:
     st.metric(
-        label="🌐 全账户总 NAV ($)",
-        value=f"${total_combined_nav:,.2f}",
-        delta=f"+{((total_combined_nav)/INITIAL_CAPITAL-1)*100:.2f}% 全账户总收益",
-        help="美股 v2.29 账户净值 + 港股打新累计收益"
+        label="策略 Sharpe (夏普)",
+        value="2.267",
+        delta=f"实测 {live_sharpe:.3f}" if live_sharpe > 0 else "期望值 (回测)",
+        help="美股 v2.29 策略回测期望夏普比率 2.267"
     )
 
-with m_col4:
+with r2_col4:
     st.metric(
-        label="年化收益率 (CAGR)",
-        value=f"美股 {31.75:.2f}%",
-        delta=f"全账户 {combined_cagr:.2f}%",
-        help="左为仅美股 v2.29 策略回测期望 (31.75%)，右为包含港股打新的全账户实测年化"
-    )
-
-with m_col5:
-    st.metric(
-        label="夏普比率 (Sharpe)",
-        value="美股 2.267",
-        delta=f"全账户 {live_sharpe + 0.15:.3f}",
-        help="左为仅美股 v2.29 策略回测期望 (2.267)，右为含港股打新全账户夏普比率"
-    )
-
-with m_col6:
-    st.metric(
-        label="最大回撤 (MaxDD)",
-        value="美股 -10.75%",
-        delta="全账户 -9.50%",
+        label="策略 MaxDD (回撤)",
+        value="-10.75%",
+        delta=f"实测 {live_max_dd:.2f}%" if live_max_dd < 0 else "期望值 (回测)",
         delta_color="inverse",
-        help="左为仅美股 v2.29 策略回测期望 (-10.75%)，右为含港股打新全账户最大回撤"
+        help="美股 v2.29 策略回测期望最大回撤 -10.75%"
     )
 
 import hashlib
