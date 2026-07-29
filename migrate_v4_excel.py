@@ -92,7 +92,7 @@ def migrate():
             pnl = (price - prev_cost) * qty - fee
             positions[ticker] = {"shares": new_shares, "cost": prev_cost if new_shares > 0 else 0.0}
             
-        record_trade(d_str, ticker, side, qty, price, gross_val, pnl, layer, notes)
+        record_trade(d_str, ticker, side, qty, price, gross_val, fee, pnl, layer, notes)
 
     # 5. Populate Current Active Positions into Database
     for t, p in positions.items():
