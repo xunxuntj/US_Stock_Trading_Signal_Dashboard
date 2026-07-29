@@ -31,11 +31,16 @@ def init_db():
         shares REAL NOT NULL,
         price REAL NOT NULL,
         total_val REAL NOT NULL,
+        fee REAL DEFAULT 0.0,
         pnl REAL DEFAULT 0.0,
         layer TEXT NOT NULL,
         reason TEXT
     )
     """)
+    try:
+        cursor.execute("ALTER TABLE trades ADD COLUMN fee REAL DEFAULT 0.0")
+    except Exception:
+        pass
     
     # 3. NAV History Table
     cursor.execute("""
@@ -161,13 +166,13 @@ def update_position(ticker, shares, cost_basis, layer):
     conn.commit()
     conn.close()
 
-def record_trade(date_str, ticker, action, shares, price, total_val, pnl=0.0, layer="TREND", reason=""):
+def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason=""):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO trades (date, ticker, action, shares, price, total_val, pnl, layer, reason)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (date_str, ticker, action, shares, price, total_val, pnl, layer, reason))
+    INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (date_str, ticker, action, shares, price, total_val, fee, pnl, layer, reason))
     conn.commit()
     conn.close()
 
@@ -191,7 +196,7 @@ def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, laye
         pnl = (price - current_cost) * shares - fee
         update_position(ticker, new_shares, current_cost if new_shares > 0 else 0.0, layer)
 
-    record_trade(date_str, ticker, action.upper(), shares, price, total_val, pnl, layer, reason)
+    record_trade(date_str, ticker, action.upper(), shares, price, total_val, fee, pnl, layer, reason)
 
 
 def record_nav(date_str, nav, cash, jepq_val, sgov_val, trend_val):
