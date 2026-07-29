@@ -322,7 +322,7 @@ with col_left:
                     "层级": row['layer']
                 })
             
-    cash_val = 43102.76
+    cash_val = 5830.89
     labels_pie.append("USD Cash (美元现金)")
     values_pie.append(cash_val)
     table_rows.append({
