@@ -345,8 +345,8 @@ with col_right:
     
     fig_line.update_layout(
         title="v2.29 资金复利增长双曲线 (美股策略 vs 全账户)",
-        margin=dict(t=40, b=20, l=20, r=20),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        margin=dict(t=40, b=60, l=20, r=20),
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5)
     )
     st.plotly_chart(fig_line, use_container_width=True)
 
