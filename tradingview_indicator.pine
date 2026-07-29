@@ -1,0 +1,272 @@
+//@version=6
+indicator("US Stock Multi-Layered Trend System v2.2", shorttitle="US-MT v2.2", overlay=true)
+
+// ==========================================
+// 1. Inputs & Configuration (Bilingual Support / English Default)
+// ==========================================
+grp_lang = "=== Language Setting / 语言设定 ==="
+lang_input = input.string("English", title="Language / 语言", options=["English", "中文"], group=grp_lang)
+
+grp_mode = "=== Capital Allocation / 资金配置 ==="
+nav_input = input.float(100000.0, title="Account NAV ($) / 账户总NAV", group=grp_mode)
+
+grp_breadth = "=== S5FI Breadth / 宽度指标参数 ==="
+s5fi_symbol = input.symbol("INDEX:S5FI", title="S5FI Ticker / 宽度指标代码", group=grp_breadth)
+
+grp_indicators = "=== Moving Average & SuperTrend / 均线与 SuperTrend ==="
+ema_len = input.int(200, title="EMA 200 Length / EMA 200 长度", group=grp_indicators)
+st_period = input.int(10, title="SuperTrend Period / SuperTrend 周期", group=grp_indicators)
+st_mult = input.float(3.0, title="SuperTrend Multiplier / SuperTrend 乘数", group=grp_indicators, step=0.1)
+
+grp_display = "=== UI Display / 显示设定 ==="
+table_pos_input = input.string("Top Right", title="Dashboard Position / 看板位置", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grp_display)
+
+table_pos = table_pos_input == "Top Right" ? position.top_right :
+            table_pos_input == "Top Left" ? position.top_left :
+            table_pos_input == "Bottom Right" ? position.bottom_right :
+            position.bottom_left
+
+// ==========================================
+// 2. Technical Indicators & Data Fetching (Automatic Matching)
+// ==========================================
+// Local EMA 200
+ema200 = ta.ema(close, ema_len)
+plot(ema200, color=color.rgb(156, 163, 175), linewidth=2, title="EMA 200")
+
+// Local SuperTrend (10, 3)
+[st_val, st_dir] = ta.supertrend(st_mult, st_period)
+st_color = st_dir < 0 ? color.rgb(0, 255, 204) : color.rgb(255, 94, 98)
+plot(st_val, color=st_color, linewidth=2, title="SuperTrend")
+
+// Local ATR (20) for informational purposes
+atr20 = ta.atr(20)
+atr_pct = (atr20 / close) * 100.0
+
+// Fetch S5FI Market Breadth Index
+s5fi_val = request.security(s5fi_symbol, "D", close, ignore_invalid_symbol=true)
+
+// Fetch parent L1 data (SPY and QQQ EMAs and SuperTrend directions) in the background
+[spy_close, spy_ema, spy_dir, spy_dir_prev] = request.security("SPY", "D", [close, ta.ema(close, ema_len), st_dir, st_dir[1]], ignore_invalid_symbol=true)
+[qqq_close, qqq_ema, qqq_dir, qqq_dir_prev] = request.security("QQQ", "D", [close, ta.ema(close, ema_len), st_dir, st_dir[1]], ignore_invalid_symbol=true)
+
+// ==========================================
+// 3. Auto-Identify Current Asset Role & Parent
+// ==========================================
+is_spy  = (syminfo.ticker == "SPY")
+is_qqq  = (syminfo.ticker == "QQQ")
+is_soxx = (syminfo.ticker == "SOXX")
+is_tqqq = (syminfo.ticker == "TQQQ")
+is_qld  = (syminfo.ticker == "QLD")
+
+has_l1_role = is_spy or is_qqq or is_soxx
+has_l2_role = is_qqq or is_soxx or is_tqqq or is_qld
+
+parent_close     = is_qqq ? spy_close : qqq_close
+parent_ema       = is_qqq ? spy_ema : qqq_ema
+parent_dir       = is_qqq ? spy_dir : qqq_dir
+parent_dir_prev  = is_qqq ? spy_dir_prev : qqq_dir_prev
+parent_name      = is_qqq ? "SPY" : "QQQ"
+
+// ==========================================
+// 4. L1 & L2 Signals & S5FI Gates
+// ==========================================
+// SuperTrend crossovers (Bullish / Bearish shifts)
+st_bullish_change = (st_dir[1] >= 0 and st_dir < 0)
+st_bearish_change = (st_dir[1] < 0 and st_dir >= 0)
+
+// Parent SuperTrend crossovers
+parent_st_bullish_change = (parent_dir_prev >= 0 and parent_dir < 0)
+parent_st_bearish_change = (parent_dir_prev < 0 and parent_dir >= 0)
+
+// S5FI Gate check status
+l1_gate_open = not na(s5fi_val) ? (s5fi_val >= 45.0) : true
+l2_gate_open = not na(s5fi_val) ? (s5fi_val >= 55.0) : true
+
+// --- L1 Logic ---
+l1_buy_signal  = (close > ema200) and st_bullish_change
+l1_sell_signal = st_bearish_change
+
+// --- L2 Logic ---
+parent_bullish = (parent_close > parent_ema) and (parent_dir < 0)
+parent_l1_buy_signal = (parent_close > parent_ema) and parent_st_bullish_change
+
+l2_buy_a = parent_bullish and st_bullish_change
+l2_buy_b = (st_dir < 0) and parent_l1_buy_signal
+l2_buy_signal  = l2_buy_a or l2_buy_b
+l2_sell_signal = st_bearish_change or parent_st_bearish_change
+
+// ==========================================
+// 5. Vertical Price Offset Shapes (Stacked Labels)
+// ==========================================
+// Uses 14-period ATR to calculate dynamic stack distances to avoid overlaps
+atr_val = ta.atr(14)
+l1_buy_price  = low - (0.4 * atr_val)
+l2_buy_price  = low - (2.0 * atr_val)
+l1_sell_price = high + (0.4 * atr_val)
+l2_sell_price = high + (2.0 * atr_val)
+
+// Plot L1 signals (Closer to candles, Mint Green / Crimson Red)
+plotshape(has_l1_role and l1_buy_signal ? l1_buy_price : na, title="L1 Buy", style=shape.labelup, location=location.absolute, color=color.rgb(0, 255, 204), text="L1 BUY", textcolor=color.black, size=size.normal)
+plotshape(has_l1_role and l1_sell_signal ? l1_sell_price : na, title="L1 Sell", style=shape.labeldown, location=location.absolute, color=color.rgb(255, 94, 98), text="L1 SELL", textcolor=color.white, size=size.normal)
+
+// Plot L2 signals (Outer stacked, Bright Blue / Golden Orange)
+plotshape(has_l2_role and l2_buy_signal ? l2_buy_price : na, title="L2 Buy", style=shape.labelup, location=location.absolute, color=color.rgb(0, 162, 255), text="L2 BUY", textcolor=color.white, size=size.normal)
+plotshape(has_l2_role and l2_sell_signal ? l2_sell_price : na, title="L2 Sell", style=shape.labeldown, location=location.absolute, color=color.rgb(255, 166, 0), text="L2 SELL", textcolor=color.black, size=size.normal)
+
+// ==========================================
+// 6. Sizing Calculation
+// ==========================================
+l1_alloc_dollars = nav_input * 0.10
+l1_shares = math.round(l1_alloc_dollars / close)
+
+l2_alloc_dollars = nav_input * 0.08
+l2_shares = math.round(l2_alloc_dollars / close)
+
+// ==========================================
+// 7. Bilingual Translation Dictionary
+// ==========================================
+is_cn = (lang_input == "中文")
+
+// Base Headers & Labels
+t_header = is_cn ? "美股多层趋势系统 v2.2" : "US Stock Multi-Layered Trend System v2.2"
+t_ticker = is_cn ? "监控标的" : "Ticker / Price"
+t_s5fi   = is_cn ? "S5FI 市场宽度" : "S5FI Market Breadth"
+t_role_col = is_cn ? "交易层级角色" : "Trading Role"
+t_action_col = is_cn ? "★ 实盘操作建议" : "★ Action Recommendation"
+t_shares_col = is_cn ? "★ 建议执行份额 (股数)" : "★ Suggested Order Size (Shares)"
+t_cap_check = is_cn ? "全局限额校验 (手动自检)" : "Global Cap Checks (Manual)"
+t_cap_rule1 = is_cn ? "1. 单一标的持仓不超过 10% NAV" : "1. Single asset exposure <= 10% NAV"
+t_cap_rule2 = is_cn ? "2. 趋势层总持仓不超过 35% NAV" : "2. Total trend exposure <= 35% NAV"
+t_formula_title = is_cn ? "股数计算公式" : "Shares Formula"
+t_note_formula = is_cn ? "股数 = (NAV * 占比) / 当前价格" : "Shares = (NAV * % Size) / Current Price"
+t_note_cooling = is_cn ? "平仓冷静期：翻空后强制空仓 4 天" : "Cooling: 4 days off after Sell"
+
+// Roles Info
+t_l1_role = is_cn ? "L1 母仓角色 (10% NAV)" : "L1 Core Role (10% NAV)"
+t_l2_role = is_cn ? "L2 加速角色 (8% NAV, 对应母仓 " + parent_name + ")" : "L2 Accelerator (8% NAV, Parent: " + parent_name + ")"
+t_l1_no_role = is_cn ? "当前标的无 L1 角色" : "No L1 Role for this Ticker"
+t_l2_no_role = is_cn ? "当前标的无 L2 角色" : "No L2 Role for this Ticker"
+
+// Actions & Recommendations
+t_act_sell   = is_cn ? "卖出平仓" : "Sell to Close"
+t_val_sell   = is_cn ? "全部平仓离场" : "Sell all positions"
+t_act_buy    = is_cn ? "买入开仓" : "Buy to Open"
+t_act_hold   = is_cn ? "继续持股" : "Hold Position"
+t_val_hold   = is_cn ? "持有中" : "Holding"
+t_act_wait   = is_cn ? "观望中" : "Waiting"
+t_val_wait   = is_cn ? "0 股" : "0 shares"
+t_act_blocked = is_cn ? "S5FI 闸门关闭 (禁买)" : "S5FI Gate Closed (Block)"
+t_no_role    = is_cn ? "无此角色" : "N/A"
+
+// ==========================================
+// 8. Execution Logic Processing
+// ==========================================
+// --- L1 Recommendation ---
+var string l1_action = t_no_role
+var color l1_color = color.gray
+var string l1_shares_str = "-"
+
+if has_l1_role
+    if l1_sell_signal
+        l1_action := t_act_sell
+        l1_color := color.rgb(255, 94, 98)
+        l1_shares_str := t_val_sell
+    else if l1_buy_signal
+        if not l1_gate_open
+            l1_action := t_act_blocked
+            l1_color := color.orange
+            l1_shares_str := is_cn ? "0 股 (S5FI < 45%)" : "0 shares (S5FI < 45%)"
+        else
+            l1_action := t_act_buy
+            l1_color := color.rgb(0, 255, 204)
+            l1_shares_str := is_cn ? 
+                 str.tostring(l1_shares, "#") + " 股 (约 $" + str.tostring(l1_alloc_dollars, "#,###") + ")" : 
+                 str.tostring(l1_shares, "#") + " shares (approx $" + str.tostring(l1_alloc_dollars, "#,###") + ")"
+    else
+        if st_dir < 0
+            l1_action := t_act_hold
+            l1_color := color.rgb(59, 130, 246)
+            l1_shares_str := t_val_hold
+        else
+            l1_action := t_act_wait
+            l1_color := color.gray
+            l1_shares_str := t_val_wait
+
+// --- L2 Recommendation ---
+var string l2_action = t_no_role
+var color l2_color = color.gray
+var string l2_shares_str = "-"
+
+if has_l2_role
+    if l2_sell_signal
+        l2_action := t_act_sell
+        l2_color := color.rgb(255, 166, 0)
+        l2_shares_str := t_val_sell
+    else if l2_buy_signal
+        if not l2_gate_open
+            l2_action := t_act_blocked
+            l2_color := color.orange
+            l2_shares_str := is_cn ? "0 股 (S5FI < 55%)" : "0 shares (S5FI < 55%)"
+        else
+            l2_action := t_act_buy
+            l2_color := color.rgb(0, 162, 255)
+            l2_shares_str := is_cn ? 
+                 str.tostring(l2_shares, "#") + " 股 (约 $" + str.tostring(l2_alloc_dollars, "#,###") + ")" : 
+                 str.tostring(l2_shares, "#") + " shares (approx $" + str.tostring(l2_alloc_dollars, "#,###") + ")"
+    else
+        if st_dir < 0 and parent_bullish
+            l2_action := t_act_hold
+            l2_color := color.rgb(59, 130, 246)
+            l2_shares_str := t_val_hold
+        else
+            l2_action := t_act_wait
+            l2_color := color.gray
+            l2_shares_str := t_val_wait
+
+// ==========================================
+// 9. Dashboard Drawing (Bilingual Layout)
+// ==========================================
+var table infoTable = table.new(position = table_pos, columns = 3, rows = 7, 
+     bgcolor = color.new(color.black, 15), 
+     border_width = 1, 
+     border_color = color.rgb(255, 255, 255, 15))
+
+if barstate.islast
+    // Header Row
+    table.cell(infoTable, 0, 0, t_header, bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 0, (is_cn ? "标的: " : "Symbol: ") + syminfo.ticker + " @ $" + str.tostring(close, "0.00"), bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 2, 0, (is_cn ? "账户 NAV: $" : "Account NAV: $") + str.tostring(nav_input, "#,###"), bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
+    
+    // Breadth Width & Gates Status Row
+    s5fi_str = na(s5fi_val) ? (is_cn ? "加载中" : "Loading") : str.tostring(s5fi_val, "0.0") + "%"
+    t_gate_open = is_cn ? "开放" : "Open"
+    t_gate_closed = is_cn ? "关闭" : "Closed"
+    table.cell(infoTable, 0, 1, t_s5fi, text_color=color.rgb(209, 213, 219), text_size=size.small)
+    table.cell(infoTable, 1, 1, (is_cn ? "当前宽度: " : "Current Width: ") + s5fi_str, text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 2, 1, "L1 " + (is_cn ? "闸门" : "Gate") + " (45%): " + (l1_gate_open ? t_gate_open : t_gate_closed) + " | L2 " + (is_cn ? "闸门" : "Gate") + " (55%): " + (l2_gate_open ? t_gate_open : t_gate_closed), text_color=l2_gate_open ? color.green : color.orange, text_size=size.small)
+    
+    // Table Column Titles
+    table.cell(infoTable, 0, 2, t_role_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 2, t_action_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 2, 2, t_shares_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
+    
+    // L1 Mother Position Row
+    table.cell(infoTable, 0, 3, t_l1_role, text_color=color.rgb(147, 197, 253), text_size=size.small)
+    table.cell(infoTable, 1, 3, l1_action, text_color=l1_color, text_size=size.small)
+    table.cell(infoTable, 2, 3, l1_shares_str, text_color=l1_color, text_size=size.small)
+    
+    // L2 Acceleration Position Row
+    l2_role_desc = has_l2_role ? t_l2_role : t_l2_no_role
+    table.cell(infoTable, 0, 4, l2_role_desc, text_color=color.rgb(244, 114, 182), text_size=size.small)
+    table.cell(infoTable, 1, 4, l2_action, text_color=l2_color, text_size=size.small)
+    table.cell(infoTable, 2, 4, l2_shares_str, text_color=l2_color, text_size=size.small)
+    
+    // Wind Control Info Row
+    table.cell(infoTable, 0, 5, t_cap_check, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(infoTable, 1, 5, t_cap_rule1, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(infoTable, 2, 5, t_cap_rule2, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    
+    // Formulas & Explanations Row
+    table.cell(infoTable, 0, 6, t_formula_title, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(infoTable, 1, 6, t_note_formula, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(infoTable, 2, 6, t_note_cooling, text_color=color.rgb(156, 163, 175), text_size=size.small)
