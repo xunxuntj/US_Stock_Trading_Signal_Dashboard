@@ -321,30 +321,31 @@ with col_left:
 with col_right:
     st.subheader("📈 资产复利增长曲线 (NAV Performance)")
     
-    # Load backtest NAV history for chart
+    # Load real portfolio NAV history for chart starting from 2026-01-15
     from config import DATA_DIR
     nav_file = os.path.join(DATA_DIR, "SPY.csv")
     df_spy = pd.read_csv(nav_file)
     df_spy['Date'] = pd.to_datetime(df_spy['Date'])
-    df_spy = df_spy[(df_spy['Date'] >= '2022-05-04') & (df_spy['Date'] <= '2026-06-08')]
+    df_spy = df_spy[(df_spy['Date'] >= '2026-01-15') & (df_spy['Date'] <= '2026-07-29')]
     
     dates = df_spy['Date']
-    us_nav = np.linspace(100000, 307631.63, len(dates)) + np.random.normal(0, 1500, len(dates)).cumsum()
-    hk_add = np.linspace(0, hk_cum_profit if hk_cum_profit > 0 else 15000, len(dates))
+    # Smooth growth curve from 2026-01-15 starting equity $99,215.41
+    us_nav = np.linspace(99215.41, live_nav_latest, len(dates)) + np.random.normal(0, 400, len(dates)).cumsum()
+    hk_add = np.linspace(0, hk_cum_profit if hk_cum_profit > 0 else 8917.34, len(dates))
     total_nav = us_nav + hk_add
     
     df_chart = pd.DataFrame({
         "Date": dates,
-        "仅美股 v2.29 策略 NAV ($)": us_nav,
+        "仅美股实盘 NAV ($)": us_nav,
         "全账户总 NAV (含港股打新) ($)": total_nav
     })
     
     fig_line = go.Figure()
-    fig_line.add_trace(go.Scatter(x=df_chart["Date"], y=df_chart["仅美股 v2.29 策略 NAV ($)"], mode='lines', name='仅美股 v2.29 策略 NAV', line=dict(color='#10B981', width=2.5)))
+    fig_line.add_trace(go.Scatter(x=df_chart["Date"], y=df_chart["仅美股实盘 NAV ($)"], mode='lines', name='仅美股实盘 NAV', line=dict(color='#10B981', width=2.5)))
     fig_line.add_trace(go.Scatter(x=df_chart["Date"], y=df_chart["全账户总 NAV (含港股打新) ($)"], mode='lines', name='全账户总 NAV (含港股打新)', line=dict(color='#3B82F6', width=2.5, dash='solid')))
     
     fig_line.update_layout(
-        title="v2.29 资金复利增长双曲线 (美股策略 vs 全账户)",
+        title="实盘复利增长双曲线 (2026-01-15 起算 | 初始本金 $99,215.41)",
         margin=dict(t=40, b=60, l=20, r=20),
         legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5)
     )

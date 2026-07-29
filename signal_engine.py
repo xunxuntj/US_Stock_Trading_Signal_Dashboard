@@ -17,7 +17,7 @@ def generate_v229_signals():
     latest_date = spy_df.index[-1]
     prev_date = spy_df.index[-2] if len(spy_df) >= 2 else latest_date
     
-    date_str = latest_date.strftime("%Y-%m-%d")
+    date_str = datetime.date.today().strftime("%Y-%m-%d")
     
     current_prices = {t: data[t].loc[latest_date, 'Close'] for t in data if latest_date in data[t].index}
     s5fi_val = float(data["S5FI"].loc[latest_date, "Close"]) if "S5FI" in data and latest_date in data["S5FI"].index else 50.0
