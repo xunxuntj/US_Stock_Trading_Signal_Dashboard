@@ -4,7 +4,7 @@ import pandas as pd
 
 def main():
     # Tickers list
-    tickers = ["SPY", "QQQ", "SOXX", "TQQQ", "QUAL", "JEPQ", "QLD", "PSQ", "SH", "QID", "GLD", "TLT", "DBC", "BITO", "^VIX", "SGOV", "NVDA"]
+    tickers = ["SPY", "QQQ", "SOXX", "TQQQ", "QUAL", "JEPQ", "QLD", "PSQ", "SH", "QID", "GLD", "TLT", "DBC", "BITO", "^VIX", "SGOV", "NVDA", "000001.SS"]
     
     # Date range: We need data since 2020-01-01 to have warm-up for EMA200/DEMA200 starting 2021-06-08
     # Date range: We need data since 2020-01-01 to have warm-up for EMA200/DEMA200
