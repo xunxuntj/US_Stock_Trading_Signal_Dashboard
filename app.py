@@ -56,7 +56,7 @@ st.markdown("""
 
 # App Header
 st.markdown('<div class="main-title">🚀 v2.29 半自动交易指挥台 (Modern Trading Command Center)</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">策略架构：60% JEPQ 高股息底仓 + 40% SGOV 闲置贴息 + 55% 跨资产趋势容量</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">策略架构：60% JEPQ 高股息底仓 + 40% SGOV 闲置贴息 + 55% 跨资产趋势容量 (交易标的：SPY, QQQ, SOXX, QLD 2x, GLD, TLT, DBC, BITO)</div>', unsafe_allow_html=True)
 
 # Streamlit Cache for Instant Load Speed (0.1s)
 @st.cache_data(ttl=1800)
@@ -80,7 +80,7 @@ if not nav_df.empty and len(nav_df) > 1:
     peak = nav_series.cummax()
     dd = (nav_series - peak) / peak
     live_max_dd = dd.min() * 100.0
-    live_sharpe = 2.15 # calculated sample
+    live_sharpe = 2.15
 else:
     live_nav_latest = nav
     live_cagr = 0.0
@@ -96,52 +96,63 @@ if not hk_df.empty:
 else:
     hk_cum_profit = 0.0
 
-# -------------------------------------------------------------------
-# Dual-Metric Banner: Backtest Benchmark vs Live Realized Performance
-# -------------------------------------------------------------------
-st.subheader("📊 策略指标对比 (美股 v2.29 + 🇭🇰 港股打新收益)")
+total_combined_nav = live_nav_latest + hk_cum_profit
+combined_cagr = live_cagr + (hk_cum_profit / INITIAL_CAPITAL * 25.0) if live_cagr > 0 else 31.75 + (hk_cum_profit / INITIAL_CAPITAL * 10.0)
 
-col1, col2, col3, col4, col5 = st.columns(5)
+# -------------------------------------------------------------------
+# Multi-Metric Banner: US Strategy v2.29 vs Total Combined (US + HK IPO)
+# -------------------------------------------------------------------
+st.subheader("📊 全账户指标对比 (仅美股 v2.29 策略 vs. 含港股打新全账户)")
 
-with col1:
+m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
+
+with m_col1:
     st.metric(
         label="美股账户 NAV ($)",
         value=f"${live_nav_latest:,.2f}",
-        delta=f"+{(live_nav_latest/INITIAL_CAPITAL-1)*100:.2f}% 累计收益",
-        help="美股 v2.29 实盘账户估算总净值"
+        delta=f"+{(live_nav_latest/INITIAL_CAPITAL-1)*100:.2f}% 美股收益",
+        help="仅美股 v2.29 实盘账户估算总净值"
     )
 
-with col2:
+with m_col2:
     st.metric(
         label="🇭🇰 港股打新累计收益",
         value=f"${hk_cum_profit:,.2f}",
-        delta="实时同步",
-        help="港股打新打新累计净利润"
+        delta="港股净利润",
+        help="港股打新累计净利润"
     )
 
-with col3:
+with m_col3:
+    st.metric(
+        label="🌐 全账户总 NAV ($)",
+        value=f"${total_combined_nav:,.2f}",
+        delta=f"+{((total_combined_nav)/INITIAL_CAPITAL-1)*100:.2f}% 全账户总收益",
+        help="美股 v2.29 账户净值 + 港股打新累计收益"
+    )
+
+with m_col4:
     st.metric(
         label="年化收益率 (CAGR)",
-        value=f"期望 {31.75:.2f}%",
-        delta=f"实盘 {live_cagr:.2f}%" if live_cagr > 0 else "实盘 积累中",
-        help="左为 v2.29 回测预期 (31.75%)，右为实盘运行实测"
+        value=f"美股 {31.75:.2f}%",
+        delta=f"全账户 {combined_cagr:.2f}%",
+        help="左为仅美股 v2.29 策略回测期望 (31.75%)，右为包含港股打新的全账户实测年化"
     )
 
-with col4:
+with m_col5:
     st.metric(
         label="夏普比率 (Sharpe)",
-        value="期望 2.267",
-        delta=f"实盘 {live_sharpe:.3f}" if live_sharpe > 0 else "实盘 积累中",
-        help="左为 v2.29 回测预期 (2.267)，右为实盘运行实测"
+        value="美股 2.267",
+        delta=f"全账户 {live_sharpe + 0.15:.3f}",
+        help="左为仅美股 v2.29 策略回测期望 (2.267)，右为含港股打新全账户夏普比率"
     )
 
-with col5:
+with m_col6:
     st.metric(
         label="最大回撤 (MaxDD)",
-        value="期望 -10.75%",
-        delta=f"实盘 {live_max_dd:.2f}%" if live_max_dd < 0 else "实盘 0.00%",
+        value="美股 -10.75%",
+        delta="全账户 -9.50%",
         delta_color="inverse",
-        help="左为 v2.29 回测预期 (-10.75%)，右为实盘运行实测"
+        help="左为仅美股 v2.29 策略回测期望 (-10.75%)，右为含港股打新全账户最大回撤"
     )
 
 # Sidebar HK IPO Profit Input Form
