@@ -26,8 +26,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Daily Scan & Signal Generator
+      - name: Download Live Market Data & Run Scan
         run: |
+          python download_data.py
           python run_daily_scan.py
 
       - name: Commit & Push Updated Database / Signals

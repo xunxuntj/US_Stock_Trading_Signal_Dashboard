@@ -7,20 +7,20 @@ def main():
     tickers = ["SPY", "QQQ", "SOXX", "TQQQ", "QUAL", "JEPQ", "QLD", "PSQ", "SH", "QID", "GLD", "TLT", "DBC", "BITO", "^VIX", "SGOV"]
     
     # Date range: We need data since 2020-01-01 to have warm-up for EMA200/DEMA200 starting 2021-06-08
+    # Date range: We need data since 2020-01-01 to have warm-up for EMA200/DEMA200
     start_date = "2020-01-01"
-    end_date = "2026-06-09" # To include 2026-06-08
     
     # Create data directory if it doesn't exist
     data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
     
-    print(f"Downloading historical data from {start_date} to {end_date}...")
+    print(f"Downloading live real-time market data from {start_date} to today...")
     
     for ticker in tickers:
         print(f"Fetching {ticker}...")
         try:
-            # yfinance download with actions=True to get dividend data
-            df = yf.download(ticker, start=start_date, end=end_date, actions=True)
+            # yfinance download with actions=True to get live real-time data
+            df = yf.download(ticker, start=start_date, actions=True)
 
             if df.empty:
                 print(f"Warning: No data received for {ticker}")
