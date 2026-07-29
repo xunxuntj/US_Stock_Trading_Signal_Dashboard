@@ -87,22 +87,39 @@ else:
     live_max_dd = 0.0
     live_sharpe = 0.0
 
+from database import init_db, get_positions, get_nav_history, get_trades_history, get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum
+
+# Check HK IPO History
+hk_df = get_hk_ipo_history()
+if not hk_df.empty:
+    hk_cum_profit = hk_df.iloc[-1]['cum_profit']
+else:
+    hk_cum_profit = 0.0
+
 # -------------------------------------------------------------------
 # Dual-Metric Banner: Backtest Benchmark vs Live Realized Performance
 # -------------------------------------------------------------------
-st.subheader("📊 策略指标对比 (策略回测期望 vs. 实盘运行实测)")
+st.subheader("📊 策略指标对比 (美股 v2.29 + 🇭🇰 港股打新收益)")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric(
-        label="账户估算 NAV ($)",
+        label="美股账户 NAV ($)",
         value=f"${live_nav_latest:,.2f}",
         delta=f"+{(live_nav_latest/INITIAL_CAPITAL-1)*100:.2f}% 累计收益",
-        help="由初始建仓 $100,000 (60% JEPQ + 40% SGOV) 结合历史分红与最新净值计算得出"
+        help="美股 v2.29 实盘账户估算总净值"
     )
 
 with col2:
+    st.metric(
+        label="🇭🇰 港股打新累计收益",
+        value=f"${hk_cum_profit:,.2f}",
+        delta="实时同步",
+        help="港股打新打新累计净利润"
+    )
+
+with col3:
     st.metric(
         label="年化收益率 (CAGR)",
         value=f"期望 {31.75:.2f}%",
@@ -110,7 +127,7 @@ with col2:
         help="左为 v2.29 回测预期 (31.75%)，右为实盘运行实测"
     )
 
-with col3:
+with col4:
     st.metric(
         label="夏普比率 (Sharpe)",
         value="期望 2.267",
@@ -118,7 +135,7 @@ with col3:
         help="左为 v2.29 回测预期 (2.267)，右为实盘运行实测"
     )
 
-with col4:
+with col5:
     st.metric(
         label="最大回撤 (MaxDD)",
         value="期望 -10.75%",
@@ -126,6 +143,24 @@ with col4:
         delta_color="inverse",
         help="左为 v2.29 回测预期 (-10.75%)，右为实盘运行实测"
     )
+
+# Sidebar HK IPO Profit Input Form
+st.sidebar.markdown("### 🇭🇰 港股打新收益登记")
+with st.sidebar.form("hk_ipo_form"):
+    ipo_date = st.date_input("登记日期", datetime.date.today())
+    ipo_type = st.radio("登记类型", ["首次设定截止本月累计收益", "新增本月单月收益"])
+    ipo_amt = st.number_input("收益金额 ($ USD)", value=0.0, step=100.0)
+    ipo_notes = st.text_input("备注 (例如: 某某新股打新收益)", value="")
+    submitted = st.form_submit_button("提交登记")
+    if submitted and ipo_amt != 0:
+        date_str_ipo = ipo_date.strftime("%Y-%m-%d")
+        if "首次" in ipo_type:
+            set_initial_hk_ipo_cum(date_str_ipo, ipo_amt, ipo_notes or "初始累计收益")
+            st.sidebar.success(f"已设定初始港股打新累计收益: ${ipo_amt:,.2f}")
+        else:
+            new_cum = record_hk_ipo(date_str_ipo, ipo_amt, ipo_notes)
+            st.sidebar.success(f"已登记本月打新收益 ${ipo_amt:,.2f}！最新累计收益: ${new_cum:,.2f}")
+        st.rerun()
 
 st.divider()
 

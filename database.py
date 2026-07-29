@@ -62,8 +62,53 @@ def init_db():
     )
     """)
     
+    # 5. HK Stock IPO Profits Table (港股打新收益)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS hk_ipo_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        monthly_profit REAL NOT NULL,
+        cum_profit REAL NOT NULL,
+        notes TEXT
+    )
+    """)
+    
     conn.commit()
     conn.close()
+
+def record_hk_ipo(date_str, monthly_profit, notes=""):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Get last cumulative profit
+    cursor.execute("SELECT cum_profit FROM hk_ipo_records ORDER BY id DESC LIMIT 1")
+    row = cursor.fetchone()
+    prev_cum = row[0] if row else 0.0
+    new_cum = prev_cum + monthly_profit
+    
+    cursor.execute("""
+    INSERT INTO hk_ipo_records (date, monthly_profit, cum_profit, notes)
+    VALUES (?, ?, ?, ?)
+    """, (date_str, monthly_profit, new_cum, notes))
+    conn.commit()
+    conn.close()
+    return new_cum
+
+def set_initial_hk_ipo_cum(date_str, initial_cum_profit, notes="初始累计收益"):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO hk_ipo_records (date, monthly_profit, cum_profit, notes)
+    VALUES (?, ?, ?, ?)
+    """, (date_str, initial_cum_profit, initial_cum_profit, notes))
+    conn.commit()
+    conn.close()
+
+def get_hk_ipo_history():
+    conn = get_connection()
+    df = pd.read_sql_query("SELECT * FROM hk_ipo_records ORDER BY date ASC", conn)
+    conn.close()
+    return df
 
 def get_positions():
     conn = get_connection()
