@@ -119,7 +119,8 @@ with col_right:
     st.subheader("📈 资产曲线与收益表现 (NAV Performance)")
     
     # Load backtest NAV history for chart
-    nav_file = r"c:\Users\Jason Zhang\OneDrive\6Career\100KProject\AG_Workspaces\01_Trading_System\data\SPY.csv"
+    from config import DATA_DIR
+    nav_file = os.path.join(DATA_DIR, "SPY.csv")
     df_spy = pd.read_csv(nav_file)
     df_spy['Date'] = pd.to_datetime(df_spy['Date'])
     df_spy = df_spy[(df_spy['Date'] >= '2022-05-04') & (df_spy['Date'] <= '2026-06-08')]
