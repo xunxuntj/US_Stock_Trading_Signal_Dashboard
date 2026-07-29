@@ -199,19 +199,56 @@ def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, laye
     record_trade(date_str, ticker, action.upper(), shares, price, total_val, fee, pnl, layer, reason)
 
 
-def record_nav(date_str, nav, cash, jepq_val, sgov_val, trend_val):
+def record_nav(date_str, nav, cash, jepq_val, sgov_val, trend_val,
+               total_equity=None, strategy_equity=None, hk_pnl_cum=0.0,
+               high_water_mark=None, drawdown_pct=0.0, source='CALCULATED'):
+    """Write a NAV row. If total_equity not given, uses nav as both total and strategy."""
+    if total_equity is None:
+        total_equity = nav
+    if strategy_equity is None:
+        strategy_equity = nav
+    if high_water_mark is None:
+        high_water_mark = total_equity
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT OR REPLACE INTO nav_history (date, nav, cash, jepq_val, sgov_val, trend_val)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (date_str, nav, cash, jepq_val, sgov_val, trend_val))
+    INSERT OR REPLACE INTO nav_history
+        (date, nav, cash, jepq_val, sgov_val, trend_val,
+         total_equity, strategy_equity, hk_pnl_cum, high_water_mark, drawdown_pct, source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (date_str, nav, cash, jepq_val, sgov_val, trend_val,
+           total_equity, strategy_equity, hk_pnl_cum, high_water_mark, drawdown_pct, source))
     conn.commit()
     conn.close()
 
+
+def record_brokerage_nav(date_str, total_equity, hk_pnl_cum=0.0):
+    """Record a manually-entered Tiger Brokerage equity snapshot."""
+    strategy_equity = total_equity - hk_pnl_cum
+    conn = get_connection()
+    cursor = conn.cursor()
+    # Compute running HWM from latest stored
+    df_existing = pd.read_sql_query(
+        "SELECT high_water_mark FROM nav_history WHERE high_water_mark IS NOT NULL ORDER BY date DESC LIMIT 1",
+        conn)
+    hwm = float(df_existing['high_water_mark'].iloc[0]) if not df_existing.empty else total_equity
+    hwm = max(hwm, total_equity)
+    dd = (total_equity - hwm) / hwm * 100.0 if hwm > 0 else 0.0
+    cursor.execute("""
+    INSERT OR REPLACE INTO nav_history
+        (date, nav, cash, jepq_val, sgov_val, trend_val,
+         total_equity, strategy_equity, hk_pnl_cum, high_water_mark, drawdown_pct, source)
+    VALUES (?, ?, 0, 0, 0, 0, ?, ?, ?, ?, ?, 'BROKERAGE')
+    """, (date_str, strategy_equity, total_equity, strategy_equity, hk_pnl_cum, hwm, dd))
+    conn.commit()
+    conn.close()
+
+
 def get_nav_history():
     conn = get_connection()
-    df = pd.read_sql_query("SELECT * FROM nav_history ORDER BY date ASC", conn)
+    df = pd.read_sql_query(
+        "SELECT * FROM nav_history WHERE total_equity IS NOT NULL ORDER BY date ASC",
+        conn)
     conn.close()
     return df
 

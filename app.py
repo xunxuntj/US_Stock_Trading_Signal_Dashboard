@@ -23,7 +23,8 @@ from config import DATA_DIR, INITIAL_CAPITAL
 from database import (
     init_db, get_positions, get_nav_history, get_trades_history,
     get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum,
-    execute_live_us_trade, record_cash_transaction, get_cash_transactions
+    execute_live_us_trade, record_cash_transaction, get_cash_transactions,
+    record_brokerage_nav
 )
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
@@ -263,6 +264,27 @@ with st.sidebar.form("cash_trans_form"):
             c_date_str = c_date.strftime("%Y-%m-%d")
             record_cash_transaction(c_date_str, trans_code, c_amt, c_notes)
             st.sidebar.success(f"已成功登记 {c_date_str} {trans_code} ${c_amt:,.2f}！")
+            st.rerun()
+
+# Sidebar Section 4: Manual Brokerage Equity Update
+st.sidebar.divider()
+st.sidebar.markdown("### 🏦 更新券商真实净值 (Tiger)")
+st.sidebar.caption("从老虎证券导出后手动登记，标记为 🏦 真实数据")
+with st.sidebar.form("brokerage_nav_form"):
+    bn_date  = st.date_input("净值日期", datetime.date.today(), key="bn_date")
+    bn_total = st.number_input("老虎证券总净值 ($ USD)", value=130000.0, step=100.0)
+    bn_hk    = st.number_input("港股打新累计盈亏 ($ USD)", value=9066.49, step=10.0)
+    bn_pwd   = st.text_input("授权校验密码    ", type="password")
+    bn_submitted = st.form_submit_button("🏦 确认写入真实净值")
+    if bn_submitted:
+        pwd_hash = hashlib.sha256(bn_pwd.encode('utf-8')).hexdigest()
+        if pwd_hash != HK_IPO_PWD_HASH:
+            st.sidebar.error("❌ 密码错误！")
+        elif bn_total <= 0:
+            st.sidebar.warning("⚠️ 净值必须大于 0")
+        else:
+            record_brokerage_nav(bn_date.strftime("%Y-%m-%d"), bn_total, bn_hk)
+            st.sidebar.success(f"✅ 已写入 {bn_date} 券商净值 ${bn_total:,.2f}（🏦 BROKERAGE）")
             st.rerun()
 
 st.divider()
@@ -513,16 +535,77 @@ with tab_nav:
     if not df_nav_full.empty:
         df_nav_full["date"] = pd.to_datetime(df_nav_full["date"])
         df_nav_full = df_nav_full.sort_values("date", ascending=False).reset_index(drop=True)
+
+        # Source badge
+        def source_label(s):
+            if s == 'BROKERAGE': return '🏦 券商导出'
+            if s == 'INITIAL':   return '📌 初始锚点'
+            return '🔢 持仓估算'
+
         df_nav_disp = df_nav_full.rename(columns={
-            "date": "日期", "nav": "账户净值NAV($)",
-            "cash": "现金($)", "jepq_val": "JEPQ市值($)",
-            "sgov_val": "SGOV市值($)", "trend_val": "趋势层市值($)"
+            "date":             "日期",
+            "total_equity":     "券商总净值($)",
+            "strategy_equity":  "策略净值($)",
+            "hk_pnl_cum":       "港股累计盈亏($)",
+            "high_water_mark":  "历史最高点($)",
+            "drawdown_pct":     "当日回撤(%)",
+            "source":           "数据来源"
         })
-        for col in ["账户净值NAV($)", "现金($)", "JEPQ市值($)", "SGOV市值($)", "趋势层市值($)"]:
+        if "数据来源" in df_nav_disp.columns:
+            df_nav_disp["数据来源"] = df_nav_disp["数据来源"].apply(source_label)
+        for col in ["券商总净值($)", "策略净值($)", "港股累计盈亏($)", "历史最高点($)"]:
             if col in df_nav_disp.columns:
-                df_nav_disp[col] = df_nav_disp[col].apply(lambda x: f"${x:,.2f}")
-        st.dataframe(df_nav_disp, use_container_width=True, height=500)
-        st.caption(f"共 {len(df_nav_full)} 条日度净资产记录 | 起始日期：2026-01-15 | 初始净值：$99,215.41")
+                df_nav_disp[col] = df_nav_disp[col].apply(lambda x: f"${x:,.2f}" if pd.notnull(x) else "-")
+        if "当日回撤(%)" in df_nav_disp.columns:
+            df_nav_disp["当日回撤(%)"] = df_nav_disp["当日回撤(%)"].apply(lambda x: f"{x:.3f}%" if pd.notnull(x) else "-")
+
+        # Show relevant columns only
+        show_cols = [c for c in ["日期","数据来源","券商总净值($)","策略净值($)","港股累计盈亏($)","历史最高点($)","当日回撤(%)"] if c in df_nav_disp.columns]
+        st.dataframe(df_nav_disp[show_cols], use_container_width=True, height=500)
+
+        brokerage_count = (df_nav_full["source"] == 'BROKERAGE').sum()
+        calc_count = (df_nav_full["source"] == 'CALCULATED').sum()
+        n1, n2, n3 = st.columns(3)
+        n1.metric("🏦 券商导出真实数据", f"{brokerage_count} 天")
+        n2.metric("🔢 持仓估算数据", f"{calc_count} 天")
+        n3.metric("📅 数据起始日期", "2026-01-15")
+        st.caption("💡 🏦=从老虎证券导出的真实净值 | 🔢=根据实时持仓×收盘价估算 | 📌=初始本金锚点")
+
+        # NAV curve chart using real data
+        df_nav_chart = df_nav_full[df_nav_full["total_equity"].notnull()].sort_values("date")
+        fig_nav_real = go.Figure()
+        df_brok = df_nav_chart[df_nav_chart["source"] == 'BROKERAGE']
+        df_calc = df_nav_chart[df_nav_chart["source"].isin(['CALCULATED', 'INITIAL'])]
+        if not df_brok.empty:
+            fig_nav_real.add_trace(go.Scatter(
+                x=df_brok["date"], y=df_brok["total_equity"],
+                mode='lines', name='🏦 券商总净值 (真实)',
+                line=dict(color='#3B82F6', width=2.5)
+            ))
+            fig_nav_real.add_trace(go.Scatter(
+                x=df_brok["date"], y=df_brok["strategy_equity"],
+                mode='lines', name='🟢 策略净值 (真实)',
+                line=dict(color='#10B981', width=2)
+            ))
+        if not df_calc.empty:
+            fig_nav_real.add_trace(go.Scatter(
+                x=df_calc["date"], y=df_calc["total_equity"],
+                mode='lines', name='🔢 估算总净值',
+                line=dict(color='#3B82F6', width=2, dash='dot')
+            ))
+            fig_nav_real.add_trace(go.Scatter(
+                x=df_calc["date"], y=df_calc["strategy_equity"],
+                mode='lines', name='🔢 估算策略净值',
+                line=dict(color='#10B981', width=2, dash='dot')
+            ))
+        fig_nav_real.update_layout(
+            title="逐日净资产曲线 (实线=券商真实 | 虚线=持仓估算)",
+            margin=dict(t=45, b=20), height=380,
+            legend=dict(orientation='h', yanchor='top', y=-0.25, xanchor='center', x=0.5)
+        )
+        st.plotly_chart(fig_nav_real, use_container_width=True)
+    else:
+        st.info("暂无 NAV 数据。")
 
 # ── Tab 3: HK IPO ─────────────────────────────────────────────────────────────
 with tab_hk:
@@ -656,52 +739,52 @@ with tab_stats:
         )
         st.plotly_chart(fig_attr, use_container_width=True)
 
-        # ── 4. NAV Drawdown — computed from SPY/JEPQ price data ──────────────
+        # ── 4. NAV Drawdown — from real nav_history ────────────────────────
         st.markdown("##### 📉 资产净值回撤分析 (Drawdown Analysis)")
-        try:
-            from config import DATA_DIR as _DATA_DIR
-            _spy_path = os.path.join(_DATA_DIR, "SPY.csv")
-            _jepq_path = os.path.join(_DATA_DIR, "JEPQ.csv")
-            _df_spy_dd = pd.read_csv(_spy_path)
-            _df_spy_dd["Date"] = pd.to_datetime(_df_spy_dd["Date"])
-            _df_spy_dd = _df_spy_dd[_df_spy_dd["Date"] >= "2026-01-15"].reset_index(drop=True)
-            # Build approximate strategy NAV: 60% JEPQ + 40% SGOV (flat)
-            _df_jepq_dd = pd.read_csv(_jepq_path)
-            _df_jepq_dd["Date"] = pd.to_datetime(_df_jepq_dd["Date"])
-            _df_jepq_dd = _df_jepq_dd[_df_jepq_dd["Date"] >= "2026-01-15"].reset_index(drop=True)
-            _merged = pd.merge(_df_spy_dd[["Date","Close"]], _df_jepq_dd[["Date","Close"]], on="Date", suffixes=("_spy","_jepq"))
-            _jepq0 = _merged["Close_jepq"].iloc[0]
-            # Approx NAV: 60% in JEPQ (market-priced) + 40% flat SGOV
-            _approx_nav = 99215.41 * (0.60 * (_merged["Close_jepq"] / _jepq0) + 0.40)
-            _running_max = _approx_nav.cummax()
-            _drawdown = (_approx_nav - _running_max) / _running_max * 100
-            _max_dd = _drawdown.min()
-            _max_dd_date = _merged["Date"].iloc[_drawdown.idxmin()].strftime("%Y-%m-%d")
+        df_nav_real = get_nav_history()
+        if not df_nav_real.empty and 'drawdown_pct' in df_nav_real.columns:
+            df_nav_real = df_nav_real[df_nav_real['drawdown_pct'].notnull()].copy()
+            df_nav_real["date"] = pd.to_datetime(df_nav_real["date"])
+            df_nav_real = df_nav_real.sort_values("date")
+            max_dd = df_nav_real['drawdown_pct'].min()
+            max_dd_date = df_nav_real.loc[df_nav_real['drawdown_pct'].idxmin(), 'date'].strftime('%Y-%m-%d')
+            current_dd  = df_nav_real['drawdown_pct'].iloc[-1]
 
-            dd1, dd2 = st.columns(2)
-            dd1.metric("📉 历史最大回撤 (Max Drawdown)", f"{_max_dd:.2f}%", delta="回测期望 -10.75%", delta_color="inverse")
-            dd2.metric("📅 最大回撤发生日", _max_dd_date)
+            dd1, dd2, dd3 = st.columns(3)
+            dd1.metric("📉 历史最大回撤", f"{max_dd:.2f}%", delta="回测期望 -10.75%", delta_color="inverse")
+            dd2.metric("📅 最大回撤发生日", max_dd_date)
+            dd3.metric("📊 当前回撤", f"{current_dd:.2f}%")
 
             fig_dd = go.Figure()
-            fig_dd.add_trace(go.Scatter(
-                x=_merged["Date"], y=_drawdown,
-                fill="tozeroy",
-                fillcolor="rgba(239,68,68,0.18)",
-                line=dict(color="#EF4444", width=1.5),
-                name="回撤 (%)",
-                hovertemplate="%{x|%Y-%m-%d}<br>回撤: %{y:.2f}%<extra></extra>"
-            ))
+            df_brok_dd = df_nav_real[df_nav_real['source'] == 'BROKERAGE']
+            df_calc_dd = df_nav_real[df_nav_real['source'].isin(['CALCULATED', 'INITIAL'])]
+            if not df_brok_dd.empty:
+                fig_dd.add_trace(go.Scatter(
+                    x=df_brok_dd["date"], y=df_brok_dd["drawdown_pct"],
+                    fill="tozeroy", fillcolor="rgba(239,68,68,0.25)",
+                    line=dict(color="#EF4444", width=2),
+                    name="🏦 回撤 (券商真实)",
+                    hovertemplate="%{x|%Y-%m-%d}<br>回撤: %{y:.3f}%<extra></extra>"
+                ))
+            if not df_calc_dd.empty:
+                fig_dd.add_trace(go.Scatter(
+                    x=df_calc_dd["date"], y=df_calc_dd["drawdown_pct"],
+                    fill="tozeroy", fillcolor="rgba(239,68,68,0.10)",
+                    line=dict(color="#EF4444", width=1.5, dash="dot"),
+                    name="🔢 回撤 (持仓估算)",
+                    hovertemplate="%{x|%Y-%m-%d}<br>回撤: %{y:.3f}%<extra></extra>"
+                ))
             fig_dd.add_hline(y=-10.75, line_dash="dash", line_color="#F59E0B",
                              annotation_text="回测最大回撤基准 -10.75%", annotation_position="top right")
             fig_dd.update_layout(
-                title="策略净值估算逐日回撤曲线 (基于 JEPQ 60% + SGOV 40% 持仓结构)",
-                margin=dict(t=50, b=20),
-                height=380,
+                title="逐日回撤曲线 (实线=券商真实 | 虚线=持仓估算)",
+                margin=dict(t=50, b=20), height=380,
                 yaxis_title="回撤幅度 (%)", xaxis_title="日期"
             )
             st.plotly_chart(fig_dd, use_container_width=True)
-        except Exception as _e:
-            st.warning(f"回撤计算暂时不可用（市场数据未加载）: {_e}")
+        else:
+            st.info("回撤数据正在积累中，历史真实数据将在下次导入后显示。")
+
 
         # ── 5. Fee Analysis ────────────────────────────────────────────────
         st.markdown("##### 💸 手续费支出分析 (Transaction Cost Analysis)")
