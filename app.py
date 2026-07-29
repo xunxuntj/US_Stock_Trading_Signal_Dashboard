@@ -182,11 +182,39 @@ with r2_col4:
         help="美股 v2.29 策略回测期望最大回撤 -10.75%"
     )
 
-import hashlib
-# Encrypted SHA-256 Hash of Password '790323'
-HK_IPO_PWD_HASH = "3524c12e3f2ac91563a82dedde6816f0310b9c543dcbc0dac383220069e2c2d9"
+from database import init_db, get_positions, get_nav_history, get_trades_history, get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum, execute_live_us_trade
 
-# Sidebar HK IPO Profit Input Form
+# Sidebar Section 1: US Live Trade Logging
+st.sidebar.markdown("### 🇺🇸 美股实盘交易登记 (US Trade Log)")
+with st.sidebar.form("us_trade_form"):
+    t_date = st.date_input("交易日期", datetime.date.today())
+    t_ticker = st.selectbox("交易标的", ["BITO", "SOXX", "SPY", "QQQ", "QLD", "GLD", "TLT", "DBC", "JEPQ", "SGOV"])
+    t_action = st.selectbox("买卖方向", ["BUY (买入)", "SELL (卖出)"])
+    t_price = st.number_input("成交单价 ($/股)", value=100.0, step=0.1)
+    t_shares = st.number_input("成交数量 (股数)", value=10.0, step=1.0)
+    t_fee = st.number_input("总手续费 ($ USD)", value=0.0, step=0.5)
+    t_pwd = st.text_input("授权校验密码 ", type="password", help="输入正确密码方可提交交易")
+    
+    us_submitted = st.form_submit_button("🔒 确认提交美股交易")
+    
+    if us_submitted:
+        pwd_hash = hashlib.sha256(t_pwd.encode('utf-8')).hexdigest()
+        if pwd_hash != HK_IPO_PWD_HASH:
+            st.sidebar.error("❌ 密码错误！无法提交美股交易。")
+        elif t_price <= 0 or t_shares <= 0:
+            st.sidebar.warning("⚠️ 价格与数量必须大于 0。")
+        else:
+            action_code = "BUY" if "BUY" in t_action else "SELL"
+            t_date_str = t_date.strftime("%Y-%m-%d")
+            layer_tag = "L0" if t_ticker == "JEPQ" else ("SGOV" if t_ticker == "SGOV" else "TREND")
+            
+            execute_live_us_trade(t_date_str, t_ticker, action_code, t_price, t_shares, t_fee, layer_tag, "实盘手工登记")
+            st.sidebar.success(f"已成功登记 {t_date_str} {action_code} {t_shares} 股 {t_ticker} (${t_price}/股)！持仓及 SGOV 余额已同步！")
+            st.rerun()
+
+st.sidebar.divider()
+
+# Sidebar Section 2: HK IPO Profit Input Form
 st.sidebar.markdown("### 🇭🇰 港股打新收益登记")
 with st.sidebar.form("hk_ipo_form"):
     ipo_year = st.selectbox("登记年份", [2026, 2025, 2024, 2023, 2022], index=0)
@@ -197,10 +225,9 @@ with st.sidebar.form("hk_ipo_form"):
     ipo_pwd = st.text_input("授权校验密码", type="password", help="输入正确密码方可提交登记")
     ipo_notes = st.text_input("备注 (例如: 某某新股打新收益)", value="")
     
-    submitted = st.form_submit_button("🔒 确认提交登记")
+    submitted = st.form_submit_button("🔒 确认提交港股打新")
     
     if submitted:
-        # Verify SHA-256 Hash of Entered Password
         pwd_input_hash = hashlib.sha256(ipo_pwd.encode('utf-8')).hexdigest()
         if pwd_input_hash != HK_IPO_PWD_HASH:
             st.sidebar.error("❌ 密码错误！无法提交登记。")

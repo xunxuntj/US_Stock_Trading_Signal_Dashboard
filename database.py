@@ -144,6 +144,46 @@ def record_trade(date_str, ticker, action, shares, price, total_val, pnl=0.0, la
     conn.commit()
     conn.close()
 
+def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, layer="TREND", reason="实盘手工登记"):
+    total_val = price * shares
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT shares, cost_basis FROM positions WHERE ticker = ?", (ticker,))
+    row = cursor.fetchone()
+    current_shares = row[0] if row else 0.0
+    current_cost = row[1] if row else price
+    
+    pnl = 0.0
+    if action.upper() == "BUY":
+        new_shares = current_shares + shares
+        new_cost = (current_shares * current_cost + total_val + fee) / new_shares if new_shares > 0 else price
+        update_position(ticker, new_shares, new_cost, layer)
+        
+        if ticker != "SGOV":
+            cursor.execute("SELECT shares, cost_basis FROM positions WHERE ticker = 'SGOV'")
+            sgov_row = cursor.fetchone()
+            if sgov_row and sgov_row[0] > 0:
+                sgov_shares = sgov_row[0]
+                sgov_price = sgov_row[1] if sgov_row[1] > 0 else 100.5
+                sgov_deduct_shares = (total_val + fee) / sgov_price
+                update_position("SGOV", max(0.0, sgov_shares - sgov_deduct_shares), sgov_price, "SGOV")
+    else: # SELL
+        new_shares = max(0.0, current_shares - shares)
+        pnl = (price - current_cost) * shares - fee
+        update_position(ticker, new_shares, current_cost if new_shares > 0 else 0.0, layer)
+        
+        if ticker != "SGOV":
+            cursor.execute("SELECT shares, cost_basis FROM positions WHERE ticker = 'SGOV'")
+            sgov_row = cursor.fetchone()
+            sgov_shares = sgov_row[0] if sgov_row else 0.0
+            sgov_price = sgov_row[1] if sgov_row and sgov_row[1] > 0 else 100.5
+            sgov_add_shares = max(0.0, total_val - fee) / sgov_price
+            update_position("SGOV", sgov_shares + sgov_add_shares, sgov_price, "SGOV")
+
+    record_trade(date_str, ticker, action.upper(), shares, price, total_val, pnl, layer, reason)
+
+
 def record_nav(date_str, nav, cash, jepq_val, sgov_val, trend_val):
     conn = get_connection()
     cursor = conn.cursor()
