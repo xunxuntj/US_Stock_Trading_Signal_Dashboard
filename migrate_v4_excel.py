@@ -99,7 +99,9 @@ def migrate():
         if p["shares"] > 0.001:
             layer = "L0" if t in ["JEPQ", "QUAL"] else "TREND"
             update_position(t, p["shares"], p["cost"], layer)
-    print("✓ Imported US Stock Transactions & Active Positions.")
+    # Add legacy NVDA position
+    update_position("NVDA", 20.02244, 118.51, "LEGACY")
+    print("✓ Imported US Stock Transactions & Active Positions (including NVDA).")
     
     # 6. Populate NAV History Points
     dates = pd.date_range("2026-01-15", "2026-07-29")

@@ -304,20 +304,52 @@ else:
 st.divider()
 
 # Section 2: Portfolio Breakdown & Allocation Gauge
+
+# Section 2: Real Portfolio Breakdown & NAV Performance
 col_left, col_right = st.columns([1, 1])
 
 with col_left:
-    st.subheader("💼 实盘资产结构与配比 (Current Allocation)")
+    st.subheader("💼 实盘持仓结构明细 (Real Portfolio Holdings)")
     
-    labels = ["JEPQ (60% 底仓)", "SGOV (40% 闲置贴息)", "趋势层持仓 (≤55%)"]
-    values = [nav * 0.60, nav * 0.40, 0.0]
+    pos_df = get_positions()
+    labels_pie = []
+    values_pie = []
+    table_rows = []
+    
+    if not pos_df.empty:
+        for _, row in pos_df.iterrows():
+            t = row['ticker']
+            s = float(row['shares'])
+            c = float(row['cost_basis'])
+            val = s * c
+            labels_pie.append(t)
+            values_pie.append(val)
+            table_rows.append({
+                "标的": t,
+                "持仓股数": f"{s:,.4f}",
+                "成本单价": f"${c:,.2f}",
+                "持仓市值": f"${val:,.2f}",
+                "层级": row['layer']
+            })
+            
+    cash_val = 5830.89
+    labels_pie.append("Cash (现金)")
+    values_pie.append(cash_val)
+    table_rows.append({
+        "标的": "Cash (现金)",
+        "持仓股数": "-",
+        "成本单价": "-",
+        "持仓市值": f"${cash_val:,.2f}",
+        "层级": "CASH"
+    })
     
     fig_pie = px.pie(
-        names=labels, values=values, hole=0.4,
-        color_discrete_sequence=["#3B82F6", "#10B981", "#F59E0B"]
+        names=labels_pie, values=values_pie, hole=0.4,
+        color_discrete_sequence=["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444"]
     )
     fig_pie.update_layout(margin=dict(t=20, b=20, l=20, r=20))
     st.plotly_chart(fig_pie, use_container_width=True)
+    st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
 
 with col_right:
     st.subheader("📈 资产复利增长曲线 (NAV Performance)")
@@ -353,7 +385,7 @@ with col_right:
 st.divider()
 
 # Section 3: Monthly Return Matrices (2 Separate Tables, Aligned to 2026-01-15 Start)
-st.subheader("🗓️ 逐月收益率矩阵表 (2026-01-15 实盘起算)")
+st.subheader("🗓️ 逐月收益率矩阵表 (2026-01-15 起算)")
 st.caption("注：数据完全对齐至实盘起算日 2026年1月15日 (初始本金 $99,215.41)")
 
 # Table 1: Total Account Combined
