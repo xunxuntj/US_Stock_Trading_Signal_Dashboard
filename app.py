@@ -24,7 +24,8 @@ from database import (
     init_db, get_positions, get_nav_history, get_trades_history,
     get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum,
     execute_live_us_trade, record_cash_transaction, get_cash_transactions,
-    record_brokerage_nav, get_hk_ipo_trades_history, record_hk_ipo_trade
+    record_brokerage_nav, get_hk_ipo_trades_history, record_hk_ipo_trade,
+    get_latest_kids_returns
 )
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
@@ -255,6 +256,8 @@ st.sidebar.divider()
 
 # Sidebar Section 2: Single IPO Trade Entry Form
 st.sidebar.markdown("### 🇭🇰 港美股打新单股登记")
+default_h_ret, default_c_ret = get_latest_kids_returns()
+
 with st.sidebar.form("single_ipo_form"):
     ipo_name = st.text_input("股票名称", value="", help="例如: 蜜雪集团、晶合集成")
     ipo_mkt  = st.selectbox("打新市场", ["HK (港股)", "US (美股)"])
@@ -268,15 +271,15 @@ with st.sidebar.form("single_ipo_form"):
     ipo_sell_p = st.number_input("卖出平仓单价 ($)", value=0.0, step=1.0)
     ipo_fee_sell = st.number_input("卖出交易费用 ($)", value=0.0, step=10.0)
 
-    st.caption("── Hiro & Caspar 投资分摊 (人民币 RMB) ──")
-    hiro_in   = st.number_input("Hiro 投入金额 (¥ RMB)", value=35.0, step=5.0)
-    caspar_in = st.number_input("Caspar 投入金额 (¥ RMB)", value=35.0, step=5.0)
+    st.caption("── Hiro & Caspar 投资分摊 (人民币 RMB | 已自动带出上次返还本息) ──")
+    hiro_in   = st.number_input("Hiro 投入金额 (¥ RMB)", value=round(default_h_ret, 2), step=5.0)
+    caspar_in = st.number_input("Caspar 投入金额 (¥ RMB)", value=round(default_c_ret, 2), step=5.0)
     ipo_mult  = st.number_input("结算系数 (盈利填 5/10, 亏损填 1)", value=5.0, step=1.0)
 
     st.caption("── 日期节点 ──")
     ipo_start_d  = st.date_input("申购开始日 (X列)", datetime.date.today(), key="ipo_start_d")
     ipo_settle_d = st.date_input("抛出结算日 (Y列)", datetime.date.today(), key="ipo_settle_d")
-    ipo_pwd      = st.text_input("授权校验密码 ", type="password")
+    ipo_pwd      = st.text_input("授权校验密码 ", type="password", help="输入授权密码 790323")
 
     ipo_submitted = st.form_submit_button("🔒 确认提交打新明细")
 
@@ -297,7 +300,9 @@ with st.sidebar.form("single_ipo_form"):
                 hiro_in, caspar_in, ipo_mult,
                 ipo_start_d.strftime("%Y-%m-%d"), ipo_settle_d.strftime("%Y-%m-%d")
             )
-            st.sidebar.success(f"✅ 已成功登记打新 `{ipo_name}`！Hiro/Caspar 本息已自动结算。")
+            # Clear Streamlit cache so total NAV & PnL refresh instantly
+            st.cache_data.clear()
+            st.sidebar.success(f"✅ 已成功登记打新 `{ipo_name}`！Hiro/Caspar 本息已自动结算，看板数据已刷新。")
             st.rerun()
 
 # Sidebar Section 3: Cash Deposit/Withdrawal Form

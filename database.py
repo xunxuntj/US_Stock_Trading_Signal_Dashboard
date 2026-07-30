@@ -277,6 +277,33 @@ def get_hk_ipo_trades_history():
     conn.close()
     return df
 
+def get_latest_kids_returns():
+    conn = get_connection()
+    df = pd.read_sql_query("SELECT hiro_return, caspar_return FROM hk_ipo_trades ORDER BY id DESC LIMIT 1", conn)
+    conn.close()
+    if not df.empty:
+        h_ret = float(df['hiro_return'].iloc[0]) if pd.notnull(df['hiro_return'].iloc[0]) and df['hiro_return'].iloc[0] > 0 else 143.84
+        c_ret = float(df['caspar_return'].iloc[0]) if pd.notnull(df['caspar_return'].iloc[0]) and df['caspar_return'].iloc[0] > 0 else 143.79
+        return h_ret, c_ret
+    return 143.84, 143.79
+
+def sync_hk_ipo_pnl_to_nav():
+    """Sync cumulative HK IPO profit from hk_ipo_trades to latest nav_history."""
+    conn = get_connection()
+    df_trades = pd.read_sql_query("SELECT hkd_profit FROM hk_ipo_trades", conn)
+    total_hkd = float(df_trades['hkd_profit'].sum()) if not df_trades.empty else 0.0
+    total_usd = total_hkd / 7.8
+    
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE nav_history 
+    SET hk_pnl_cum = ?,
+        total_equity = strategy_equity + ?
+    WHERE date = (SELECT MAX(date) FROM nav_history)
+    """, (total_usd, total_usd))
+    conn.commit()
+    conn.close()
+
 def record_hk_ipo_trade(
     ticker_name, market, margin_principal, allocated_shares, ipo_fee,
     won_shares, won_price, sell_price, trade_fee,
@@ -320,3 +347,6 @@ def record_hk_ipo_trade(
     ))
     conn.commit()
     conn.close()
+    
+    # Auto sync total profit to NAV history table
+    sync_hk_ipo_pnl_to_nav()
