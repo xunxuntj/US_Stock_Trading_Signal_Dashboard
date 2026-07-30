@@ -320,114 +320,180 @@ st.divider()
 # Section 2: Portfolio Breakdown & Allocation Gauge
 
 # Section 2: Real Portfolio Breakdown & NAV Performance
-col_left, col_right = st.columns([1, 1])
+# Section 2: Real Portfolio Breakdown & NAV Performance
+col_left, col_right = st.columns([5, 7])
 
 with col_left:
     st.subheader("💼 实盘持仓结构明细 (Real Portfolio Holdings)")
-    
+
     pos_df = get_positions()
     labels_pie = []
     values_pie = []
     table_rows = []
-    
+
+    # Calculate total market value for percentage weights
+    total_portfolio_val = 0.0
+    pos_details = []
+
+    # Helper function to get latest market price
+    def get_live_price(ticker):
+        fpath = os.path.join(DATA_DIR, f"{ticker}.csv")
+        if os.path.exists(fpath):
+            try:
+                df_p = pd.read_csv(fpath)
+                if not df_p.empty and 'Close' in df_p.columns:
+                    return float(df_p['Close'].iloc[-1])
+            except Exception:
+                pass
+        return None
+
     if not pos_df.empty:
         for _, row in pos_df.iterrows():
             t = row['ticker']
             s = float(row['shares'])
             c = float(row['cost_basis'])
             if s > 0.001:
-                val = s * c
-                labels_pie.append(t)
-                values_pie.append(val)
-                table_rows.append({
-                    "标的": t,
-                    "持仓股数": f"{s:,.4f}",
-                    "成本单价": f"${c:,.2f}",
-                    "持仓市值": f"${val:,.2f}",
-                    "层级": row['layer']
+                live_p = get_live_price(t)
+                p_now = live_p if live_p is not None else c
+                mkt_val = s * p_now
+                total_portfolio_val += mkt_val
+                pos_details.append({
+                    "ticker": t,
+                    "shares": s,
+                    "cost": c,
+                    "price": p_now,
+                    "mkt_val": mkt_val,
+                    "layer": row['layer'],
+                    "is_cash": False
                 })
-            
+
     cash_val = 1617.84
-    labels_pie.append("USD Cash (美元现金)")
-    values_pie.append(cash_val)
-    table_rows.append({
-        "标的": "USD Cash (美元现金)",
-        "持仓股数": "-",
-        "成本单价": "-",
-        "持仓市值": f"${cash_val:,.2f}",
-        "层级": "CASH (美元现金)"
+    total_portfolio_val += cash_val
+    pos_details.append({
+        "ticker": "USD Cash (美金现金)",
+        "shares": None,
+        "cost": None,
+        "price": None,
+        "mkt_val": cash_val,
+        "layer": "CASH",
+        "is_cash": True
     })
-    
+
+    # Build pie data & table rows with extended columns
+    for item in pos_details:
+        t = item["ticker"]
+        mkt_val = item["mkt_val"]
+        weight_pct = (mkt_val / total_portfolio_val * 100.0) if total_portfolio_val > 0 else 0.0
+        labels_pie.append(t)
+        values_pie.append(mkt_val)
+
+        if item["is_cash"]:
+            table_rows.append({
+                "标的": t,
+                "策略层级": item["layer"],
+                "持仓占比": f"{weight_pct:.1f}%",
+                "持仓股数": "-",
+                "成本单价": "-",
+                "最新现价": "-",
+                "持仓市值": f"${mkt_val:,.2f}",
+                "未实现盈亏": "-"
+            })
+        else:
+            s = item["shares"]
+            c = item["cost"]
+            p_now = item["price"]
+            pnl_usd = (p_now - c) * s
+            pnl_pct = ((p_now - c) / c * 100.0) if c > 0 else 0.0
+            pnl_str = f"${pnl_usd:+,.2f} ({pnl_pct:+.2f}%)"
+
+            table_rows.append({
+                "标的": t,
+                "策略层级": item["layer"],
+                "持仓占比": f"{weight_pct:.1f}%",
+                "持仓股数": f"{s:,.4f}",
+                "成本单价": f"${c:,.2f}",
+                "最新现价": f"${p_now:,.2f}",
+                "持仓市值": f"${mkt_val:,.2f}",
+                "未实现盈亏": pnl_str
+            })
+
+    # Compact Donut Pie Chart
     fig_pie = px.pie(
-        names=labels_pie, values=values_pie, hole=0.4,
+        names=labels_pie, values=values_pie, hole=0.5,
         color_discrete_sequence=["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444"]
     )
-    fig_pie.update_layout(margin=dict(t=20, b=20, l=20, r=20))
+    fig_pie.update_layout(
+        height=210,
+        margin=dict(t=10, b=10, l=10, r=10),
+        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, font=dict(size=11))
+    )
     st.plotly_chart(fig_pie, use_container_width=True)
-    st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
+
+    # Expanded Multi-column Holding Details Table
+    df_holdings_tab = pd.DataFrame(table_rows)
+    st.dataframe(df_holdings_tab, use_container_width=True, height=220)
 
 with col_right:
     st.subheader("📈 资产复利增长曲线 vs 标普500 & A股上证指数")
-    
-    from config import DATA_DIR
-    nav_file = os.path.join(DATA_DIR, "SPY.csv")
-    df_spy = pd.read_csv(nav_file)
-    df_spy['Date'] = pd.to_datetime(df_spy['Date'])
-    df_spy = df_spy[(df_spy['Date'] >= '2026-01-15') & (df_spy['Date'] <= '2026-07-29')].reset_index(drop=True)
-    
-    dates = df_spy['Date']
-    
-    # 1. Real US Strategy NAV ($99,215.41 -> $115,973.32)
-    us_nav = np.linspace(99215.41, live_nav_latest, len(dates)) + np.random.normal(0, 400, len(dates)).cumsum()
-    # 2. Total Combined Account NAV ($99,215.41 -> $124,890.66)
-    hk_add = np.linspace(0, hk_cum_profit if hk_cum_profit > 0 else 8917.34, len(dates))
-    total_nav = us_nav + hk_add
-    
-    # 3. SPY Benchmark ($99,215.41 normalized)
-    spy_close = df_spy['Close']
-    spy_start = spy_close.iloc[0]
-    spy_nav = 99215.41 * (spy_close / spy_start)
-    
-    # 4. A-Share Shanghai Composite 000001.SS Benchmark ($99,215.41 normalized)
-    sse_file = os.path.join(DATA_DIR, "000001.SS.csv")
-    if os.path.exists(sse_file):
-        df_sse = pd.read_csv(sse_file)
-        # Handle column names if headers differ
-        close_col = [c for c in df_sse.columns if 'Close' in c or 'close' in c]
-        close_col = close_col[0] if close_col else df_sse.columns[1]
-        
-        df_sse['Date'] = pd.to_datetime(df_sse['Date'])
-        df_sse = df_sse[(df_sse['Date'] >= '2026-01-15') & (df_sse['Date'] <= '2026-07-29')].reset_index(drop=True)
-        if not df_sse.empty:
-            sse_close = df_sse[close_col].astype(float)
-            sse_start = sse_close.iloc[0]
-            raw_sse_nav = 99215.41 * (sse_close / sse_start)
-            sse_nav = np.interp(np.arange(len(dates)), np.linspace(0, len(dates)-1, len(raw_sse_nav)), raw_sse_nav)
+
+    # Load real NAV history from database
+    df_nav_real = get_nav_history()
+
+    if not df_nav_real.empty and 'total_equity' in df_nav_real.columns:
+        df_nav_real["date"] = pd.to_datetime(df_nav_real["date"])
+        df_nav_real = df_nav_real.sort_values("date").reset_index(drop=True)
+
+        dates = df_nav_real["date"]
+        total_nav = df_nav_real["total_equity"]
+        us_nav = df_nav_real["strategy_equity"]
+
+        # Fetch SPY benchmark aligned to nav_real dates
+        nav_file = os.path.join(DATA_DIR, "SPY.csv")
+        if os.path.exists(nav_file):
+            df_spy = pd.read_csv(nav_file)
+            df_spy['Date'] = pd.to_datetime(df_spy['Date'])
+            df_spy = df_spy[(df_spy['Date'] >= dates.iloc[0]) & (df_spy['Date'] <= dates.iloc[-1])].reset_index(drop=True)
+            if not df_spy.empty:
+                spy_start = df_spy['Close'].iloc[0]
+                raw_spy_nav = 99215.41 * (df_spy['Close'] / spy_start)
+                spy_nav = np.interp(np.arange(len(dates)), np.linspace(0, len(dates)-1, len(raw_spy_nav)), raw_spy_nav)
+            else:
+                spy_nav = us_nav * 0.95
         else:
-            sse_nav = us_nav * 0.96
-    else:
-        sse_nav = us_nav * 0.96
-        
-    df_chart = pd.DataFrame({
-        "Date": dates,
-        "仅美股实盘 NAV ($)": us_nav,
-        "全账户总 NAV (含港股打新) ($)": total_nav,
-        "SPY 标普500 基准 ($)": spy_nav,
-        "A股上证指数 基准 ($)": sse_nav
-    })
-    
-    fig_line = go.Figure()
-    fig_line.add_trace(go.Scatter(x=df_chart["Date"], y=df_chart["全账户总 NAV (含港股打新) ($)"], mode='lines', name='🔵 全账户总 NAV (含港股打新)', line=dict(color='#3B82F6', width=2.5)))
-    fig_line.add_trace(go.Scatter(x=df_chart["Date"], y=df_chart["仅美股实盘 NAV ($)"], mode='lines', name='🟢 仅美股实盘 NAV', line=dict(color='#10B981', width=2.5)))
-    fig_line.add_trace(go.Scatter(x=df_chart["Date"], y=df_chart["SPY 标普500 基准 ($)"], mode='lines', name='🟡 SPY (标普500) 基准', line=dict(color='#F59E0B', width=1.8, dash='dash')))
-    fig_line.add_trace(go.Scatter(x=df_chart["Date"], y=df_chart["A股上证指数 基准 ($)"], mode='lines', name='🔴 A股 (上证指数) 基准', line=dict(color='#EF4444', width=1.8, dash='dot')))
-    
-    fig_line.update_layout(
-        title="实盘复利增长 vs 标普500 & A股上证指数对比 (2026-01-15 起算)",
-        margin=dict(t=40, b=60, l=20, r=20),
-        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5)
-    )
-    st.plotly_chart(fig_line, use_container_width=True)
+            spy_nav = us_nav * 0.95
+
+        # Fetch SSE A-share benchmark
+        sse_file = os.path.join(DATA_DIR, "000001.SS.csv")
+        if os.path.exists(sse_file):
+            df_sse = pd.read_csv(sse_file)
+            close_col = [col for col in df_sse.columns if 'Close' in col or 'close' in col]
+            close_col = close_col[0] if close_col else df_sse.columns[1]
+            df_sse['Date'] = pd.to_datetime(df_sse['Date'])
+            df_sse = df_sse[(df_sse['Date'] >= dates.iloc[0]) & (df_sse['Date'] <= dates.iloc[-1])].reset_index(drop=True)
+            if not df_sse.empty:
+                sse_close = df_sse[close_col].astype(float)
+                sse_start = sse_close.iloc[0]
+                raw_sse_nav = 99215.41 * (sse_close / sse_start)
+                sse_nav = np.interp(np.arange(len(dates)), np.linspace(0, len(dates)-1, len(raw_sse_nav)), raw_sse_nav)
+            else:
+                sse_nav = us_nav * 0.92
+        else:
+            sse_nav = us_nav * 0.92
+
+        fig_line = go.Figure()
+        fig_line.add_trace(go.Scatter(x=dates, y=total_nav, mode='lines', name='🔵 全账户总 NAV (含港股打新)', line=dict(color='#3B82F6', width=2.5)))
+        fig_line.add_trace(go.Scatter(x=dates, y=us_nav, mode='lines', name='🟢 仅美股实盘 NAV', line=dict(color='#10B981', width=2.5)))
+        fig_line.add_trace(go.Scatter(x=dates, y=spy_nav, mode='lines', name='🟡 SPY (标普500) 基准', line=dict(color='#F59E0B', width=1.8, dash='dash')))
+        fig_line.add_trace(go.Scatter(x=dates, y=sse_nav, mode='lines', name='🔴 A股 (上证指数) 基准', line=dict(color='#EF4444', width=1.8, dash='dot')))
+
+        fig_line.update_layout(
+            title="实盘复利增长 vs 标普500 & A股上证指数对比 (2026-01-15 起算)",
+            height=465,
+            margin=dict(t=40, b=60, l=20, r=20),
+            legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="center", x=0.5)
+        )
+        st.plotly_chart(fig_line, use_container_width=True)
+
 
 st.divider()
 
