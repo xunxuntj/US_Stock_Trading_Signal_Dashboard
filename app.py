@@ -686,28 +686,44 @@ if not df_ipo_raw.empty:
 
     with k_col1:
         h_roi_pct = (h_sum['active_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
-        h_early_str = f"¥{h_sum['early_settled_profit']:+.2f}" if h_sum['early_settled_profit'] != 0 else "¥0.00"
-        h_lifetime_str = f"+¥{h_sum['lifetime_total_profit']:,.2f}" if h_sum['lifetime_total_profit'] > 0 else f"¥{h_sum['lifetime_total_profit']:,.2f}"
+        h_early_val = h_sum['early_settled_profit']
+        if h_early_val < 0:
+            h_early_html = f"<span style='color:#EF4444;font-weight:bold;'>-¥{abs(h_early_val):.2f} RMB</span>"
+        elif h_early_val > 0:
+            h_early_html = f"<span style='color:#10B981;font-weight:bold;'>+¥{h_early_val:.2f} RMB</span>"
+        else:
+            h_early_html = "<span style='color:#94A3B8;font-weight:bold;'>¥0.00 RMB</span>"
+
+        h_lifetime_val = h_sum['lifetime_total_profit']
+        h_lifetime_html = f"<span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>+¥{h_lifetime_val:,.2f} RMB</span>" if h_lifetime_val > 0 else f"<span style='color:#EF4444;font-size:1.1rem;font-weight:bold;'>-¥{abs(h_lifetime_val):,.2f} RMB</span>"
         
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Hiro 账户复利卡")
         st.markdown(f"**当前小金库总资产**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{h_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**在盘未提取收益**: <span style='color:#10B981;font-weight:bold;'>+¥{h_sum['active_profit']:,.2f} RMB (+{h_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
-        st.markdown(f"**历史已结清盈亏**: {h_early_str}", unsafe_allow_html=True)
-        st.markdown(f"**🌟 全历史投资总创利**: <span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>{h_lifetime_str} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**历史已结清盈亏**: {h_early_html}", unsafe_allow_html=True)
+        st.markdown(f"**🌟 全历史投资总创利**: {h_lifetime_html}", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
         c_roi_pct = (c_sum['active_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
-        c_early_str = f"¥{c_sum['early_settled_profit']:+.2f}" if c_sum['early_settled_profit'] != 0 else "¥0.00"
-        c_lifetime_str = f"+¥{c_sum['lifetime_total_profit']:,.2f}" if c_sum['lifetime_total_profit'] > 0 else f"¥{c_sum['lifetime_total_profit']:,.2f}"
+        c_early_val = c_sum['early_settled_profit']
+        if c_early_val < 0:
+            c_early_html = f"<span style='color:#EF4444;font-weight:bold;'>-¥{abs(c_early_val):.2f} RMB</span>"
+        elif c_early_val > 0:
+            c_early_html = f"<span style='color:#10B981;font-weight:bold;'>+¥{c_early_val:.2f} RMB</span>"
+        else:
+            c_early_html = "<span style='color:#94A3B8;font-weight:bold;'>¥0.00 RMB</span>"
+
+        c_lifetime_val = c_sum['lifetime_total_profit']
+        c_lifetime_html = f"<span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>+¥{c_lifetime_val:,.2f} RMB</span>" if c_lifetime_val > 0 else f"<span style='color:#EF4444;font-size:1.1rem;font-weight:bold;'>-¥{abs(c_lifetime_val):,.2f} RMB</span>"
 
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Caspar 账户复利卡")
         st.markdown(f"**当前小金库总资产**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{c_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**在盘未提取收益**: <span style='color:#10B981;font-weight:bold;'>+¥{c_sum['active_profit']:,.2f} RMB (+{c_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
-        st.markdown(f"**历史已结清盈亏**: {c_early_str}", unsafe_allow_html=True)
-        st.markdown(f"**🌟 全历史投资总创利**: <span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>{c_lifetime_str} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**历史已结清盈亏**: {c_early_html}", unsafe_allow_html=True)
+        st.markdown(f"**🌟 全历史投资总创利**: {c_lifetime_html}", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:
