@@ -35,7 +35,9 @@ st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    header {background: transparent !important;}
+    [data-testid="stAppDeployButton"] {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
     .main-title {
         font-size: 2.0rem;
         font-weight: 700;
@@ -667,6 +669,56 @@ if not df_ipo_raw.empty:
         st.markdown("**最大保证金投入年化**: <span style='color:#3B82F6;font-weight:bold;'>11.86%</span>", unsafe_allow_html=True)
         st.caption("全账户质押融资真实上限 | 平均占用年化 41.72%")
         st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("")
+
+    # In-page Quick IPO Entry Form
+    with st.expander("➕ 快捷在线登记单笔打新明细 (点击展开录入表单)"):
+        with st.form("inpage_ipo_form"):
+            in_name = st.text_input("股票名称 ", value="", help="例如: 蜜雪集团、晶合集成")
+            in_mkt  = st.selectbox("打新市场 ", ["HK (港股)", "US (美股)"])
+            in_margin = st.number_input("打新本金/冻结保证金 ($) ", value=50000.0, step=5000.0)
+            in_alloc  = st.number_input("配签数 (申购股数) ", value=10000.0, step=1000.0)
+            in_fee_buy = st.number_input("打新费用 (手续费+利息) ", value=100.0, step=50.0)
+
+            st.caption("── 中签与平仓变现 ──")
+            in_won_s = st.number_input("中签股数 (未中签填 0) ", value=0.0, step=100.0)
+            in_won_p = st.number_input("中签单价 ($) ", value=0.0, step=1.0)
+            in_sell_p = st.number_input("卖出平仓单价 ($) ", value=0.0, step=1.0)
+            in_fee_sell = st.number_input("卖出交易费用 ($) ", value=0.0, step=10.0)
+
+            st.caption("── Hiro & Caspar 投资分摊 (人民币 RMB | 已自动带出上次返还本息) ──")
+            in_hiro   = st.number_input("Hiro 投入金额 (¥ RMB) ", value=round(default_h_ret, 2), step=5.0)
+            in_caspar = st.number_input("Caspar 投入金额 (¥ RMB) ", value=round(default_c_ret, 2), step=5.0)
+            in_mult   = st.number_input("结算系数 (盈利填 5/10, 亏损填 1) ", value=5.0, step=1.0)
+
+            st.caption("── 日期节点 ──")
+            in_start_d  = st.date_input("申购开始日 (X列) ", datetime.date.today(), key="in_start_d")
+            in_settle_d = st.date_input("抛出结算日 (Y列) ", datetime.date.today(), key="in_settle_d")
+            in_pwd      = st.text_input("授权校验密码  ", type="password", help="校验密码: 790323")
+
+            in_submitted = st.form_submit_button("🔒 确认提交打新明细并同步全账户")
+
+            if in_submitted:
+                pwd_hash = hashlib.sha256(in_pwd.encode('utf-8')).hexdigest()
+                if pwd_hash != HK_IPO_PWD_HASH:
+                    st.error("❌ 密码错误！无法提交打新明细。")
+                elif not in_name.strip():
+                    st.warning("⚠️ 请输入股票名称。")
+                else:
+                    mkt_code = "HK" if "HK" in in_mkt else "US"
+                    w_price = in_won_p if in_won_s > 0 else None
+                    s_price = in_sell_p if in_won_s > 0 else None
+
+                    record_hk_ipo_trade(
+                        in_name.strip(), mkt_code, in_margin, in_alloc, in_fee_buy,
+                        in_won_s, w_price, s_price, in_fee_sell,
+                        in_hiro, in_caspar, in_mult,
+                        in_start_d.strftime("%Y-%m-%d"), in_settle_d.strftime("%Y-%m-%d")
+                    )
+                    st.cache_data.clear()
+                    st.success(f"✅ 已成功登记打新 `{in_name}`！看板数据与全账户净值已同步刷新。")
+                    st.rerun()
 
     st.write("")
 
