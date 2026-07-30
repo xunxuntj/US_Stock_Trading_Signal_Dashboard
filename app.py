@@ -685,25 +685,31 @@ if not df_ipo_raw.empty:
     k_col1, k_col2, k_col3 = st.columns(3)
 
     with k_col1:
-        h_roi_pct = (h_sum['ipo_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
+        h_roi_pct = (h_sum['active_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
+        h_early_str = f"¥{h_sum['early_settled_profit']:+.2f}" if h_sum['early_settled_profit'] != 0 else "¥0.00"
+        h_lifetime_str = f"+¥{h_sum['lifetime_total_profit']:,.2f}" if h_sum['lifetime_total_profit'] > 0 else f"¥{h_sum['lifetime_total_profit']:,.2f}"
+        
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Hiro 账户复利卡")
-        st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{h_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;font-weight:bold;'>+¥{h_sum['ipo_profit']:,.2f} RMB (+{h_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
-        st.markdown(f"**科学持有年化 (60天)**: <span style='color:#10B981;font-weight:bold;'>271.30%</span> | 单股占用年化: 96.01%", unsafe_allow_html=True)
-        st.markdown(f"**出入金流水**: 起始入金 ¥100 (2026-06-02 首钢朗泽) | 提现 ¥{h_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
-        st.caption("💡 亏损结算系数 1x | 盈利给予 5x~10x 激励补贴")
+        st.markdown(f"**当前小金库总资产**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{h_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**在盘未提取收益**: <span style='color:#10B981;font-weight:bold;'>+¥{h_sum['active_profit']:,.2f} RMB (+{h_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
+        st.markdown(f"**历史已结清 / 已提现**: 早期已结清 {h_early_str} | 微信已提现 ¥{h_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.markdown(f"**🌟 全历史投资总创利**: <span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>{h_lifetime_str} RMB</span>", unsafe_allow_html=True)
+        st.caption("起始本金 ¥100 (2026-06-02 首钢朗泽) | 亏损 1x | 盈利 5x~10x 激励")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
-        c_roi_pct = (c_sum['ipo_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
+        c_roi_pct = (c_sum['active_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
+        c_early_str = f"¥{c_sum['early_settled_profit']:+.2f}" if c_sum['early_settled_profit'] != 0 else "¥0.00"
+        c_lifetime_str = f"+¥{c_sum['lifetime_total_profit']:,.2f}" if c_sum['lifetime_total_profit'] > 0 else f"¥{c_sum['lifetime_total_profit']:,.2f}"
+
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Caspar 账户复利卡")
-        st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{c_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;font-weight:bold;'>+¥{c_sum['ipo_profit']:,.2f} RMB (+{c_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
-        st.markdown(f"**科学持有年化 (60天)**: <span style='color:#10B981;font-weight:bold;'>266.39%</span> | 单股占用年化: 57.11%", unsafe_allow_html=True)
-        st.markdown(f"**出入金流水**: 起始入金 ¥100 (2026-06-01 创想三维) | 提现 ¥{c_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
-        st.caption("💡 亏损结算系数 1x | 盈利给予 5x~10x 激励补贴")
+        st.markdown(f"**当前小金库总资产**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{c_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**在盘未提取收益**: <span style='color:#10B981;font-weight:bold;'>+¥{c_sum['active_profit']:,.2f} RMB (+{c_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
+        st.markdown(f"**历史已结清 / 已提现**: 早期已结清 {c_early_str} | 微信已提现 ¥{c_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.markdown(f"**🌟 全历史投资总创利**: <span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>{c_lifetime_str} RMB</span>", unsafe_allow_html=True)
+        st.caption("起始本金 ¥100 (2026-06-01 创想三维) | 亏损 1x | 盈利 5x~10x 激励")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:

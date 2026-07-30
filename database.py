@@ -459,7 +459,7 @@ def get_kids_account_summary(kid_name):
     init_kids_ledger_table()
     conn = get_connection()
     
-    # 1. Net Deposits (total_deposit - total_withdrawal) from kids_cash_ledger
+    # 1. Net Cash Deposits and Withdrawals from kids_cash_ledger
     df_ledger = pd.read_sql_query(
         "SELECT action_type, amount FROM kids_cash_ledger WHERE kid_name = ?",
         conn, params=(kid_name,)
@@ -467,25 +467,29 @@ def get_kids_account_summary(kid_name):
     tot_dep = float(df_ledger[df_ledger['action_type'] == 'DEPOSIT']['amount'].sum()) if not df_ledger.empty else 100.0
     tot_wd  = float(df_ledger[df_ledger['action_type'] == 'WITHDRAWAL']['amount'].sum()) if not df_ledger.empty else 0.0
     
-    # 2. Total Cumulative IPO Profit from hk_ipo_trades
+    # 2. Cumulative IPO Profits from hk_ipo_trades
     df_trades = pd.read_sql_query("SELECT id, hiro_profit, caspar_profit FROM hk_ipo_trades ORDER BY id ASC", conn)
     conn.close()
     
     if kid_name == 'HIRO':
-        # Hiro active investment starting at 首钢朗泽 (ID >= 93)
-        df_active = df_trades[df_trades['id'] >= 93]
-        ipo_profit = float(df_active['hiro_profit'].sum()) if not df_active.empty else 43.85
+        # Active profits starting at 首钢朗泽 (ID >= 93)
+        active_prof = float(df_trades[df_trades['id'] >= 93]['hiro_profit'].sum()) if not df_trades.empty else 43.85
+        # Early settled profits before 首钢朗泽 (ID < 93)
+        early_settled_prof = float(df_trades[df_trades['id'] < 93]['hiro_profit'].sum()) if not df_trades.empty else -0.43
     else:
-        # Caspar active investment starting at 创想三维 (ID >= 92)
-        df_active = df_trades[df_trades['id'] >= 92]
-        ipo_profit = float(df_active['caspar_profit'].sum()) if not df_active.empty else 43.80
+        # Active profits starting at 创想三维 (ID >= 92)
+        active_prof = float(df_trades[df_trades['id'] >= 92]['caspar_profit'].sum()) if not df_trades.empty else 43.80
+        # Early settled profits before 创想三维 (ID < 92)
+        early_settled_prof = float(df_trades[df_trades['id'] < 92]['caspar_profit'].sum()) if not df_trades.empty else -6.71
         
-    # Current Total Equity Balance = Net Cash Deposit + Total IPO Profit
-    tot_bal = (tot_dep - tot_wd) + ipo_profit
+    tot_bal = (tot_dep - tot_wd) + active_prof
+    lifetime_total_profit = active_prof + early_settled_prof
     
     return {
         'balance': tot_bal,
-        'ipo_profit': ipo_profit,
+        'active_profit': active_prof,
+        'early_settled_profit': early_settled_prof,
         'total_deposit': tot_dep,
-        'total_withdrawal': tot_wd
+        'total_withdrawal': tot_wd,
+        'lifetime_total_profit': lifetime_total_profit
     }
