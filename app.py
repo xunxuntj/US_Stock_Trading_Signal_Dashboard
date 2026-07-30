@@ -658,15 +658,15 @@ if not df_ipo_raw.empty:
     with b1:
         st.markdown("##### 🟢 最赚钱新股 Top 5")
         top_w_disp = top_winners.rename(columns={"ticker_name": "新股名称", "market": "市场", "profit_amt": "收益额(HKD)", "roi": "单次ROI"})
-        top_w_disp["收益额(HKD)"] = top_w_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}")
-        top_w_disp["单次ROI"] = top_w_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%")
+        top_w_disp["收益额(HKD)"] = top_w_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}" if pd.notnull(x) else "-")
+        top_w_disp["单次ROI"] = top_w_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%" if pd.notnull(x) else "-")
         st.dataframe(top_w_disp, use_container_width=True)
 
     with b2:
         st.markdown("##### 🔴 费用侵蚀/亏损新股 Top 5")
         top_l_disp = top_losers.rename(columns={"ticker_name": "新股名称", "market": "市场", "profit_amt": "收益额(HKD)", "roi": "单次ROI"})
-        top_l_disp["收益额(HKD)"] = top_l_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}")
-        top_l_disp["单次ROI"] = top_l_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%")
+        top_l_disp["收益额(HKD)"] = top_l_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}" if pd.notnull(x) else "-")
+        top_l_disp["单次ROI"] = top_l_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%" if pd.notnull(x) else "-")
         st.dataframe(top_l_disp, use_container_width=True)
 
     st.write("")
@@ -688,6 +688,9 @@ if not df_ipo_raw.empty:
     for col in ["打新本金", "中签价", "卖出价", "费用合计"]:
         if col in df_ipo_disp.columns:
             df_ipo_disp[col] = df_ipo_disp[col].apply(lambda x: f"${x:,.2f}" if pd.notnull(x) else "-")
+    for col in ["Hiro本金", "Hiro收益", "Hiro本息", "Caspar本金", "Caspar收益", "Caspar本息"]:
+        if col in df_ipo_disp.columns:
+            df_ipo_disp[col] = df_ipo_disp[col].apply(lambda x: f"HK${x:,.2f}" if pd.notnull(x) and x != 0 else "-")
     df_ipo_disp["收益额(HKD)"] = df_ipo_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}" if pd.notnull(x) else "-")
     df_ipo_disp["单次ROI"] = df_ipo_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%" if pd.notnull(x) else "-")
 
