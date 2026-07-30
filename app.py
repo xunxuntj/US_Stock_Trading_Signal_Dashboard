@@ -317,126 +317,114 @@ else:
 
 st.divider()
 
-# Section 2: Portfolio Breakdown & Allocation Gauge
-
 # Section 2: Real Portfolio Breakdown & NAV Performance
-# Section 2: Real Portfolio Breakdown & NAV Performance
-col_left, col_right = st.columns([5, 7])
 
-with col_left:
-    st.subheader("💼 实盘持仓结构明细 (Real Portfolio Holdings)")
+pos_df = get_positions()
+labels_pie = []
+values_pie = []
+table_rows = []
 
-    pos_df = get_positions()
-    labels_pie = []
-    values_pie = []
-    table_rows = []
+total_portfolio_val = 0.0
+pos_details = []
 
-    # Calculate total market value for percentage weights
-    total_portfolio_val = 0.0
-    pos_details = []
+def get_live_price(ticker):
+    fpath = os.path.join(DATA_DIR, f"{ticker}.csv")
+    if os.path.exists(fpath):
+        try:
+            df_p = pd.read_csv(fpath)
+            if not df_p.empty and 'Close' in df_p.columns:
+                return float(df_p['Close'].iloc[-1])
+        except Exception:
+            pass
+    return None
 
-    # Helper function to get latest market price
-    def get_live_price(ticker):
-        fpath = os.path.join(DATA_DIR, f"{ticker}.csv")
-        if os.path.exists(fpath):
-            try:
-                df_p = pd.read_csv(fpath)
-                if not df_p.empty and 'Close' in df_p.columns:
-                    return float(df_p['Close'].iloc[-1])
-            except Exception:
-                pass
-        return None
-
-    if not pos_df.empty:
-        for _, row in pos_df.iterrows():
-            t = row['ticker']
-            s = float(row['shares'])
-            c = float(row['cost_basis'])
-            if s > 0.001:
-                live_p = get_live_price(t)
-                p_now = live_p if live_p is not None else c
-                mkt_val = s * p_now
-                total_portfolio_val += mkt_val
-                pos_details.append({
-                    "ticker": t,
-                    "shares": s,
-                    "cost": c,
-                    "price": p_now,
-                    "mkt_val": mkt_val,
-                    "layer": row['layer'],
-                    "is_cash": False
-                })
-
-    cash_val = 1617.84
-    total_portfolio_val += cash_val
-    pos_details.append({
-        "ticker": "USD Cash (美金现金)",
-        "shares": None,
-        "cost": None,
-        "price": None,
-        "mkt_val": cash_val,
-        "layer": "CASH",
-        "is_cash": True
-    })
-
-    # Build pie data & table rows with extended columns
-    for item in pos_details:
-        t = item["ticker"]
-        mkt_val = item["mkt_val"]
-        weight_pct = (mkt_val / total_portfolio_val * 100.0) if total_portfolio_val > 0 else 0.0
-        labels_pie.append(t)
-        values_pie.append(mkt_val)
-
-        if item["is_cash"]:
-            table_rows.append({
-                "标的": t,
-                "策略层级": item["layer"],
-                "持仓占比": f"{weight_pct:.1f}%",
-                "持仓股数": "-",
-                "成本单价": "-",
-                "最新现价": "-",
-                "持仓市值": f"${mkt_val:,.2f}",
-                "未实现盈亏": "-"
-            })
-        else:
-            s = item["shares"]
-            c = item["cost"]
-            p_now = item["price"]
-            pnl_usd = (p_now - c) * s
-            pnl_pct = ((p_now - c) / c * 100.0) if c > 0 else 0.0
-            pnl_str = f"${pnl_usd:+,.2f} ({pnl_pct:+.2f}%)"
-
-            table_rows.append({
-                "标的": t,
-                "策略层级": item["layer"],
-                "持仓占比": f"{weight_pct:.1f}%",
-                "持仓股数": f"{s:,.4f}",
-                "成本单价": f"${c:,.2f}",
-                "最新现价": f"${p_now:,.2f}",
-                "持仓市值": f"${mkt_val:,.2f}",
-                "未实现盈亏": pnl_str
+if not pos_df.empty:
+    for _, row in pos_df.iterrows():
+        t = row['ticker']
+        s = float(row['shares'])
+        c = float(row['cost_basis'])
+        if s > 0.001:
+            live_p = get_live_price(t)
+            p_now = live_p if live_p is not None else c
+            mkt_val = s * p_now
+            total_portfolio_val += mkt_val
+            pos_details.append({
+                "ticker": t,
+                "shares": s,
+                "cost": c,
+                "price": p_now,
+                "mkt_val": mkt_val,
+                "layer": row['layer'],
+                "is_cash": False
             })
 
-    # Compact Donut Pie Chart
+cash_val = 1617.84
+total_portfolio_val += cash_val
+pos_details.append({
+    "ticker": "USD Cash (美金现金)",
+    "shares": None,
+    "cost": None,
+    "price": None,
+    "mkt_val": cash_val,
+    "layer": "CASH",
+    "is_cash": True
+})
+
+for item in pos_details:
+    t = item["ticker"]
+    mkt_val = item["mkt_val"]
+    weight_pct = (mkt_val / total_portfolio_val * 100.0) if total_portfolio_val > 0 else 0.0
+    labels_pie.append(t)
+    values_pie.append(mkt_val)
+
+    if item["is_cash"]:
+        table_rows.append({
+            "标的": t,
+            "策略层级": item["layer"],
+            "持仓占比": f"{weight_pct:.1f}%",
+            "持仓股数": "-",
+            "成本单价": "-",
+            "最新现价": "-",
+            "持仓市值": f"${mkt_val:,.2f}",
+            "未实现盈亏": "-"
+        })
+    else:
+        s = item["shares"]
+        c = item["cost"]
+        p_now = item["price"]
+        pnl_usd = (p_now - c) * s
+        pnl_pct = ((p_now - c) / c * 100.0) if c > 0 else 0.0
+        pnl_str = f"${pnl_usd:+,.2f} ({pnl_pct:+.2f}%)"
+
+        table_rows.append({
+            "标的": t,
+            "策略层级": item["layer"],
+            "持仓占比": f"{weight_pct:.1f}%",
+            "持仓股数": f"{s:,.4f}",
+            "成本单价": f"${c:,.2f}",
+            "最新现价": f"${p_now:,.2f}",
+            "持仓市值": f"${mkt_val:,.2f}",
+            "未实现盈亏": pnl_str
+        })
+
+# ── Row 1: Equal-height Pie Chart & Real NAV Growth Curve Side-by-Side ───────
+col_pie, col_chart = st.columns([1.1, 2.5])
+
+with col_pie:
+    st.subheader("🍰 实盘资产配置比例")
     fig_pie = px.pie(
-        names=labels_pie, values=values_pie, hole=0.5,
+        names=labels_pie, values=values_pie, hole=0.45,
         color_discrete_sequence=["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444"]
     )
     fig_pie.update_layout(
-        height=210,
-        margin=dict(t=10, b=10, l=10, r=10),
-        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, font=dict(size=11))
+        height=400,
+        margin=dict(t=20, b=20, l=10, r=10),
+        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02, font=dict(size=12))
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Expanded Multi-column Holding Details Table
-    df_holdings_tab = pd.DataFrame(table_rows)
-    st.dataframe(df_holdings_tab, use_container_width=True, height=220)
-
-with col_right:
+with col_chart:
     st.subheader("📈 资产复利增长曲线 vs 标普500 & A股上证指数")
-
-    # Load real NAV history from database
     df_nav_real = get_nav_history()
 
     if not df_nav_real.empty and 'total_equity' in df_nav_real.columns:
@@ -447,7 +435,6 @@ with col_right:
         total_nav = df_nav_real["total_equity"]
         us_nav = df_nav_real["strategy_equity"]
 
-        # Fetch SPY benchmark aligned to nav_real dates
         nav_file = os.path.join(DATA_DIR, "SPY.csv")
         if os.path.exists(nav_file):
             df_spy = pd.read_csv(nav_file)
@@ -462,7 +449,6 @@ with col_right:
         else:
             spy_nav = us_nav * 0.95
 
-        # Fetch SSE A-share benchmark
         sse_file = os.path.join(DATA_DIR, "000001.SS.csv")
         if os.path.exists(sse_file):
             df_sse = pd.read_csv(sse_file)
@@ -488,11 +474,17 @@ with col_right:
 
         fig_line.update_layout(
             title="实盘复利增长 vs 标普500 & A股上证指数对比 (2026-01-15 起算)",
-            height=465,
-            margin=dict(t=40, b=60, l=20, r=20),
+            height=400,
+            margin=dict(t=30, b=50, l=10, r=10),
             legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="center", x=0.5)
         )
         st.plotly_chart(fig_line, use_container_width=True)
+
+# ── Row 2: Full-width Holding Details Table ──────────────────────────────────
+st.write("")
+st.subheader("💼 实盘持仓结构明细 (Real Portfolio Holdings)")
+df_holdings_tab = pd.DataFrame(table_rows)
+st.dataframe(df_holdings_tab, use_container_width=True)
 
 
 st.divider()
