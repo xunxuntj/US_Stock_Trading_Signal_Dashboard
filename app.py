@@ -685,21 +685,25 @@ if not df_ipo_raw.empty:
     k_col1, k_col2, k_col3 = st.columns(3)
 
     with k_col1:
+        h_roi_pct = (h_sum['ipo_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Hiro 账户复利卡")
         st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{h_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;'>+¥{h_sum['ipo_profit']:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**出入金变现**: 入金 ¥{h_sum['total_deposit']:,.2f} | 微信已提现 ¥{h_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
-        st.caption("起始本金 ¥100 RMB (首钢朗泽入金) | 独立事件·平均占用年化 96.01%")
+        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;font-weight:bold;'>+¥{h_sum['ipo_profit']:,.2f} RMB (+{h_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
+        st.markdown(f"**科学持有年化 (60天)**: <span style='color:#10B981;font-weight:bold;'>271.30%</span> | 单股占用年化: 96.01%", unsafe_allow_html=True)
+        st.markdown(f"**出入金流水**: 起始入金 ¥100 (2026-06-02 首钢朗泽) | 提现 ¥{h_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.caption("💡 亏损结算系数 1x | 盈利给予 5x~10x 激励补贴")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
+        c_roi_pct = (c_sum['ipo_profit'] / 100.0 * 100.0) if 100.0 > 0 else 0.0
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Caspar 账户复利卡")
         st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{c_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;'>+¥{c_sum['ipo_profit']:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**出入金变现**: 入金 ¥{c_sum['total_deposit']:,.2f} | 微信已提现 ¥{c_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
-        st.caption("起始本金 ¥100 RMB (创想三维入金) | 独立事件·平均占用年化 57.11%")
+        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;font-weight:bold;'>+¥{c_sum['ipo_profit']:,.2f} RMB (+{c_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
+        st.markdown(f"**科学持有年化 (60天)**: <span style='color:#10B981;font-weight:bold;'>266.39%</span> | 单股占用年化: 57.11%", unsafe_allow_html=True)
+        st.markdown(f"**出入金流水**: 起始入金 ¥100 (2026-06-01 创想三维) | 提现 ¥{c_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.caption("💡 亏损结算系数 1x | 盈利给予 5x~10x 激励补贴")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:
