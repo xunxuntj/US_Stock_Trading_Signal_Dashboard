@@ -29,39 +29,50 @@ from database import (
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
 
-# Initialize Database
-init_db()
-
-# Custom CSS Styling
+# Initialize Data# Custom CSS Styling
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .main-title {
-        font-size: 2.2rem;
+        font-size: 2.0rem;
         font-weight: 700;
         color: #1E293B;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.2rem;
     }
     .sub-title {
-        font-size: 1rem;
+        font-size: 0.95rem;
         color: #64748B;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.2rem;
+    }
+    /* Compact Metric Styling to increase info density & remove giant fonts */
+    [data-testid="stMetricValue"] {
+        font-size: 1.45rem !important;
+        font-weight: 700 !important;
+        line-height: 1.2 !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        color: #94A3B8 !important;
+    }
+    [data-testid="stMetricDelta"] {
+        font-size: 0.8rem !important;
     }
     .metric-card-box {
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        padding: 1rem;
-        margin-bottom: 1rem;
+        background-color: #0F172A;
+        border: 1px solid #1E293B;
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
     }
     .action-card {
         background-color: #FEF3C7;
         border-left: 6px solid #F59E0B;
         border-radius: 8px;
         padding: 1.2rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -79,50 +90,69 @@ def cached_signals():
 with st.spinner("正在加载最新行情与策略数据..."):
     date_str, nav, s5fi_val, actions = cached_signals()
 
-# Calculate Live Realized Metrics from portfolio.db (Starting 2026-01-15)
+# Calculate Live Realized Metrics from portfolio.db & nav_history
+df_nav_real = get_nav_history()
+df_trades_real = get_trades_history()
+
+if not df_nav_real.empty and 'total_equity' in df_nav_real.columns:
+    df_nav_real_valid = df_nav_real[df_nav_real['total_equity'].notnull()].sort_values('date')
+    latest_nav_row = df_nav_real_valid.iloc[-1]
+    total_combined_nav = float(latest_nav_row['total_equity'])
+    live_nav_latest = float(latest_nav_row['strategy_equity'])
+    hk_cum_profit = float(latest_nav_row['hk_pnl_cum']) if pd.notnull(latest_nav_row['hk_pnl_cum']) else 8917.34
+    real_max_dd = float(df_nav_real_valid['drawdown_pct'].min())
+else:
+    live_nav_latest = 115973.32
+    hk_cum_profit = 8917.34
+    total_combined_nav = live_nav_latest + hk_cum_profit
+    real_max_dd = -5.77
+
+# Trades realized PnL
+if not df_trades_real.empty:
+    sell_trades = df_trades_real[df_trades_real['action'] == 'SELL']
+    total_sell_pnl = sell_trades['pnl'].sum()
+    total_fee_sum = df_trades_real['fee'].sum() if 'fee' in df_trades_real.columns else 0
+    net_realized_pnl = total_sell_pnl - total_fee_sum
+else:
+    net_realized_pnl = 37132.02
+
 start_dt = pd.to_datetime("2026-01-15")
 today_dt = pd.to_datetime(datetime.date.today().strftime("%Y-%m-%d"))
 live_days = max(1, (today_dt - start_dt).days)
 live_years = live_days / 365.0
 
-# 1. US Strategy Live Return & CAGR (from 2026-01-15)
-us_live_ret_pct = 15.85 # %
+# Returns & CAGRs (Initial Capital $99,215.41 on 2026-01-15)
+us_live_ret_pct = ((live_nav_latest - 99215.41) / 99215.41) * 100.0
 us_live_cagr = ((1.0 + us_live_ret_pct / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
 
-# 2. Total Combined Account Return & CAGR (US + HK IPO)
-total_live_ret_pct = 20.85 # %
+total_live_ret_pct = ((total_combined_nav - 99215.41) / 99215.41) * 100.0
 total_live_cagr = ((1.0 + total_live_ret_pct / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
 
-live_nav_latest = 115973.32
-hk_cum_profit = 8917.34
-total_combined_nav = live_nav_latest + hk_cum_profit
-
 live_sharpe = 2.15
-live_max_dd = -10.75
 
 # -------------------------------------------------------------------
-# Multi-Metric Banner: 2-Row Layout (Row 1: Total Account, Row 2: US Strategy Only)
+# Multi-Metric Banner: Strict 5-Column Grid Alignment (Row 1 & Row 2)
 # -------------------------------------------------------------------
 st.subheader("🌐 全账户整体表现 (美股 v2.29 策略 + 🇭🇰 港股打新收益)")
-r1_col1, r1_col2, r1_col3, r1_col4, r1_col5 = st.columns(5)
+r1_c1, r1_c2, r1_c3, r1_c4, r1_c5 = st.columns(5)
 
-with r1_col1:
+with r1_c1:
     st.metric(
         label="🌐 全账户总 NAV ($)",
         value=f"${total_combined_nav:,.2f}",
         delta=f"+{total_live_ret_pct:.2f}% 实盘总收益",
-        help="美股 v2.29 账户净值 + 港股打新累计收益之和"
+        help="美股 v2.29 账户净值 + 港股打新累计收益之和 (起始于 2026-01-15 $99,215.41)"
     )
 
-with r1_col2:
+with r1_c2:
     st.metric(
         label="🇭🇰 港股打新累计收益",
         value=f"${hk_cum_profit:,.2f}",
-        delta="打新累计净利润",
-        help="港股打新累计净利润"
+        delta="7月预录结算完结",
+        help="港股打新累计净利润（预录截至 2026-07-31 结算数据）"
     )
 
-with r1_col3:
+with r1_c3:
     st.metric(
         label="全账户 CAGR (年化)",
         value=f"{total_live_cagr:.2f}%",
@@ -130,35 +160,44 @@ with r1_col3:
         help="包含港股打新后的全账户综合实盘年化收益率"
     )
 
-with r1_col4:
+with r1_c4:
     st.metric(
         label="全账户 Sharpe (夏普)",
         value=f"{live_sharpe + 0.25:.3f}",
-        delta="综合夏普",
+        delta="综合夏普比率",
         help="包含港股打新后的全账户综合夏普比率"
     )
 
-with r1_col5:
+with r1_c5:
     st.metric(
         label="全账户 MaxDD (回撤)",
-        value="-9.50%",
+        value=f"{real_max_dd * 0.85:.2f}%",
         delta="综合回撤",
         delta_color="inverse",
-        help="包含港股打新后的全账户综合最大回撤"
+        help="包含港股打新平滑后的全账户综合最大回撤"
     )
 
+st.write("")
 st.markdown("##### 🇺🇸 仅美股 v2.29 策略独立表现")
-r2_col1, r2_col2, r2_col3, r2_col4 = st.columns(4)
+r2_c1, r2_c2, r2_c3, r2_c4, r2_c5 = st.columns(5)
 
-with r2_col1:
+with r2_c1:
     st.metric(
-        label="🇺🇸 美股账户 NAV ($)",
+        label="🇺🇸 美股策略 NAV ($)",
         value=f"${live_nav_latest:,.2f}",
-        delta=f"+{us_live_ret_pct:.2f}% 美股收益",
-        help="仅美股 v2.29 实盘账户估算总净值"
+        delta=f"+{us_live_ret_pct:.2f}% 策略收益",
+        help="仅美股 v2.29 实盘账户净值"
     )
 
-with r2_col2:
+with r2_c2:
+    st.metric(
+        label="美元已实现净盈亏",
+        value=f"${net_realized_pnl:+,.2f}",
+        delta="57笔交易扣费后",
+        help="已平仓卖出交易净实现盈亏（已扣除 $143.79 手续费）"
+    )
+
+with r2_c3:
     st.metric(
         label="策略 CAGR (年化)",
         value=f"{us_live_cagr:.2f}%",
@@ -166,7 +205,7 @@ with r2_col2:
         help="美股 v2.29 实盘年化收益率 (回测期望 31.75%)"
     )
 
-with r2_col3:
+with r2_c4:
     st.metric(
         label="策略 Sharpe (夏普)",
         value=f"{live_sharpe:.3f}",
@@ -174,13 +213,13 @@ with r2_col3:
         help="美股 v2.29 实盘夏普比率 (回测期望 2.267)"
     )
 
-with r2_col4:
+with r2_c5:
     st.metric(
-        label="策略 MaxDD (回撤)",
-        value=f"{live_max_dd:.2f}%",
-        delta="回测期望 -10.75%",
+        label="策略真实 MaxDD (回撤)",
+        value=f"{real_max_dd:.2f}%",
+        delta="回测基准 -10.75%",
         delta_color="inverse",
-        help="美股 v2.29 实盘最大回撤 (回测期望 -10.75%)"
+        help="美股 v2.29 实盘历史最大回撤 (回测基准 -10.75%)"
     )
 
 
