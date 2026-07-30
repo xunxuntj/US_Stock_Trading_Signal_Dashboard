@@ -88,7 +88,52 @@ def init_db():
         notes TEXT
     )
     """)
-    
+
+    # 7. HK/US Single IPO Trades Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS hk_ipo_trades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticker_name TEXT,
+        market TEXT,
+        margin_principal REAL,
+        allocated_shares REAL,
+        ipo_fee REAL,
+        won_shares REAL,
+        won_price REAL,
+        sell_price REAL,
+        trade_fee REAL,
+        total_fee REAL,
+        profit_amt REAL,
+        roi REAL,
+        multiplier REAL,
+        hiro_capital REAL,
+        hiro_profit REAL,
+        hiro_return REAL,
+        caspar_capital REAL,
+        caspar_profit REAL,
+        caspar_return REAL,
+        exchange_rate REAL,
+        hkd_principal REAL,
+        hkd_total_fee REAL,
+        hkd_profit REAL,
+        start_date TEXT,
+        settle_date TEXT
+    )
+    """)
+
+    # 8. Kids Cash Flow Ledger Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS kids_cash_ledger (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT,
+        kid_name TEXT,
+        action_type TEXT,
+        amount REAL,
+        balance_after REAL,
+        notes TEXT
+    )
+    """)
+
     conn.commit()
     conn.close()
 
