@@ -642,7 +642,8 @@ if not df_ipo_raw.empty:
         st.markdown("##### 👦 Hiro 账户复利卡")
         st.markdown(f"**当前总本息 (结算返还)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{latest_hiro_ret:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+¥{latest_hiro_prof_total:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.caption("起始出资 ¥15 RMB → 资金占用年化 96.01%")
+        st.markdown("**独立事件·平均占用年化**: <span style='color:#10B981;font-weight:bold;'>96.01%</span>", unsafe_allow_html=True)
+        st.caption("起始出资 ¥15 RMB | 单次打新独立算平均保证金")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
@@ -650,15 +651,16 @@ if not df_ipo_raw.empty:
         st.markdown("##### 👦 Caspar 账户复利卡")
         st.markdown(f"**当前总本息 (结算返还)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{latest_caspar_ret:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+¥{latest_caspar_prof_total:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.caption("起始出资 ¥15 RMB → 资金占用年化 57.11%")
+        st.markdown("**独立事件·平均占用年化**: <span style='color:#10B981;font-weight:bold;'>57.11%</span>", unsafe_allow_html=True)
+        st.caption("起始出资 ¥15 RMB | 单次打新独立算平均保证金")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 🏆 港股打新主账户 (Master)")
         st.markdown(f"**打新总净利润**: <span style='color:#3B82F6;font-size:1.4rem;font-weight:bold;'>HK${total_hkd_profit:,.2f}</span>", unsafe_allow_html=True)
-        st.markdown("**资金平均占用年化**: <span style='color:#3B82F6;'>41.72%</span>", unsafe_allow_html=True)
-        st.caption("最大投入年化 11.86% | 自动输送至美股月度矩阵")
+        st.markdown("**最大保证金投入年化**: <span style='color:#3B82F6;font-weight:bold;'>11.86%</span>", unsafe_allow_html=True)
+        st.caption("全账户质押融资真实上限 | 平均占用年化 41.72%")
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.write("")
