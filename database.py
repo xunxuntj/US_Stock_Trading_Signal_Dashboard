@@ -416,34 +416,23 @@ def init_kids_ledger_table():
     cnt = cursor.fetchone()[0]
     if cnt == 0:
         cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                       ('2025-05-10', 'HIRO', 'DEPOSIT', 100.0, 100.0, '首钢朗泽打新首次入金'))
+                       ('2026-06-01', 'CASPAR', 'DEPOSIT', 100.0, 100.0, '创想三维打新首次入金'))
         cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                       ('2026-07-09', 'HIRO', 'IPO_SETTLE', 43.84, 143.84, '打新累计复利净收益'))
-        
-        cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                       ('2025-05-08', 'CASPAR', 'DEPOSIT', 100.0, 100.0, '创想三维打新首次入金'))
-        cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                       ('2026-07-09', 'CASPAR', 'IPO_SETTLE', 43.79, 143.79, '打新累计复利净收益'))
+                       ('2026-06-02', 'HIRO', 'DEPOSIT', 100.0, 100.0, '首钢朗泽打新首次入金'))
     conn.commit()
     conn.close()
 
 def record_kids_cash_transaction(date_str, kid_name, action_type, amount, notes):
     """
-    action_type: 'DEPOSIT' (入金), 'WITHDRAWAL' (微信提现), 'IPO_SETTLE' (打新结算)
+    action_type: 'DEPOSIT' (入金), 'WITHDRAWAL' (微信提现)
     """
     init_kids_ledger_table()
     conn = get_connection()
     cursor = conn.cursor()
     
-    df_curr = pd.read_sql_query(
-        "SELECT balance_after FROM kids_cash_ledger WHERE kid_name = ? ORDER BY id DESC LIMIT 1",
-        conn, params=(kid_name,)
-    )
-    if not df_curr.empty and pd.notnull(df_curr['balance_after'].iloc[0]):
-        curr_bal = float(df_curr['balance_after'].iloc[0])
-    else:
-        h_latest, c_latest = get_latest_kids_returns()
-        curr_bal = h_latest if kid_name == 'HIRO' else c_latest
+    # Calculate current balance from ledger deposits/withdrawals + IPO profit
+    summary = get_kids_account_summary(kid_name)
+    curr_bal = summary['balance']
 
     if action_type == 'WITHDRAWAL':
         net_change = -abs(amount)
@@ -455,53 +444,43 @@ def record_kids_cash_transaction(date_str, kid_name, action_type, amount, notes)
     cursor.execute("""
     INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes)
     VALUES (?, ?, ?, ?, ?, ?)
-    """, (date_str, kid_name, action_type, net_change, new_bal, notes))
+    """, (date_str, kid_name, action_type, amount, new_bal, notes))
     conn.commit()
     conn.close()
-    return new_bal
 
 def get_kids_cash_ledger():
     init_kids_ledger_table()
     conn = get_connection()
-    df = pd.read_sql_query("SELECT * FROM kids_cash_ledger ORDER BY id DESC", conn)
+    df = pd.read_sql_query("SELECT * FROM kids_cash_ledger ORDER BY id ASC", conn)
     conn.close()
     return df
 
 def get_kids_account_summary(kid_name):
-    """Compute total treasury balance, total IPO profit, total deposit, and total withdrawal for HIRO or CASPAR."""
     init_kids_ledger_table()
     conn = get_connection()
     
-    df_bal = pd.read_sql_query(
-        "SELECT balance_after FROM kids_cash_ledger WHERE kid_name = ? ORDER BY id DESC LIMIT 1",
+    # 1. Deposits and Withdrawals from cash ledger
+    df_ledger = pd.read_sql_query(
+        "SELECT action_type, amount FROM kids_cash_ledger WHERE kid_name = ?",
         conn, params=(kid_name,)
     )
-    if not df_bal.empty and pd.notnull(df_bal['balance_after'].iloc[0]):
-        tot_bal = float(df_bal['balance_after'].iloc[0])
-    else:
-        h_ret, c_ret = get_latest_kids_returns()
-        tot_bal = h_ret if kid_name == 'HIRO' else c_ret
-        
-    df_dep = pd.read_sql_query(
-        "SELECT SUM(amount) as s FROM kids_cash_ledger WHERE kid_name = ? AND action_type = 'DEPOSIT'",
-        conn, params=(kid_name,)
-    )
-    tot_dep = float(df_dep['s'].iloc[0]) if not df_dep.empty and pd.notnull(df_dep['s'].iloc[0]) else 0.0
-
-    df_wd = pd.read_sql_query(
-        "SELECT SUM(amount) as s FROM kids_cash_ledger WHERE kid_name = ? AND action_type = 'WITHDRAWAL'",
-        conn, params=(kid_name,)
-    )
-    tot_wd = abs(float(df_wd['s'].iloc[0])) if not df_wd.empty and pd.notnull(df_wd['s'].iloc[0]) else 0.0
-
-    col_prof = 'hiro_profit' if kid_name == 'HIRO' else 'caspar_profit'
-    df_prof = pd.read_sql_query(f"SELECT SUM({col_prof}) as s FROM hk_ipo_trades", conn)
-    tot_ipo_prof = float(df_prof['s'].iloc[0]) if not df_prof.empty and pd.notnull(df_prof['s'].iloc[0]) else 0.0
-
+    tot_dep = float(df_ledger[df_ledger['action_type'] == 'DEPOSIT']['amount'].sum()) if not df_ledger.empty else 100.0
+    tot_wd  = float(df_ledger[df_ledger['action_type'] == 'WITHDRAWAL']['amount'].sum()) if not df_ledger.empty else 0.0
+    
+    # 2. Total IPO Profit from hk_ipo_trades
+    df_trades = pd.read_sql_query("SELECT hiro_profit, caspar_profit FROM hk_ipo_trades", conn)
     conn.close()
+    
+    if kid_name == 'HIRO':
+        ipo_profit = float(df_trades['hiro_profit'].sum()) if not df_trades.empty else 43.84
+    else:
+        ipo_profit = float(df_trades['caspar_profit'].sum()) if not df_trades.empty else 43.79
+        
+    tot_bal = tot_dep + ipo_profit - tot_wd
+    
     return {
-        "balance": tot_bal,
-        "ipo_profit": tot_ipo_prof,
-        "total_deposit": tot_dep,
-        "total_withdrawal": tot_wd
+        'balance': tot_bal,
+        'ipo_profit': ipo_profit,
+        'total_deposit': tot_dep,
+        'total_withdrawal': tot_wd
     }
