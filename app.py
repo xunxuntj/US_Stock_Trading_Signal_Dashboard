@@ -133,7 +133,7 @@ live_sharpe = 2.15
 # -------------------------------------------------------------------
 # Multi-Metric Banner: Strict 5-Column Grid Alignment (Row 1 & Row 2)
 # -------------------------------------------------------------------
-st.subheader("🌐 全账户整体表现 (美股 v2.29 策略 + 🇭🇰 港股打新收益)")
+st.subheader("🌐 全账户整体表现")
 r1_c1, r1_c2, r1_c3, r1_c4, r1_c5 = st.columns(5)
 
 with r1_c1:
@@ -178,7 +178,7 @@ with r1_c5:
     )
 
 st.write("")
-st.markdown("##### 🇺🇸 仅美股 v2.29 策略独立表现")
+st.markdown("##### 🇺🇸 v2.29 策略独立表现")
 r2_c1, r2_c2, r2_c3, r2_c4, r2_c5 = st.columns(5)
 
 with r2_c1:
