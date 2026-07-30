@@ -323,13 +323,7 @@ def get_hk_ipo_trades_history():
     return df
 
 def get_latest_kids_returns():
-    conn = get_connection()
-    df = pd.read_sql_query("SELECT hiro_return, caspar_return FROM hk_ipo_trades ORDER BY id DESC LIMIT 1", conn)
-    conn.close()
-    if not df.empty:
-        h_ret = float(df['hiro_return'].iloc[0]) if pd.notnull(df['hiro_return'].iloc[0]) and df['hiro_return'].iloc[0] > 0 else 143.84
-        c_ret = float(df['caspar_return'].iloc[0]) if pd.notnull(df['caspar_return'].iloc[0]) and df['caspar_return'].iloc[0] > 0 else 143.79
-        return h_ret, c_ret
+    """Returns baseline accumulated total asset balance for Hiro (143.84 RMB) and Caspar (143.79 RMB)."""
     return 143.84, 143.79
 
 def sync_hk_ipo_pnl_to_nav():
@@ -416,6 +410,16 @@ def init_kids_ledger_table():
         notes TEXT
     )
     """)
+    
+    # Seed baseline records if empty
+    cursor.execute("SELECT COUNT(*) FROM kids_cash_ledger")
+    cnt = cursor.fetchone()[0]
+    if cnt == 0:
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+        cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                       (today_str, 'HIRO', 'INITIAL', 143.84, 143.84, '截止2026年7月打新109笔累计总本息'))
+        cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                       (today_str, 'CASPAR', 'INITIAL', 143.79, 143.79, '截止2026年7月打新109笔累计总本息'))
     conn.commit()
     conn.close()
 
