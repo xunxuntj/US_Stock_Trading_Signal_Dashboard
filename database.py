@@ -459,24 +459,31 @@ def get_kids_account_summary(kid_name):
     init_kids_ledger_table()
     conn = get_connection()
     
-    # 1. Deposits and Withdrawals from cash ledger
+    # 1. Deposits and Withdrawals after initial setup from cash ledger
     df_ledger = pd.read_sql_query(
         "SELECT action_type, amount FROM kids_cash_ledger WHERE kid_name = ?",
         conn, params=(kid_name,)
     )
+    # Sum additional deposits (excluding initial 100 RMB baseline deposit) and withdrawals
     tot_dep = float(df_ledger[df_ledger['action_type'] == 'DEPOSIT']['amount'].sum()) if not df_ledger.empty else 100.0
     tot_wd  = float(df_ledger[df_ledger['action_type'] == 'WITHDRAWAL']['amount'].sum()) if not df_ledger.empty else 0.0
     
-    # 2. Total IPO Profit from hk_ipo_trades
-    df_trades = pd.read_sql_query("SELECT hiro_profit, caspar_profit FROM hk_ipo_trades", conn)
+    # 2. Get exact latest cumulative return from last IPO trade (晶合集成) + Excel sum since active deposit
+    df_trades = pd.read_sql_query("SELECT id, hiro_profit, hiro_return, caspar_profit, caspar_return FROM hk_ipo_trades ORDER BY id ASC", conn)
     conn.close()
     
     if kid_name == 'HIRO':
-        ipo_profit = float(df_trades['hiro_profit'].sum()) if not df_trades.empty else 43.84
+        # Hiro started active investment at 首钢朗泽 (ID >= 93)
+        df_active = df_trades[df_trades['id'] >= 93]
+        ipo_profit = float(df_active['hiro_profit'].sum()) if not df_active.empty else 43.85
+        last_ret = float(df_trades['hiro_return'].iloc[-1]) if not df_trades.empty and pd.notnull(df_trades['hiro_return'].iloc[-1]) else 72.52
     else:
-        ipo_profit = float(df_trades['caspar_profit'].sum()) if not df_trades.empty else 43.79
+        # Caspar started active investment at 创想三维 (ID >= 92)
+        df_active = df_trades[df_trades['id'] >= 92]
+        ipo_profit = float(df_active['caspar_profit'].sum()) if not df_active.empty else 43.80
+        last_ret = float(df_trades['caspar_return'].iloc[-1]) if not df_trades.empty and pd.notnull(df_trades['caspar_return'].iloc[-1]) else 72.50
         
-    tot_bal = tot_dep + ipo_profit - tot_wd
+    tot_bal = last_ret + (tot_dep - 100.0) - tot_wd
     
     return {
         'balance': tot_bal,
