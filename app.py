@@ -24,7 +24,7 @@ from database import (
     init_db, get_positions, get_nav_history, get_trades_history,
     get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum,
     execute_live_us_trade, record_cash_transaction, get_cash_transactions,
-    record_brokerage_nav
+    record_brokerage_nav, get_hk_ipo_trades_history
 )
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
@@ -578,13 +578,136 @@ st.dataframe(df_us_monthly, use_container_width=True)
 
 st.divider()
 
-# ─── Section 4: Advanced Analytics — Beyond Excel ────────────────────────────
-st.subheader("📊 数据明细 & 量化分析看板")
+# ─── Section 4: 🇭🇰 港美股打新与家庭财商教育 (IPO & Kids Wealth Matrix) ───────
+st.subheader("🇭🇰 港美股打新与家庭财商教育 (IPO & Kids Wealth Matrix)")
+st.caption("注：主账户即港股打新整体账户，收益按 Y列 (结算日期) 自动归档计入全账户月度收益矩阵")
 
-tab_trades, tab_nav, tab_hk, tab_cash, tab_stats = st.tabs([
+df_ipo_raw = get_hk_ipo_trades_history()
+
+if not df_ipo_raw.empty:
+    # ── 1. 【2】打新量化大盘统计 (IPO Analytics Overview) ─────────────────────
+    st.markdown("#### 📊 1. 打新量化大盘统计 (IPO Overall Analytics)")
+
+    total_ipo_count = len(df_ipo_raw)
+    won_trades = df_ipo_raw[df_ipo_raw["won_shares"] > 0]
+    won_count = len(won_trades)
+    win_ipo_count = len(df_ipo_raw[df_ipo_raw["profit_amt"] > 0])
+
+    alloc_rate = (won_count / total_ipo_count * 100.0) if total_ipo_count > 0 else 0.0
+    win_rate_ipo = (win_ipo_count / total_ipo_count * 100.0) if total_ipo_count > 0 else 0.0
+
+    total_hkd_profit = df_ipo_raw["hkd_profit"].sum()
+    total_usd_profit = total_hkd_profit / 7.8  # Approx USD
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("🎯 总打新申购次数", f"{total_ipo_count} 次")
+    m2.metric("🎯 整体中签率", f"{alloc_rate:.2f}%", delta=f"{won_count} 次中签获配")
+    m3.metric("🏆 打新扣费后净胜率", f"{win_rate_ipo:.2f}%", delta=f"{win_ipo_count} 次实现净盈利")
+    m4.metric("💰 打新累计总收益", f"HK${total_hkd_profit:,.2f}", delta=f"≈ ${total_usd_profit:,.2f} USD")
+
+    st.write("")
+
+    # ── 2. 【1】Hiro & Caspar 投资成长卡片 (Kids Wealth Growth Cards) ────────
+    st.markdown("#### 👦 2. Hiro & Caspar 投资成长卡片 (Kids Wealth Growth)")
+    st.caption("💡 教育激励规则：亏损时按原比例结算 (1x)，盈利时给予 5x ~ 10x 放大回报奖励！已实现复利滚动出资。")
+
+    # Hiro & Caspar cumulative stats
+    latest_hiro_ret = df_ipo_raw["hiro_return"].iloc[0] if not df_ipo_raw.empty and pd.notnull(df_ipo_raw["hiro_return"].iloc[0]) else 143.84
+    latest_hiro_prof_total = df_ipo_raw["hiro_profit"].sum()
+
+    latest_caspar_ret = df_ipo_raw["caspar_return"].iloc[0] if not df_ipo_raw.empty and pd.notnull(df_ipo_raw["caspar_return"].iloc[0]) else 143.79
+    latest_caspar_prof_total = df_ipo_raw["caspar_profit"].sum()
+
+    k_col1, k_col2, k_col3 = st.columns(3)
+
+    with k_col1:
+        st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
+        st.markdown("##### 👦 Hiro 账户复利卡")
+        st.markdown(f"**当前总本息**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>HK${latest_hiro_ret:,.2f}</span>", unsafe_allow_html=True)
+        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+HK${latest_hiro_prof_total:,.2f}</span>", unsafe_allow_html=True)
+        st.caption("起始出资 $15 HKD → 资金占用年化 96.01%")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with k_col2:
+        st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
+        st.markdown("##### 👦 Caspar 账户复利卡")
+        st.markdown(f"**当前总本息**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>HK${latest_caspar_ret:,.2f}</span>", unsafe_allow_html=True)
+        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+HK${latest_caspar_prof_total:,.2f}</span>", unsafe_allow_html=True)
+        st.caption("起始出资 $15 HKD → 资金占用年化 57.11%")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with k_col3:
+        st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
+        st.markdown("##### 🏆 港股打新主账户 (Master)")
+        st.markdown(f"**打新总净利润**: <span style='color:#3B82F6;font-size:1.4rem;font-weight:bold;'>HK${total_hkd_profit:,.2f}</span>", unsafe_allow_html=True)
+        st.markdown("**资金平均占用年化**: <span style='color:#3B82F6;'>41.72%</span>", unsafe_allow_html=True)
+        st.caption("最大投入年化 11.86% | 自动输送至美股月度矩阵")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("")
+
+    # ── 3. 【3】109 笔单股打新明细与盈亏榜 (Full Trade Log & Leaderboard) ────────
+    st.markdown("#### 📋 3. 打新盈亏排行榜与单股全量明细表")
+
+    # Leaderboard: Top 5 Best & Top 5 Worst
+    df_ipo_sorted = df_ipo_raw.sort_values("profit_amt", ascending=False)
+    top_winners = df_ipo_sorted.head(5)[["ticker_name", "market", "profit_amt", "roi"]]
+    top_losers = df_ipo_sorted.tail(5)[["ticker_name", "market", "profit_amt", "roi"]].sort_values("profit_amt", ascending=True)
+
+    b1, b2 = st.columns(2)
+    with b1:
+        st.markdown("##### 🟢 最赚钱新股 Top 5")
+        top_w_disp = top_winners.rename(columns={"ticker_name": "新股名称", "market": "市场", "profit_amt": "收益额(HKD)", "roi": "单次ROI"})
+        top_w_disp["收益额(HKD)"] = top_w_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}")
+        top_w_disp["单次ROI"] = top_w_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%")
+        st.dataframe(top_w_disp, use_container_width=True)
+
+    with b2:
+        st.markdown("##### 🔴 费用侵蚀/亏损新股 Top 5")
+        top_l_disp = top_losers.rename(columns={"ticker_name": "新股名称", "market": "市场", "profit_amt": "收益额(HKD)", "roi": "单次ROI"})
+        top_l_disp["收益额(HKD)"] = top_l_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}")
+        top_l_disp["单次ROI"] = top_l_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%")
+        st.dataframe(top_l_disp, use_container_width=True)
+
+    st.write("")
+    st.markdown("##### 📋 全量 109 笔打新对账表 (含申购日X与结算日Y)")
+
+    # Prepare display dataframe for 109 trades
+    df_ipo_disp = df_ipo_raw.rename(columns={
+        "id": "ID", "ticker_name": "新股名称", "market": "市场",
+        "margin_principal": "打新本金", "allocated_shares": "配签数",
+        "won_shares": "中签数", "won_price": "中签价", "sell_price": "卖出价",
+        "total_fee": "费用合计", "profit_amt": "收益额(HKD)", "roi": "单次ROI",
+        "multiplier": "结算系数", "hiro_capital": "Hiro本金", "hiro_profit": "Hiro收益",
+        "hiro_return": "Hiro本息", "caspar_capital": "Caspar本金",
+        "caspar_profit": "Caspar收益", "caspar_return": "Caspar本息",
+        "start_date": "申购开始日(X)", "settle_date": "抛出结算日(Y)"
+    })
+
+    # Formatting numeric columns
+    for col in ["打新本金", "中签价", "卖出价", "费用合计"]:
+        if col in df_ipo_disp.columns:
+            df_ipo_disp[col] = df_ipo_disp[col].apply(lambda x: f"${x:,.2f}" if pd.notnull(x) else "-")
+    df_ipo_disp["收益额(HKD)"] = df_ipo_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}" if pd.notnull(x) else "-")
+    df_ipo_disp["单次ROI"] = df_ipo_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%" if pd.notnull(x) else "-")
+
+    cols_show_ipo = [
+        "ID", "新股名称", "市场", "申购开始日(X)", "抛出结算日(Y)",
+        "打新本金", "配签数", "中签数", "中签价", "卖出价", "费用合计",
+        "收益额(HKD)", "单次ROI", "结算系数",
+        "Hiro本金", "Hiro收益", "Hiro本息",
+        "Caspar本金", "Caspar收益", "Caspar本息"
+    ]
+    st.dataframe(df_ipo_disp[[c for c in cols_show_ipo if c in df_ipo_disp.columns]], use_container_width=True, height=450)
+
+st.divider()
+
+# ─── Section 5: Advanced Analytics & Database Explorer ───────────────────────
+st.subheader("📊 历史数据库 & 深度量化分析")
+
+tab_trades, tab_nav, tab_cash, tab_stats = st.tabs([
     "📋 全部交易记录 (Trades)",
     "📈 逐日净资产 (NAV History)",
-    "🇭🇰 港股打新记录 (HK IPO)",
     "💰 出入金记录 (Cash Flow)",
     "🔬 量化统计分析 (Quant Analytics)"
 ])
@@ -707,44 +830,7 @@ with tab_nav:
     else:
         st.info("暂无 NAV 数据。")
 
-# ── Tab 3: HK IPO ─────────────────────────────────────────────────────────────
-with tab_hk:
-    st.markdown("#### 🇭🇰 港股打新收益明细")
-    df_hk_full = get_hk_ipo_history()
-    if not df_hk_full.empty:
-        df_hk_full = df_hk_full.sort_values("date", ascending=False).reset_index(drop=True)
-        df_hk_disp = df_hk_full.rename(columns={
-            "id": "ID", "date": "结算日期",
-            "monthly_profit": "当月净收益($USD)",
-            "cum_profit": "累计总收益($USD)",
-            "notes": "备注"
-        })
-        df_hk_disp["当月净收益($USD)"] = df_hk_disp["当月净收益($USD)"].apply(lambda x: f"${x:+,.2f}")
-        df_hk_disp["累计总收益($USD)"] = df_hk_disp["累计总收益($USD)"].apply(lambda x: f"${x:+,.2f}")
-        st.dataframe(df_hk_disp, use_container_width=True)
-
-        hk1, hk2, hk3 = st.columns(3)
-        monthly_vals = df_hk_full["monthly_profit"]
-        best_month = monthly_vals.max()
-        worst_month = monthly_vals.min()
-        win_months = (monthly_vals > 0).sum()
-        hk1.metric("🏆 最佳单月收益", f"${best_month:,.2f}")
-        hk2.metric("📉 最差单月收益", f"${worst_month:,.2f}")
-        hk3.metric("✅ 盈利月数", f"{win_months} / {len(monthly_vals)-1} 月")
-
-        # Bar chart
-        df_hk_chart = df_hk_full[df_hk_full["date"] > "2026-01-15"].copy()
-        df_hk_chart["color"] = df_hk_chart["monthly_profit"].apply(lambda x: "#10B981" if x >= 0 else "#EF4444")
-        fig_hk = go.Figure(go.Bar(
-            x=df_hk_chart["date"], y=df_hk_chart["monthly_profit"],
-            marker_color=df_hk_chart["color"],
-            text=[f"${v:+,.0f}" for v in df_hk_chart["monthly_profit"]],
-            textposition="outside"
-        ))
-        fig_hk.update_layout(title="港股打新逐月收益柱状图 ($USD)", margin=dict(t=40, b=20))
-        st.plotly_chart(fig_hk, use_container_width=True)
-
-# ── Tab 4: Cash Flow ──────────────────────────────────────────────────────────
+# ── Tab 3: Cash Flow ──────────────────────────────────────────────────────────
 with tab_cash:
     st.markdown("#### 💰 账户出入金记录")
     df_cash_full = get_cash_transactions()

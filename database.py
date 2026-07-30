@@ -270,3 +270,9 @@ def resolve_pending_action(action_id, new_status="CONFIRMED"):
     cursor.execute("UPDATE pending_actions SET status = ? WHERE id = ?", (new_status, action_id))
     conn.commit()
     conn.close()
+
+def get_hk_ipo_trades_history():
+    conn = get_connection()
+    df = pd.read_sql_query("SELECT * FROM hk_ipo_trades ORDER BY id DESC", conn)
+    conn.close()
+    return df
