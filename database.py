@@ -276,3 +276,47 @@ def get_hk_ipo_trades_history():
     df = pd.read_sql_query("SELECT * FROM hk_ipo_trades ORDER BY id DESC", conn)
     conn.close()
     return df
+
+def record_hk_ipo_trade(
+    ticker_name, market, margin_principal, allocated_shares, ipo_fee,
+    won_shares, won_price, sell_price, trade_fee,
+    hiro_capital, caspar_capital, multiplier,
+    start_date, settle_date
+):
+    total_fee = ipo_fee + trade_fee
+    if won_shares > 0 and won_price is not None and sell_price is not None:
+        profit_amt = (sell_price - won_price) * won_shares - total_fee
+    else:
+        profit_amt = -total_fee
+        
+    roi = profit_amt / margin_principal if margin_principal > 0 else 0.0
+    
+    hiro_profit = hiro_capital * roi * multiplier
+    hiro_return = hiro_capital + hiro_profit
+    
+    caspar_profit = caspar_capital * roi * multiplier
+    caspar_return = caspar_capital + caspar_profit
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO hk_ipo_trades (
+        ticker_name, market, margin_principal, allocated_shares, ipo_fee,
+        won_shares, won_price, sell_price, trade_fee, total_fee,
+        profit_amt, roi, multiplier,
+        hiro_capital, hiro_profit, hiro_return,
+        caspar_capital, caspar_profit, caspar_return,
+        exchange_rate, hkd_principal, hkd_total_fee, hkd_profit,
+        start_date, settle_date
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1.0, ?, ?, ?, ?, ?)
+    """, (
+        ticker_name, market, margin_principal, allocated_shares, ipo_fee,
+        won_shares, won_price, sell_price, trade_fee, total_fee,
+        profit_amt, roi, multiplier,
+        hiro_capital, hiro_profit, hiro_return,
+        caspar_capital, caspar_profit, caspar_return,
+        margin_principal, total_fee, profit_amt,
+        start_date, settle_date
+    ))
+    conn.commit()
+    conn.close()

@@ -24,7 +24,7 @@ from database import (
     init_db, get_positions, get_nav_history, get_trades_history,
     get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum,
     execute_live_us_trade, record_cash_transaction, get_cash_transactions,
-    record_brokerage_nav, get_hk_ipo_trades_history
+    record_brokerage_nav, get_hk_ipo_trades_history, record_hk_ipo_trade
 )
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
@@ -253,34 +253,51 @@ with st.sidebar.form("us_trade_form"):
 
 st.sidebar.divider()
 
-# Sidebar Section 2: HK IPO Profit Input Form
-st.sidebar.markdown("### 🇭🇰 港股打新收益登记")
-with st.sidebar.form("hk_ipo_form"):
-    ipo_year = st.selectbox("登记年份", [2026, 2025, 2024, 2023, 2022], index=0)
-    ipo_month = st.selectbox("登记月份", [f"{m:02d}月" for m in range(1, 13)], index=datetime.date.today().month - 1)
-    
-    ipo_type = st.radio("登记类型", ["首次设定截止本月累计收益", "新增本月单月收益"])
-    ipo_amt = st.number_input("收益金额 ($ USD)", value=0.0, step=100.0)
-    ipo_pwd = st.text_input("授权校验密码", type="password", help="输入正确密码方可提交登记")
-    ipo_notes = st.text_input("备注 (例如: 某某新股打新收益)", value="")
-    
-    submitted = st.form_submit_button("🔒 确认提交港股打新")
-    
-    if submitted:
-        pwd_input_hash = hashlib.sha256(ipo_pwd.encode('utf-8')).hexdigest()
-        if pwd_input_hash != HK_IPO_PWD_HASH:
-            st.sidebar.error("❌ 密码错误！无法提交登记。")
-        elif ipo_amt == 0:
-            st.sidebar.warning("⚠️ 请输入非 0 的收益金额。")
+# Sidebar Section 2: Single IPO Trade Entry Form
+st.sidebar.markdown("### 🇭🇰 港美股打新单股登记")
+with st.sidebar.form("single_ipo_form"):
+    ipo_name = st.text_input("股票名称", value="", help="例如: 蜜雪集团、晶合集成")
+    ipo_mkt  = st.selectbox("打新市场", ["HK (港股)", "US (美股)"])
+    ipo_margin = st.number_input("打新本金/冻结保证金 ($)", value=50000.0, step=5000.0)
+    ipo_alloc  = st.number_input("配签数 (申购股数)", value=10000.0, step=1000.0)
+    ipo_fee_buy = st.number_input("打新费用 (手续费+利息)", value=100.0, step=50.0)
+
+    st.caption("── 中签与平仓变现 ──")
+    ipo_won_s = st.number_input("中签股数 (未中签填 0)", value=0.0, step=100.0)
+    ipo_won_p = st.number_input("中签单价 ($)", value=0.0, step=1.0)
+    ipo_sell_p = st.number_input("卖出平仓单价 ($)", value=0.0, step=1.0)
+    ipo_fee_sell = st.number_input("卖出交易费用 ($)", value=0.0, step=10.0)
+
+    st.caption("── Hiro & Caspar 投资分摊 (人民币 RMB) ──")
+    hiro_in   = st.number_input("Hiro 投入金额 (¥ RMB)", value=35.0, step=5.0)
+    caspar_in = st.number_input("Caspar 投入金额 (¥ RMB)", value=35.0, step=5.0)
+    ipo_mult  = st.number_input("结算系数 (盈利填 5/10, 亏损填 1)", value=5.0, step=1.0)
+
+    st.caption("── 日期节点 ──")
+    ipo_start_d  = st.date_input("申购开始日 (X列)", datetime.date.today(), key="ipo_start_d")
+    ipo_settle_d = st.date_input("抛出结算日 (Y列)", datetime.date.today(), key="ipo_settle_d")
+    ipo_pwd      = st.text_input("授权校验密码 ", type="password")
+
+    ipo_submitted = st.form_submit_button("🔒 确认提交打新明细")
+
+    if ipo_submitted:
+        pwd_hash = hashlib.sha256(ipo_pwd.encode('utf-8')).hexdigest()
+        if pwd_hash != HK_IPO_PWD_HASH:
+            st.sidebar.error("❌ 密码错误！无法提交打新明细。")
+        elif not ipo_name.strip():
+            st.sidebar.warning("⚠️ 请输入股票名称。")
         else:
-            month_num = int(ipo_month.replace("月", ""))
-            date_str_ipo = f"{ipo_year}-{month_num:02d}"
-            if "首次" in ipo_type:
-                set_initial_hk_ipo_cum(date_str_ipo, ipo_amt, ipo_notes or "初始累计收益")
-                st.sidebar.success(f"已授权设定初始港股打新累计收益: ${ipo_amt:,.2f}")
-            else:
-                new_cum = record_hk_ipo(date_str_ipo, ipo_amt, ipo_notes)
-                st.sidebar.success(f"已授权登记 {date_str_ipo} 打新收益 ${ipo_amt:,.2f}！最新累计收益: ${new_cum:,.2f}")
+            mkt_code = "HK" if "HK" in ipo_mkt else "US"
+            w_price = ipo_won_p if ipo_won_s > 0 else None
+            s_price = ipo_sell_p if ipo_won_s > 0 else None
+
+            record_hk_ipo_trade(
+                ipo_name.strip(), mkt_code, ipo_margin, ipo_alloc, ipo_fee_buy,
+                ipo_won_s, w_price, s_price, ipo_fee_sell,
+                hiro_in, caspar_in, ipo_mult,
+                ipo_start_d.strftime("%Y-%m-%d"), ipo_settle_d.strftime("%Y-%m-%d")
+            )
+            st.sidebar.success(f"✅ 已成功登记打新 `{ipo_name}`！Hiro/Caspar 本息已自动结算。")
             st.rerun()
 
 # Sidebar Section 3: Cash Deposit/Withdrawal Form
@@ -623,17 +640,17 @@ if not df_ipo_raw.empty:
     with k_col1:
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Hiro 账户复利卡")
-        st.markdown(f"**当前总本息**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>HK${latest_hiro_ret:,.2f}</span>", unsafe_allow_html=True)
-        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+HK${latest_hiro_prof_total:,.2f}</span>", unsafe_allow_html=True)
-        st.caption("起始出资 $15 HKD → 资金占用年化 96.01%")
+        st.markdown(f"**当前总本息 (结算返还)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{latest_hiro_ret:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+¥{latest_hiro_prof_total:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.caption("起始出资 ¥15 RMB → 资金占用年化 96.01%")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Caspar 账户复利卡")
-        st.markdown(f"**当前总本息**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>HK${latest_caspar_ret:,.2f}</span>", unsafe_allow_html=True)
-        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+HK${latest_caspar_prof_total:,.2f}</span>", unsafe_allow_html=True)
-        st.caption("起始出资 $15 HKD → 资金占用年化 57.11%")
+        st.markdown(f"**当前总本息 (结算返还)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{latest_caspar_ret:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+¥{latest_caspar_prof_total:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.caption("起始出资 ¥15 RMB → 资金占用年化 57.11%")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:
@@ -678,9 +695,9 @@ if not df_ipo_raw.empty:
         "margin_principal": "打新本金", "allocated_shares": "配签数",
         "won_shares": "中签数", "won_price": "中签价", "sell_price": "卖出价",
         "total_fee": "费用合计", "profit_amt": "收益额(HKD)", "roi": "单次ROI",
-        "multiplier": "结算系数", "hiro_capital": "Hiro本金", "hiro_profit": "Hiro收益",
-        "hiro_return": "Hiro本息", "caspar_capital": "Caspar本金",
-        "caspar_profit": "Caspar收益", "caspar_return": "Caspar本息",
+        "multiplier": "结算系数",
+        "hiro_capital": "Hiro本金(RMB)", "hiro_profit": "Hiro收益(RMB)", "hiro_return": "Hiro结算返还(RMB)",
+        "caspar_capital": "Caspar本金(RMB)", "caspar_profit": "Caspar收益(RMB)", "caspar_return": "Caspar结算返还(RMB)",
         "start_date": "申购开始日(X)", "settle_date": "抛出结算日(Y)"
     })
 
@@ -688,9 +705,9 @@ if not df_ipo_raw.empty:
     for col in ["打新本金", "中签价", "卖出价", "费用合计"]:
         if col in df_ipo_disp.columns:
             df_ipo_disp[col] = df_ipo_disp[col].apply(lambda x: f"${x:,.2f}" if pd.notnull(x) else "-")
-    for col in ["Hiro本金", "Hiro收益", "Hiro本息", "Caspar本金", "Caspar收益", "Caspar本息"]:
+    for col in ["Hiro本金(RMB)", "Hiro收益(RMB)", "Hiro结算返还(RMB)", "Caspar本金(RMB)", "Caspar收益(RMB)", "Caspar结算返还(RMB)"]:
         if col in df_ipo_disp.columns:
-            df_ipo_disp[col] = df_ipo_disp[col].apply(lambda x: f"HK${x:,.2f}" if pd.notnull(x) and x != 0 else "-")
+            df_ipo_disp[col] = df_ipo_disp[col].apply(lambda x: f"¥{x:,.2f}" if pd.notnull(x) and x != 0 else "-")
     df_ipo_disp["收益额(HKD)"] = df_ipo_disp["收益额(HKD)"].apply(lambda x: f"HK${x:+,.2f}" if pd.notnull(x) else "-")
     df_ipo_disp["单次ROI"] = df_ipo_disp["单次ROI"].apply(lambda x: f"{x*100:+.2f}%" if pd.notnull(x) else "-")
 
@@ -698,8 +715,8 @@ if not df_ipo_raw.empty:
         "ID", "新股名称", "市场", "申购开始日(X)", "抛出结算日(Y)",
         "打新本金", "配签数", "中签数", "中签价", "卖出价", "费用合计",
         "收益额(HKD)", "单次ROI", "结算系数",
-        "Hiro本金", "Hiro收益", "Hiro本息",
-        "Caspar本金", "Caspar收益", "Caspar本息"
+        "Hiro本金(RMB)", "Hiro收益(RMB)", "Hiro结算返还(RMB)",
+        "Caspar本金(RMB)", "Caspar收益(RMB)", "Caspar结算返还(RMB)"
     ]
     st.dataframe(df_ipo_disp[[c for c in cols_show_ipo if c in df_ipo_disp.columns]], use_container_width=True, height=450)
 
