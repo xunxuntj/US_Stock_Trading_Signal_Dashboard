@@ -690,7 +690,7 @@ if not df_ipo_raw.empty:
         st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{h_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**打新累计净收益**: <span style='color:#10B981;'>+¥{h_sum['ipo_profit']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**出入金变现**: 入金 ¥{h_sum['total_deposit']:,.2f} | 微信已提现 ¥{h_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
-        st.caption("起始出资 ¥15 RMB | 独立事件·平均占用年化 96.01%")
+        st.caption("起始本金 ¥100 RMB (首钢朗泽入金) | 独立事件·平均占用年化 96.01%")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
@@ -699,7 +699,7 @@ if not df_ipo_raw.empty:
         st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{c_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**打新累计净收益**: <span style='color:#10B981;'>+¥{c_sum['ipo_profit']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**出入金变现**: 入金 ¥{c_sum['total_deposit']:,.2f} | 微信已提现 ¥{c_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
-        st.caption("起始出资 ¥15 RMB | 独立事件·平均占用年化 57.11%")
+        st.caption("起始本金 ¥100 RMB (创想三维入金) | 独立事件·平均占用年化 57.11%")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:

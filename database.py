@@ -411,15 +411,19 @@ def init_kids_ledger_table():
     )
     """)
     
-    # Seed baseline records if empty
+    # Seed baseline records if empty with true 100 RMB deposits
     cursor.execute("SELECT COUNT(*) FROM kids_cash_ledger")
     cnt = cursor.fetchone()[0]
     if cnt == 0:
-        today_str = datetime.date.today().strftime("%Y-%m-%d")
         cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                       (today_str, 'HIRO', 'INITIAL', 143.84, 143.84, '截止2026年7月打新109笔累计总本息'))
+                       ('2025-05-10', 'HIRO', 'DEPOSIT', 100.0, 100.0, '首钢朗泽打新首次入金'))
         cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                       (today_str, 'CASPAR', 'INITIAL', 143.79, 143.79, '截止2026年7月打新109笔累计总本息'))
+                       ('2026-07-09', 'HIRO', 'IPO_SETTLE', 43.84, 143.84, '打新累计复利净收益'))
+        
+        cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                       ('2025-05-08', 'CASPAR', 'DEPOSIT', 100.0, 100.0, '创想三维打新首次入金'))
+        cursor.execute("INSERT INTO kids_cash_ledger (date, kid_name, action_type, amount, balance_after, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                       ('2026-07-09', 'CASPAR', 'IPO_SETTLE', 43.79, 143.79, '打新累计复利净收益'))
     conn.commit()
     conn.close()
 
