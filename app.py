@@ -610,25 +610,67 @@ st.caption("注：主账户即港股打新整体账户，收益按 Y列 (结算�
 df_ipo_raw = get_hk_ipo_trades_history()
 
 if not df_ipo_raw.empty:
-    # ── 1. 【2】打新量化大盘统计 (IPO Analytics Overview) ─────────────────────
-    st.markdown("#### 📊 1. 打新量化大盘统计 (IPO Overall Analytics)")
+    # ── 1. 10X 杠杆打新大盘与策略进化分析 (10X IPO Strategy Analytics) ────────
+    st.markdown("#### 📊 1. 10X 杠杆打新大盘与策略进化分析 (10X IPO Strategy Analytics)")
 
     total_ipo_count = len(df_ipo_raw)
     won_trades = df_ipo_raw[df_ipo_raw["won_shares"] > 0]
     won_count = len(won_trades)
     win_ipo_count = len(df_ipo_raw[df_ipo_raw["profit_amt"] > 0])
+    won_win_count = len(df_ipo_raw[(df_ipo_raw["won_shares"] > 0) & (df_ipo_raw["profit_amt"] > 0)])
 
     alloc_rate = (won_count / total_ipo_count * 100.0) if total_ipo_count > 0 else 0.0
-    win_rate_ipo = (win_ipo_count / total_ipo_count * 100.0) if total_ipo_count > 0 else 0.0
+    won_win_rate = (won_win_count / won_count * 100.0) if won_count > 0 else 0.0
 
     total_hkd_profit = df_ipo_raw["hkd_profit"].sum()
-    total_usd_profit = total_hkd_profit / 7.8  # Approx USD
+    total_fee_hkd = df_ipo_raw["hkd_total_fee"].sum()
+    gross_profit = total_hkd_profit + total_fee_hkd
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("🎯 总打新申购次数", f"{total_ipo_count} 次")
-    m2.metric("🎯 整体中签率", f"{alloc_rate:.2f}%", delta=f"{won_count} 次中签获配")
-    m3.metric("🏆 打新扣费后净胜率", f"{win_rate_ipo:.2f}%", delta=f"{win_ipo_count} 次实现净盈利")
-    m4.metric("💰 打新累计总收益", f"HK${total_hkd_profit:,.2f}", delta=f"≈ ${total_usd_profit:,.2f} USD")
+    cost_multiplier = (total_hkd_profit / total_fee_hkd) if total_fee_hkd > 0 else 0.0
+    friction_ratio = (total_fee_hkd / gross_profit * 100.0) if gross_profit > 0 else 0.0
+    ev_static = (total_hkd_profit / total_ipo_count) if total_ipo_count > 0 else 0.0
+
+    max_single_loss = abs(df_ipo_raw["profit_amt"].min())
+    loss_shock_ratio = (max_single_loss / total_hkd_profit * 100.0) if total_hkd_profit > 0 else 0.0
+
+    # Row 1 Metrics: Core Strategy Power
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric("💵 真实硬成本回报倍数", f"{cost_multiplier:.2f}x", help="每向券商支付 1 元利息/手续费，净赚回多少元港币")
+    m2.metric("🎯 真实中签平仓胜率", f"{won_win_rate:.2f}%", delta=f"{won_win_count}/{won_count} 次获配盈利", help="中签获配后真实的暗盘平仓胜率")
+    m3.metric("📈 静态单次申购期望值 EV", f"HK${ev_static:,.2f}", help="平均每次按下申购按钮产生的数学期望收益")
+    m4.metric("🛡️ 费用侵蚀率", f"{friction_ratio:.1f}%", help="毛收益中被利息与手续费吞噬的比例 (越低越好)")
+    m5.metric("⚠️ 单笔最大伤害侵蚀比", f"{loss_shock_ratio:.1f}%", help="单笔最大亏损 (文远知行 -$12.6k) 占总利润的比例")
+
+    st.write("")
+
+    # ── Dynamic Rolling 20-Trade EV Curve (Decision Dashboard Evolution) ─────
+    # Sort chronological (ID ASC)
+    df_ev = df_ipo_raw.sort_values("id", ascending=True).copy()
+    df_ev["rolling_ev"] = df_ev["profit_amt"].rolling(window=20, min_periods=5).mean()
+    df_ev["baseline_ev"] = ev_static
+
+    fig_ev = go.Figure()
+    fig_ev.add_trace(go.Scatter(
+        x=df_ev["id"], y=df_ev["rolling_ev"],
+        mode='lines', name='🔵 Rolling 20-Trade 动态 EV 动量线 (最近20笔申购期望值)',
+        line=dict(color='#3B82F6', width=3)
+    ))
+    fig_ev.add_trace(go.Scatter(
+        x=df_ev["id"], y=df_ev["baseline_ev"],
+        mode='lines', name=f'👵 历史全量平均 EV 基准线 (+HK${ev_static:,.2f})',
+        line=dict(color='#94A3B8', width=2, dash='dash')
+    ))
+
+    fig_ev.update_layout(
+        title="📈 单次申购期望值 EV 动态进化图 (Rolling 20-Trade EV vs 历史基准线)",
+        xaxis_title="打新交易历程 (笔数 ID)",
+        yaxis_title="单次申购期望收益 (HKD)",
+        height=380,
+        margin=dict(t=45, b=30, l=10, r=10),
+        legend=dict(orientation='h', yanchor='top', y=-0.18, xanchor='center', x=0.5)
+    )
+    st.plotly_chart(fig_ev, use_container_width=True)
+    st.caption("💡 量化进化规则：蓝线运行在灰色虚线上方 ➔ 证明您近期的选股 Decision Dashboard 升级成功，正期望值持续上升！暗盘抛出极速变现，坚决反 FOMO。")
 
     st.write("")
 
