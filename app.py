@@ -25,7 +25,8 @@ from database import (
     get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum,
     execute_live_us_trade, record_cash_transaction, get_cash_transactions,
     record_brokerage_nav, get_hk_ipo_trades_history, record_hk_ipo_trade,
-    get_latest_kids_returns
+    get_latest_kids_returns, record_kids_cash_transaction,
+    get_kids_cash_ledger, get_kids_account_summary
 )
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
@@ -635,31 +636,28 @@ if not df_ipo_raw.empty:
     st.markdown("#### 👦 2. Hiro & Caspar 投资成长卡片 (Kids Wealth Growth)")
     st.caption("💡 教育激励规则：亏损时按原比例结算 (1x)，盈利时给予 5x ~ 10x 放大回报奖励！已实现复利滚动出资。")
 
-    # Hiro & Caspar cumulative stats
-    latest_hiro_ret = df_ipo_raw["hiro_return"].iloc[0] if not df_ipo_raw.empty and pd.notnull(df_ipo_raw["hiro_return"].iloc[0]) else 143.84
-    latest_hiro_prof_total = df_ipo_raw["hiro_profit"].sum()
-
-    latest_caspar_ret = df_ipo_raw["caspar_return"].iloc[0] if not df_ipo_raw.empty and pd.notnull(df_ipo_raw["caspar_return"].iloc[0]) else 143.79
-    latest_caspar_prof_total = df_ipo_raw["caspar_profit"].sum()
+    # Dynamic kids account summary
+    h_sum = get_kids_account_summary('HIRO')
+    c_sum = get_kids_account_summary('CASPAR')
 
     k_col1, k_col2, k_col3 = st.columns(3)
 
     with k_col1:
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Hiro 账户复利卡")
-        st.markdown(f"**当前总本息 (结算返还)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{latest_hiro_ret:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+¥{latest_hiro_prof_total:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown("**独立事件·平均占用年化**: <span style='color:#10B981;font-weight:bold;'>96.01%</span>", unsafe_allow_html=True)
-        st.caption("起始出资 ¥15 RMB | 单次打新独立算平均保证金")
+        st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{h_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;'>+¥{h_sum['ipo_profit']:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**出入金变现**: 入金 ¥{h_sum['total_deposit']:,.2f} | 微信已提现 ¥{h_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.caption("起始出资 ¥15 RMB | 独立事件·平均占用年化 96.01%")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
         st.markdown('<div class="metric-card-box">', unsafe_allow_html=True)
         st.markdown("##### 👦 Caspar 账户复利卡")
-        st.markdown(f"**当前总本息 (结算返还)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{latest_caspar_ret:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown(f"**累计投资收益**: <span style='color:#10B981;'>+¥{latest_caspar_prof_total:,.2f} RMB</span>", unsafe_allow_html=True)
-        st.markdown("**独立事件·平均占用年化**: <span style='color:#10B981;font-weight:bold;'>57.11%</span>", unsafe_allow_html=True)
-        st.caption("起始出资 ¥15 RMB | 单次打新独立算平均保证金")
+        st.markdown(f"**当前总资产 (动态可用余额)**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{c_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**打新累计净收益**: <span style='color:#10B981;'>+¥{c_sum['ipo_profit']:,.2f} RMB</span>", unsafe_allow_html=True)
+        st.markdown(f"**出入金变现**: 入金 ¥{c_sum['total_deposit']:,.2f} | 微信已提现 ¥{c_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.caption("起始出资 ¥15 RMB | 独立事件·平均占用年化 57.11%")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:
@@ -669,6 +667,50 @@ if not df_ipo_raw.empty:
         st.markdown("**最大保证金投入年化**: <span style='color:#3B82F6;font-weight:bold;'>11.86%</span>", unsafe_allow_html=True)
         st.caption("全账户质押融资真实上限 | 平均占用年化 41.72%")
         st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("")
+
+    # ── Kids Deposit & Withdrawal In-Page Form ────────────────────────────────
+    with st.expander("💵 登记孩子零花钱追加入金 / 微信转账提现 (点击展开)"):
+        with st.form("kids_trans_form"):
+            kt_date  = st.date_input("变动日期", datetime.date.today(), key="kt_date")
+            kt_name  = st.selectbox("变动对象", ["HIRO", "CASPAR"])
+            kt_type  = st.radio("变动类型", ["WITHDRAWAL (微信转账提现兑现)", "DEPOSIT (零花钱追加入金)"])
+            kt_amt   = st.number_input("变动金额 (¥ RMB)", value=50.0, step=10.0)
+            kt_notes = st.text_input("变动事由/备注", value="", help="例如: 微信转账兑现收益, 压岁钱存入")
+            kt_pwd   = st.text_input("授权校验密码   ", type="password", help="校验密码: 790323")
+
+            kt_sub = st.form_submit_button("🔒 确认提交出入金/提现变动")
+            if kt_sub:
+                pwd_hash = hashlib.sha256(kt_pwd.encode('utf-8')).hexdigest()
+                if pwd_hash != HK_IPO_PWD_HASH:
+                    st.error("❌ 密码错误！无法提交变动。")
+                elif kt_amt <= 0:
+                    st.warning("⚠️ 金额必须大于 0。")
+                else:
+                    action_code = "WITHDRAWAL" if "WITHDRAWAL" in kt_type else "DEPOSIT"
+                    new_b = record_kids_cash_transaction(
+                        kt_date.strftime("%Y-%m-%d"), kt_name, action_code, kt_amt, kt_notes.strip() or "账户出入金"
+                    )
+                    st.cache_data.clear()
+                    st.success(f"✅ 已成功登记 {kt_name} {action_code} ¥{kt_amt:,.2f}！最新总资产余额: ¥{new_b:,.2f} RMB")
+                    st.rerun()
+
+    # ── Kids Cash Flow Audit Ledger Table ─────────────────────────────────────
+    df_kids_ledger = get_kids_cash_ledger()
+    if not df_kids_ledger.empty:
+        with st.expander("📜 查看 Hiro & Caspar 资金变动与提现审计流水账本 (Kids Ledger)"):
+            df_kl_disp = df_kids_ledger.rename(columns={
+                "id": "流水ID", "date": "变动日期", "kid_name": "成员",
+                "action_type": "变动类型", "amount": "变动金额(RMB)",
+                "balance_after": "最新总资产余额(RMB)", "notes": "事由/备注"
+            })
+            df_kl_disp["变动类型"] = df_kl_disp["变动类型"].apply(
+                lambda x: "微信提现 💸" if x == 'WITHDRAWAL' else ("打新结算收益 📈" if x == 'IPO_SETTLE' else "零花钱追加 📥")
+            )
+            df_kl_disp["变动金额(RMB)"] = df_kl_disp["变动金额(RMB)"].apply(lambda x: f"¥{x:+,.2f}" if pd.notnull(x) else "-")
+            df_kl_disp["最新总资产余额(RMB)"] = df_kl_disp["最新总资产余额(RMB)"].apply(lambda x: f"¥{x:,.2f}" if pd.notnull(x) else "-")
+            st.dataframe(df_kl_disp[["流水ID", "变动日期", "成员", "变动类型", "变动金额(RMB)", "最新总资产余额(RMB)", "事由/备注"]], use_container_width=True)
 
     st.write("")
 
