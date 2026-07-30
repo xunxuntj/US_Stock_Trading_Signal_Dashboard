@@ -693,9 +693,8 @@ if not df_ipo_raw.empty:
         st.markdown("##### 👦 Hiro 账户复利卡")
         st.markdown(f"**当前小金库总资产**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{h_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**在盘未提取收益**: <span style='color:#10B981;font-weight:bold;'>+¥{h_sum['active_profit']:,.2f} RMB (+{h_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
-        st.markdown(f"**历史已结清 / 已提现**: 早期已结清 {h_early_str} | 微信已提现 ¥{h_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.markdown(f"**历史已结清盈亏**: {h_early_str}", unsafe_allow_html=True)
         st.markdown(f"**🌟 全历史投资总创利**: <span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>{h_lifetime_str} RMB</span>", unsafe_allow_html=True)
-        st.caption("起始本金 ¥100 (2026-06-02 首钢朗泽) | 亏损 1x | 盈利 5x~10x 激励")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
@@ -707,9 +706,8 @@ if not df_ipo_raw.empty:
         st.markdown("##### 👦 Caspar 账户复利卡")
         st.markdown(f"**当前小金库总资产**: <span style='color:#10B981;font-size:1.4rem;font-weight:bold;'>¥{c_sum['balance']:,.2f} RMB</span>", unsafe_allow_html=True)
         st.markdown(f"**在盘未提取收益**: <span style='color:#10B981;font-weight:bold;'>+¥{c_sum['active_profit']:,.2f} RMB (+{c_roi_pct:.2f}%)</span>", unsafe_allow_html=True)
-        st.markdown(f"**历史已结清 / 已提现**: 早期已结清 {c_early_str} | 微信已提现 ¥{c_sum['total_withdrawal']:,.2f}", unsafe_allow_html=True)
+        st.markdown(f"**历史已结清盈亏**: {c_early_str}", unsafe_allow_html=True)
         st.markdown(f"**🌟 全历史投资总创利**: <span style='color:#10B981;font-size:1.1rem;font-weight:bold;'>{c_lifetime_str} RMB</span>", unsafe_allow_html=True)
-        st.caption("起始本金 ¥100 (2026-06-01 创想三维) | 亏损 1x | 盈利 5x~10x 激励")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col3:
