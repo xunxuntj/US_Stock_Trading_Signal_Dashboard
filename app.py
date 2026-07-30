@@ -697,6 +697,7 @@ if not df_ipo_raw.empty:
                     st.rerun()
 
     # ── Kids Cash Flow Audit Ledger Table ─────────────────────────────────────
+    # ── Kids Cash Flow Audit Ledger Table ─────────────────────────────────────
     df_kids_ledger = get_kids_cash_ledger()
     if not df_kids_ledger.empty:
         with st.expander("📜 查看 Hiro & Caspar 资金变动与提现审计流水账本 (Kids Ledger)"):
@@ -705,16 +706,22 @@ if not df_ipo_raw.empty:
                 "action_type": "变动类型", "amount": "变动金额(RMB)",
                 "balance_after": "最新总资产余额(RMB)", "notes": "事由/备注"
             })
-            df_kl_disp["变动类型"] = df_kl_disp["变动类型"].apply(
-                lambda x: "微信提现 💸" if x == 'WITHDRAWAL' else ("打新结算收益 📈" if x == 'IPO_SETTLE' else "零花钱追加 📥")
-            )
-            df_kl_disp["变动金额(RMB)"] = df_kl_disp["变动金额(RMB)"].apply(lambda x: f"¥{x:+,.2f}" if pd.notnull(x) else "-")
-            df_kl_disp["最新总资产余额(RMB)"] = df_kl_disp["最新总资产余额(RMB)"].apply(lambda x: f"¥{x:,.2f}" if pd.notnull(x) else "-")
-            st.dataframe(df_kl_disp[["流水ID", "变动日期", "成员", "变动类型", "变动金额(RMB)", "最新总资产余额(RMB)", "事由/备注"]], use_container_width=True)
+            if "变动类型" in df_kl_disp.columns:
+                df_kl_disp["变动类型"] = df_kl_disp["变动类型"].apply(
+                    lambda x: "微信提现 💸" if x == 'WITHDRAWAL' else ("打新结算收益 📈" if x == 'IPO_SETTLE' else "零花钱追加 📥")
+                )
+            if "变动金额(RMB)" in df_kl_disp.columns:
+                df_kl_disp["变动金额(RMB)"] = df_kl_disp["变动金额(RMB)"].apply(lambda x: f"¥{x:+,.2f}" if pd.notnull(x) else "-")
+            if "最新总资产余额(RMB)" in df_kl_disp.columns:
+                df_kl_disp["最新总资产余额(RMB)"] = df_kl_disp["最新总资产余额(RMB)"].apply(lambda x: f"¥{x:,.2f}" if pd.notnull(x) else "-")
+            
+            show_kl_cols = [c for c in ["流水ID", "变动日期", "成员", "变动类型", "变动金额(RMB)", "最新总资产余额(RMB)", "事由/备注"] if c in df_kl_disp.columns]
+            st.dataframe(df_kl_disp[show_kl_cols], use_container_width=True)
 
     st.write("")
 
     # In-page Quick IPO Entry Form
+    dh_ret, dc_ret = get_latest_kids_returns()
     with st.expander("➕ 快捷在线登记单笔打新明细 (点击展开录入表单)"):
         with st.form("inpage_ipo_form"):
             in_name = st.text_input("股票名称 ", value="", help="例如: 蜜雪集团、晶合集成")
@@ -730,8 +737,8 @@ if not df_ipo_raw.empty:
             in_fee_sell = st.number_input("卖出交易费用 ($) ", value=0.0, step=10.0)
 
             st.caption("── Hiro & Caspar 投资分摊 (人民币 RMB | 已自动带出上次返还本息) ──")
-            in_hiro   = st.number_input("Hiro 投入金额 (¥ RMB) ", value=round(default_h_ret, 2), step=5.0)
-            in_caspar = st.number_input("Caspar 投入金额 (¥ RMB) ", value=round(default_c_ret, 2), step=5.0)
+            in_hiro   = st.number_input("Hiro 投入金额 (¥ RMB) ", value=round(dh_ret, 2), step=5.0)
+            in_caspar = st.number_input("Caspar 投入金额 (¥ RMB) ", value=round(dc_ret, 2), step=5.0)
             in_mult   = st.number_input("结算系数 (盈利填 5/10, 亏损填 1) ", value=5.0, step=1.0)
 
             st.caption("── 日期节点 ──")
