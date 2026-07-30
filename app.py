@@ -35,6 +35,9 @@ init_db()
 # Custom CSS Styling
 st.markdown("""
 <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     .main-title {
         font-size: 2.2rem;
         font-weight: 700;
