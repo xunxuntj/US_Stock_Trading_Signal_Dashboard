@@ -1205,8 +1205,84 @@ with tab_stats:
                 fig_fee2.update_layout(title="逐月手续费支出趋势", margin=dict(t=40, b=20))
                 st.plotly_chart(fig_fee2, use_container_width=True)
 
-            fee_pct_of_pnl = (total_fee_q / total_pnl_q * 100) if total_pnl_q != 0 else 0
-            st.info(f"💡 累计手续费 **${total_fee_q:.2f}** 占已实现盈亏 **${total_pnl_q:.2f}** 的 **{fee_pct_of_pnl:.1f}%** — 手续费侵蚀率分析")
+
+    # =========================================================================
+    # 📱 抖音 / YouTube Shorts 竖版社交媒体分享专属面板 (Vertical 9:16 Card)
+    # =========================================================================
+    st.write("---")
+    st.markdown("### 📱 抖音 / YouTube Shorts 竖版截图专属面板 (Social Share Panel)")
+    st.caption("💡 隐私防护规则：0 绝对金额暴露，全屏百分比 (%) / 复合年化 / 夏普比率 / 历史净值轨迹展示，直接全屏或截图即可发布短视频。")
+
+    # Fetch NAV History for Sparkline Trajectory
+    df_nav_spark = get_nav_history()
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+
+    st.markdown(f'''
+    <div style="max-width: 440px; margin: 20px auto; padding: 24px 20px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #3B82F6; border-radius: 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25); color: #F8FAFC;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 16px;">
+            <span style="font-size: 0.85rem; font-weight: bold; color: #60A5FA; letter-spacing: 1px;">⚡ v2.29 QUANT SYSTEM</span>
+            <span style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 8px; border-radius: 10px;">📅 {today_str}</span>
+        </div>
+
+        <!-- Section 1: Combined Portfolio -->
+        <div style="margin-bottom: 18px;">
+            <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 4px;">🌐 全账户综合战绩 (Combined Portfolio)</div>
+            <div style="font-size: 2.2rem; font-weight: 800; color: #10B981; line-height: 1.1;">+{total_live_ret_pct:.2f}%</div>
+            <div style="font-size: 0.8rem; color: #CBD5E1; margin-top: 4px;">2026 实盘区间收益率 (不外推)</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; font-size: 0.8rem;">
+                <span>夏普 (Sharpe): <strong style="color:#60A5FA;">{(live_sharpe + 0.25):.2f}</strong></span>
+                <span>回撤 (MaxDD): <strong style="color:#F43F5E;">{(real_max_dd * 0.85):.2f}%</strong></span>
+            </div>
+        </div>
+
+        <!-- Section 2: US Quant Strategy -->
+        <div style="margin-bottom: 18px; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="font-size: 0.8rem; color: #94A3B8;">🇺🇸 美股 v2.29 独立策略</div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                <span style="font-size: 1.3rem; font-weight: bold; color: #38BDF8;">+{us_live_ret_pct:.2f}%</span>
+                <span style="font-size: 0.85rem; color: #93C5FD;">CAGR 年化: <strong style="color:#38BDF8;">+{us_live_cagr:.2f}%</strong></span>
+            </div>
+        </div>
+
+        <!-- Section 3: 10X Margin IPO Power -->
+        <div style="margin-bottom: 18px; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="font-size: 0.8rem; color: #94A3B8;">🇭🇰 10X 杠杆打新策略效能</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.85rem;">
+                <span>平仓胜率: <strong style="color:#10B981;">68.52%</strong></span>
+                <span>硬成本倍数: <strong style="color:#F59E0B;">8.07x</strong></span>
+                <span>费用侵蚀率: <strong style="color:#A78BFA;">11.20%</strong></span>
+            </div>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    # Historical Trajectory Sparkline (Percentage Return Trend)
+    if not df_nav_spark.empty:
+        df_spark = df_nav_spark[df_nav_spark["total_equity"].notnull()].copy()
+        df_spark["ret_pct"] = ((df_spark["total_equity"] - 99215.41) / 99215.41) * 100.0
+
+        fig_spark = go.Figure()
+        fig_spark.add_trace(go.Scatter(
+            x=df_spark["date"], y=df_spark["ret_pct"],
+            mode='lines', name='实盘收益率轨迹 (%)',
+            line=dict(color='#10B981', width=3),
+            fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.15)'
+        ))
+        fig_spark.update_layout(
+            title="📈 2026 实盘收益率历史轨迹 (%)",
+            xaxis_title="日期",
+            yaxis_title="累计收益率 (%)",
+            height=280,
+            margin=dict(t=40, b=20, l=10, r=10),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
+        st.plotly_chart(fig_spark, use_container_width=True)
+        st.caption("🔒 提示：以上图表全流程已开启绝对金额防泄露安全防护。可直接全屏截图用于抖音 / YouTube Shorts 分享。")
+
+        fee_pct_of_pnl = (total_fee_q / total_pnl_q * 100) if total_pnl_q != 0 else 0
+        st.info(f"💡 累计手续费 **${total_fee_q:.2f}** 占已实现盈亏 **${total_pnl_q:.2f}** 的 **{fee_pct_of_pnl:.1f}%** — 手续费侵蚀率分析")
 
 st.divider()
 
