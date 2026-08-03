@@ -1238,8 +1238,8 @@ if not df_nav_spark.empty:
         points = []
         n = len(vals)
         for i, val in enumerate(vals):
-            x = (i / (n - 1)) * 330.0
-            y = 105.0 - ((val - spark_min_y) / v_range) * 95.0
+            x = 5.0 + (i / (n - 1)) * 300.0
+            y = 102.0 - ((val - spark_min_y) / v_range) * 90.0
             points.append((x, y))
         
         path_str = f"M {points[0][0]:.1f},{points[0][1]:.1f}"
@@ -1247,7 +1247,7 @@ if not df_nav_spark.empty:
             path_str += f" L {pt[0]:.1f},{pt[1]:.1f}"
         
         svg_path = path_str
-        svg_fill_path = f"{path_str} L 330,110 L 0,110 Z"
+        svg_fill_path = f"{path_str} L {points[-1][0]:.1f},110 L {points[0][0]:.1f},110 Z"
 
 import streamlit.components.v1 as components
 
@@ -1321,7 +1321,7 @@ body {{
             <span style="font-size: 0.78rem; font-weight: bold; color: #10B981;">📈 2026 收益率历史轨迹 (%)</span>
             <span style="font-size: 0.72rem; color: #6EE7B7;">实盘 {live_days} 天</span>
         </div>
-        <svg width="320" height="110" style="overflow: visible;">
+        <svg width="310" height="110" style="overflow: hidden;">
             <defs>
                 <linearGradient id="grad_spark" x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="0%" stop-color="#10B981" stop-opacity="0.4" />
@@ -1332,6 +1332,7 @@ body {{
             <path d="{svg_path}" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" />
         </svg>
     </div>
+
 
     <!-- Section 4: Performance Matrix Footer -->
     <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 12px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.06);">
