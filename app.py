@@ -1224,7 +1224,7 @@ df_nav_spark = get_nav_history()
 
 with share_col1:
     st.markdown("##### 📱 屏 1：核心战绩风采卡 (Card 1)")
-    html_card1 = f"""<div style="max-width: 420px; margin: 10px auto; padding: 22px 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #3B82F6; border-radius: 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25); color: #F8FAFC;">
+    html_card1 = f"""<div style="width: 100%; margin: 10px 0; padding: 22px 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #3B82F6; border-radius: 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25); color: #F8FAFC; box-sizing: border-box;">
 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 14px;">
 <span style="font-size: 0.85rem; font-weight: bold; color: #60A5FA; letter-spacing: 1px;">⚡ v2.29 QUANT SYSTEM</span>
 <span style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 8px; border-radius: 10px;">📅 {today_str}</span>
@@ -1261,7 +1261,7 @@ with share_col2:
     st.markdown("##### 📈 屏 2：历史收益轨迹风采卡 (Card 2)")
 
     # Render Card 2 Header
-    html_card2_header = f"""<div style="max-width: 420px; margin: 10px auto -15px auto; padding: 22px 18px 0 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border-top: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(16, 185, 129, 0.15); color: #F8FAFC;">
+    html_card2_header = f"""<div style="width: 100%; margin: 10px 0 -15px 0; padding: 22px 18px 0 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border-top: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -10px 30px rgba(16, 185, 129, 0.15); color: #F8FAFC; box-sizing: border-box;">
 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 8px;">
 <span style="font-size: 0.85rem; font-weight: bold; color: #10B981; letter-spacing: 1px;">📈 RETURN TRAJECTORY</span>
 <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); border: 1px solid #10B981; color: #6EE7B7; padding: 2px 8px; border-radius: 10px;">2026 实盘轨迹</span>
@@ -1273,7 +1273,7 @@ with share_col2:
 </div>"""
     st.markdown(html_card2_header, unsafe_allow_html=True)
 
-    # Plotly Sparkline seamlessly blended with dark transparent background
+    # Plotly Sparkline seamlessly blended with transparent background inside column width
     if not df_nav_spark.empty:
         df_spark = df_nav_spark[df_nav_spark["total_equity"].notnull()].copy()
         df_spark["ret_pct"] = ((df_spark["total_equity"] - 99215.41) / 99215.41) * 100.0
@@ -1288,7 +1288,7 @@ with share_col2:
         fig_spark.update_layout(
             height=215,
             margin=dict(t=10, b=10, l=35, r=15),
-            paper_bgcolor='#152136',
+            paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             xaxis=dict(showgrid=False, color='#94A3B8', tickfont=dict(size=9)),
             yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.06)', color='#94A3B8', ticksuffix="%", tickfont=dict(size=9))
@@ -1296,7 +1296,7 @@ with share_col2:
         st.plotly_chart(fig_spark, use_container_width=True)
 
     # Render Card 2 Footer (seamlessly completing the green glow border)
-    html_card2_footer = f"""<div style="max-width: 420px; margin: -15px auto 10px auto; padding: 10px 18px 18px 18px; background: linear-gradient(145deg, #152136 0%, #1E293B 100%); border-bottom: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15); color: #F8FAFC;">
+    html_card2_footer = f"""<div style="width: 100%; margin: -15px 0 10px 0; padding: 10px 18px 18px 18px; background: linear-gradient(145deg, #152136 0%, #1E293B 100%); border-bottom: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15); color: #F8FAFC; box-sizing: border-box;">
 <div style="display: flex; justify-content: space-between; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 10px; font-size: 0.78rem;">
 <span>累计实盘天数: <strong style="color:#6EE7B7;">{live_days} 天</strong></span>
 <span>胜率/盈亏比: <strong style="color:#38BDF8;">优选高夏普</strong></span>
