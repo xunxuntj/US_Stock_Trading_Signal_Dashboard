@@ -1338,7 +1338,7 @@ body {{
     <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 12px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.06);">
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
             <span style="color:#94A3B8;">费用侵蚀率: <strong style="color:#A78BFA;">11.2%</strong></span>
-            <span style="color:#94A3B8;">EV期望值: <strong style="color:#F59E0B;">+HK$1,112</strong></span>
+            <span style="color:#94A3B8;">盈亏比: <strong style="color:#F59E0B;">3.45</strong></span>
         </div>
         <div style="display: flex; justify-content: space-between; color:#CBD5E1; font-size: 0.72rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px; margin-top: 4px;">
             <span>偏好: <strong style="color:#60A5FA;">反 FOMO 极速平仓</strong></span>
