@@ -1249,76 +1249,107 @@ if not df_nav_spark.empty:
         svg_path = path_str
         svg_fill_path = f"{path_str} L 330,110 L 0,110 Z"
 
+import streamlit.components.v1 as components
+
 # Unified 9:16 Smartphone Card (Width: 380px, Height: 675px)
-html_pure_card = f"""
-<div style="display: flex; justify-content: center; width: 100%; margin: 15px 0;">
-    <div style="width: 380px; height: 675px; padding: 22px 20px; background: linear-gradient(155deg, #0F172A 0%, #1E293B 50%, #090D16 100%); border: 2.5px solid #3B82F6; border-radius: 26px; box-shadow: 0 15px 40px rgba(59, 130, 246, 0.3); color: #F8FAFC; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        
-        <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 10px;">
-            <span style="font-size: 0.9rem; font-weight: 800; color: #60A5FA; letter-spacing: 1px;">⚡ v2.29 QUANT SYSTEM</span>
-            <span style="font-size: 0.72rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 8px; border-radius: 10px;">📅 {today_str}</span>
-        </div>
+html_pure_card = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body {{
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}}
+.card-box {{
+    width: 370px;
+    height: 675px;
+    padding: 22px 20px;
+    background: linear-gradient(155deg, #0F172A 0%, #1E293B 50%, #090D16 100%);
+    border: 2.5px solid #3B82F6;
+    border-radius: 26px;
+    box-shadow: 0 15px 40px rgba(59, 130, 246, 0.3);
+    color: #F8FAFC;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}}
+</style>
+</head>
+<body>
+<div class="card-box">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 10px;">
+        <span style="font-size: 0.9rem; font-weight: 800; color: #60A5FA; letter-spacing: 1px;">⚡ v2.29 QUANT SYSTEM</span>
+        <span style="font-size: 0.72rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 8px; border-radius: 10px;">📅 {today_str}</span>
+    </div>
 
-        <!-- Section 1: Main Metric -->
-        <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
-            <div style="font-size: 0.78rem; color: #94A3B8;">🌐 全账户综合战绩 (Combined Portfolio)</div>
-            <div style="font-size: 2.5rem; font-weight: 900; color: #10B981; line-height: 1.1; margin: 4px 0;">+{total_live_ret_pct:.2f}%</div>
-            <div style="font-size: 0.75rem; color: #CBD5E1;">2026 实盘到手总收益率</div>
-            <div style="display: flex; justify-content: space-between; margin-top: 10px; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 10px; font-size: 0.78rem;">
-                <span>夏普 (Sharpe): <strong style="color:#60A5FA;">{(live_sharpe + 0.25):.2f}</strong></span>
-                <span>回撤 (MaxDD): <strong style="color:#F43F5E;">{(real_max_dd * 0.85):.2f}%</strong></span>
-            </div>
+    <!-- Section 1: Main Metric -->
+    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
+        <div style="font-size: 0.78rem; color: #94A3B8;">🌐 全账户综合战绩 (Combined Portfolio)</div>
+        <div style="font-size: 2.5rem; font-weight: 900; color: #10B981; line-height: 1.1; margin: 4px 0;">+{total_live_ret_pct:.2f}%</div>
+        <div style="font-size: 0.75rem; color: #CBD5E1;">2026 实盘到手总收益率</div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 10px; font-size: 0.78rem;">
+            <span>夏普 (Sharpe): <strong style="color:#60A5FA;">{(live_sharpe + 0.25):.2f}</strong></span>
+            <span>回撤 (MaxDD): <strong style="color:#F43F5E;">{(real_max_dd * 0.85):.2f}%</strong></span>
         </div>
+    </div>
 
-        <!-- Section 2: Strategy Dual Engines Grid -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div style="background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 14px; border: 1px solid rgba(56, 189, 248, 0.2);">
-                <div style="font-size: 0.75rem; color: #94A3B8;">🇺🇸 美股 v2.29 策略</div>
-                <div style="font-size: 1.25rem; font-weight: bold; color: #38BDF8; margin-top: 2px;">+{us_live_ret_pct:.2f}%</div>
-                <div style="font-size: 0.72rem; color: #93C5FD; margin-top: 2px;">年化: +{us_live_cagr:.2f}%</div>
-            </div>
-            <div style="background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 14px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                <div style="font-size: 0.75rem; color: #94A3B8;">🇭🇰 10X 杠杆打新</div>
-                <div style="font-size: 1.25rem; font-weight: bold; color: #10B981; margin-top: 2px;">胜率 68.5%</div>
-                <div style="font-size: 0.72rem; color: #F59E0B; margin-top: 2px;">硬成本: 8.07x</div>
-            </div>
+    <!-- Section 2: Strategy Dual Engines Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div style="background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 14px; border: 1px solid rgba(56, 189, 248, 0.2);">
+            <div style="font-size: 0.75rem; color: #94A3B8;">🇺🇸 美股 v2.29 策略</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #38BDF8; margin-top: 2px;">+{us_live_ret_pct:.2f}%</div>
+            <div style="font-size: 0.72rem; color: #93C5FD; margin-top: 2px;">年化: +{us_live_cagr:.2f}%</div>
         </div>
-
-        <!-- Section 3: Embedded SVG Sparkline Trajectory -->
-        <div style="background: rgba(15, 23, 42, 0.7); padding: 10px 12px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.25);">
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-                <span style="font-size: 0.78rem; font-weight: bold; color: #10B981;">📈 2026 收益率历史轨迹 (%)</span>
-                <span style="font-size: 0.72rem; color: #6EE7B7;">实盘 {live_days} 天</span>
-            </div>
-            <svg width="330" height="110" style="overflow: visible;">
-                <defs>
-                    <linearGradient id="grad_spark" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#10B981" stop-opacity="0.4" />
-                        <stop offset="100%" stop-color="#10B981" stop-opacity="0.0" />
-                    </linearGradient>
-                </defs>
-                <path d="{svg_fill_path}" fill="url(#grad_spark)" />
-                <path d="{svg_path}" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" />
-            </svg>
+        <div style="background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 14px; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <div style="font-size: 0.75rem; color: #94A3B8;">🇭🇰 10X 杠杆打新</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #10B981; margin-top: 2px;">胜率 68.5%</div>
+            <div style="font-size: 0.72rem; color: #F59E0B; margin-top: 2px;">硬成本: 8.07x</div>
         </div>
+    </div>
 
-        <!-- Section 4: Performance Matrix Footer -->
-        <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 12px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.06);">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                <span style="color:#94A3B8;">费用侵蚀率: <strong style="color:#A78BFA;">11.2%</strong></span>
-                <span style="color:#94A3B8;">EV期望值: <strong style="color:#F59E0B;">+HK$1,112</strong></span>
-            </div>
-            <div style="display: flex; justify-content: space-between; color:#CBD5E1; font-size: 0.72rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px; margin-top: 4px;">
-                <span>偏好: <strong style="color:#60A5FA;">反 FOMO 极速平仓</strong></span>
-                <span>风控: <strong style="color:#10B981;">高夏普比率</strong></span>
-            </div>
+    <!-- Section 3: Embedded SVG Sparkline Trajectory -->
+    <div style="background: rgba(15, 23, 42, 0.7); padding: 10px 12px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.25);">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <span style="font-size: 0.78rem; font-weight: bold; color: #10B981;">📈 2026 收益率历史轨迹 (%)</span>
+            <span style="font-size: 0.72rem; color: #6EE7B7;">实盘 {live_days} 天</span>
         </div>
+        <svg width="320" height="110" style="overflow: visible;">
+            <defs>
+                <linearGradient id="grad_spark" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#10B981" stop-opacity="0.4" />
+                    <stop offset="100%" stop-color="#10B981" stop-opacity="0.0" />
+                </linearGradient>
+            </defs>
+            <path d="{svg_fill_path}" fill="url(#grad_spark)" />
+            <path d="{svg_path}" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" />
+        </svg>
+    </div>
 
+    <!-- Section 4: Performance Matrix Footer -->
+    <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 12px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.06);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color:#94A3B8;">费用侵蚀率: <strong style="color:#A78BFA;">11.2%</strong></span>
+            <span style="color:#94A3B8;">EV期望值: <strong style="color:#F59E0B;">+HK$1,112</strong></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color:#CBD5E1; font-size: 0.72rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px; margin-top: 4px;">
+            <span>偏好: <strong style="color:#60A5FA;">反 FOMO 极速平仓</strong></span>
+            <span>风控: <strong style="color:#10B981;">高夏普比率</strong></span>
+        </div>
     </div>
 </div>
+</body>
+</html>
 """
-st.markdown(html_pure_card, unsafe_allow_html=True)
+
+components.html(html_pure_card, height=710)
 
 st.divider()
 
