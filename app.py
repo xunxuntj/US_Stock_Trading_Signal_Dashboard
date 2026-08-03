@@ -1259,13 +1259,14 @@ with share_col1:
 
 with share_col2:
     st.markdown("##### 📈 屏 2：历史收益轨迹风采卡 (Card 2)")
-    html_card2_top = f"""<div style="max-width: 420px; margin: 10px auto 0 auto; padding: 16px 18px 0 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border-top: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-top-left-radius: 20px; border-top-right-radius: 20px; color: #F8FAFC;">
-<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+    html_card2_header = f"""<div style="max-width: 420px; margin: 10px auto; padding: 22px 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #10B981; border-radius: 20px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2); color: #F8FAFC;">
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 12px;">
 <span style="font-size: 0.85rem; font-weight: bold; color: #10B981; letter-spacing: 1px;">📈 RETURN TRAJECTORY</span>
 <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); border: 1px solid #10B981; color: #6EE7B7; padding: 2px 8px; border-radius: 10px;">2026 实盘轨迹</span>
 </div>
-</div>"""
-    st.markdown(html_card2_top, unsafe_allow_html=True)
+<div style="font-size: 0.78rem; color: #94A3B8; margin-bottom: 8px;">2026 累计收益率历史增长曲线 (%)</div>
+"""
+    st.markdown(html_card2_header, unsafe_allow_html=True)
 
     if not df_nav_spark.empty:
         df_spark = df_nav_spark[df_nav_spark["total_equity"].notnull()].copy()
@@ -1279,19 +1280,19 @@ with share_col2:
             fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.18)'
         ))
         fig_spark.update_layout(
-            height=230,
-            margin=dict(t=10, b=20, l=10, r=10),
-            paper_bgcolor='rgba(15, 23, 42, 0.95)',
+            height=210,
+            margin=dict(t=5, b=15, l=35, r=15),
+            paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            xaxis=dict(showgrid=False, color='#94A3B8'),
-            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', color='#94A3B8', ticksuffix="%")
+            xaxis=dict(showgrid=False, color='#94A3B8', tickfont=dict(size=10)),
+            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', color='#94A3B8', ticksuffix="%", tickfont=dict(size=10))
         )
         st.plotly_chart(fig_spark, use_container_width=True)
 
-    html_card2_bottom = """<div style="max-width: 420px; margin: 0 auto 10px auto; padding: 0 18px 16px 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border-bottom: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; color: #F8FAFC;">
+    html_card2_footer = """<div style="max-width: 420px; margin: -15px auto 10px auto; padding: 0 18px 16px 18px; color: #F8FAFC;">
 <div style="font-size: 0.65rem; color: #64748B; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">🔒 PRIVACY PROTECTED • ZERO ABSOLUTE AMOUNTS SHOWN</div>
 </div>"""
-    st.markdown(html_card2_bottom, unsafe_allow_html=True)
+    st.markdown(html_card2_footer, unsafe_allow_html=True)
 
 st.divider()
 
