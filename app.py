@@ -1287,20 +1287,17 @@ body {{
     <!-- Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 10px;">
         <span style="font-size: 0.88rem; font-weight: 800; color: #60A5FA; letter-spacing: 0.5px;">⚡ v2.29 QUANT SYSTEM</span>
-        <div style="display: flex; gap: 4px;">
-            <span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.2); border: 1px solid #10B981; color: #6EE7B7; padding: 2px 7px; border-radius: 10px; font-weight: bold;">⏱️ 实盘 {live_days} 天</span>
-            <span style="font-size: 0.7rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 7px; border-radius: 10px;">📅 {today_str}</span>
-        </div>
+        <span style="font-size: 0.72rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 8px; border-radius: 10px;">📅 {today_str}</span>
     </div>
 
     <!-- Section 1: Main Metric -->
     <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.78rem; color: #94A3B8;">🌐 全账户综合战绩 (Combined)</span>
-            <span style="font-size: 0.7rem; color: #38BDF8; font-weight: 600;">自 2026-01-15 起</span>
+            <span style="font-size: 0.72rem; color: #6EE7B7; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 1px 7px; border-radius: 8px; font-weight: bold;">实盘 {live_days} 天</span>
         </div>
         <div style="font-size: 2.5rem; font-weight: 900; color: #10B981; line-height: 1.1; margin: 4px 0;">+{total_live_ret_pct:.2f}%</div>
-        <div style="font-size: 0.75rem; color: #CBD5E1;">2026 实盘到手总收益率</div>
+        <div style="font-size: 0.75rem; color: #CBD5E1;">累计总收益率</div>
         <div style="display: flex; justify-content: space-between; margin-top: 10px; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 10px; font-size: 0.78rem;">
             <span>夏普 (Sharpe): <strong style="color:#60A5FA;">{(live_sharpe + 0.25):.2f}</strong></span>
             <span>回撤 (MaxDD): <strong style="color:#F43F5E;">{(real_max_dd * 0.85):.2f}%</strong></span>
