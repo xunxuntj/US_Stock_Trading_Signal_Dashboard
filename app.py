@@ -1306,7 +1306,7 @@ body {{
         <div style="background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 14px; border: 1px solid rgba(56, 189, 248, 0.2);">
             <div style="font-size: 0.75rem; color: #94A3B8;">🇺🇸 美股 v2.29 策略</div>
             <div style="font-size: 1.25rem; font-weight: bold; color: #38BDF8; margin-top: 2px;">+{us_live_ret_pct:.2f}%</div>
-            <div style="font-size: 0.72rem; color: #93C5FD; margin-top: 2px;">年化: +{us_live_cagr:.2f}%</div>
+            <div style="font-size: 0.72rem; color: #93C5FD; margin-top: 2px;">夏普: 2.15 | 回撤: -6.10%</div>
         </div>
         <div style="background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 14px; border: 1px solid rgba(16, 185, 129, 0.2);">
             <div style="font-size: 0.75rem; color: #94A3B8;">🇭🇰 10X 杠杆打新</div>
