@@ -117,18 +117,29 @@ if not df_trades_real.empty:
     total_sell_pnl = sell_trades['pnl'].sum()
     total_fee_sum = df_trades_real['fee'].sum() if 'fee' in df_trades_real.columns else 0
     net_realized_pnl = total_sell_pnl - total_fee_sum
+# ── 2026 Time-Matched Combined Portfolio Analytics ─────────────────────────
+df_ipo_trades_all = get_hk_ipo_trades_history()
+
+# Filter 2026 IPO trades (settled in 2026 or id >= 80)
+if not df_ipo_trades_all.empty:
+    df_ipo_2026 = df_ipo_trades_all[df_ipo_trades_all['id'] >= 80]
+    hk_2026_profit_hkd = float(df_ipo_2026['hkd_profit'].sum())
 else:
-    net_realized_pnl = 37132.02
+    hk_2026_profit_hkd = 0.0
+
+hk_2026_profit_usd = hk_2026_profit_hkd / 7.8
 
 start_dt = pd.to_datetime("2026-01-15")
 today_dt = pd.to_datetime(datetime.date.today().strftime("%Y-%m-%d"))
 live_days = max(1, (today_dt - start_dt).days)
 live_years = live_days / 365.0
 
-# Returns & CAGRs (Initial Capital $99,215.41 on 2026-01-15)
+# 1. US Strategy-only return
 us_live_ret_pct = ((live_nav_latest - 99215.41) / 99215.41) * 100.0
 us_live_cagr = ((1.0 + us_live_ret_pct / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
 
+# 2. Combined Portfolio (US + 2026 Time-Matched HK IPO)
+total_combined_nav = live_nav_latest + hk_2026_profit_usd
 total_live_ret_pct = ((total_combined_nav - 99215.41) / 99215.41) * 100.0
 total_live_cagr = ((1.0 + total_live_ret_pct / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
 
@@ -137,48 +148,47 @@ live_sharpe = 2.15
 # -------------------------------------------------------------------
 # Multi-Metric Banner: Strict 5-Column Grid Alignment (Row 1 & Row 2)
 # -------------------------------------------------------------------
-st.subheader("🌐 全账户整体表现")
+st.subheader("🌐 全账户整体表现 (2026 实盘区间匹配)")
 r1_c1, r1_c2, r1_c3, r1_c4, r1_c5 = st.columns(5)
 
 with r1_c1:
     st.metric(
         label="🌐 全账户总 NAV ($)",
         value=f"${total_combined_nav:,.2f}",
-        delta=f"+{total_live_ret_pct:.2f}% 实盘总收益",
-        help="美股 v2.29 账户净值 + 港股打新累计收益之和 (起始于 2026-01-15 $99,215.41)"
+        delta=f"+{total_live_ret_pct:.2f}% 2026实盘总收益",
+        help="美股 v2.29 净值 + 2026年港股打新收益折算美元之和 (起始于 2026-01-15 $99,215.41)"
     )
 
 with r1_c2:
     st.metric(
-        label="🇭🇰 港股打新累计收益",
-        value=f"${hk_cum_profit:,.2f}",
-        delta="7月预录结算完结",
-        help="港股打新累计净利润（预录截至 2026-07-31 结算数据）"
+        label="🇭🇰 2026港股打新收益",
+        value=f"${hk_2026_profit_usd:,.2f}",
+        delta=f"HK${hk_2026_profit_hkd:,.2f}",
+        help="2026年实盘期间港股打新净利润 (约30笔打新归集)"
     )
 
 with r1_c3:
     st.metric(
-        label="全账户 CAGR (年化)",
-        value=f"{total_live_cagr:.2f}%",
-        delta=f"高出美股策略 +{total_live_cagr - us_live_cagr:.2f}%",
-        help="包含港股打新后的全账户综合实盘年化收益率"
+        label="全账户 2026 收益率",
+        value=f"+{total_live_ret_pct:.2f}%",
+        delta=f"美股 +{us_live_ret_pct:.2f}% | 打新 +{(total_live_ret_pct - us_live_ret_pct):.2f}%",
+        help=f"自 2026-01-15 至今 ({live_days}天) 全账户实际到手总收益率，未经过复利外推放大"
     )
 
 with r1_c4:
+    st.metric(
+        label="全账户 CAGR (外推年化)",
+        value=f"{total_live_cagr:.2f}%",
+        delta=f"复利外推 ({live_days}天)",
+        help=f"按 {live_days} 天实盘收益率 (+{total_live_ret_pct:.2f}%) 按复利公式 (365/{live_days}) 外推一整年的年化回报率"
+    )
+
+with r1_c5:
     st.metric(
         label="全账户 Sharpe (夏普)",
         value=f"{live_sharpe + 0.25:.3f}",
         delta="综合夏普比率",
         help="包含港股打新后的全账户综合夏普比率"
-    )
-
-with r1_c5:
-    st.metric(
-        label="全账户 MaxDD (回撤)",
-        value=f"{real_max_dd * 0.85:.2f}%",
-        delta="综合回撤",
-        delta_color="inverse",
-        help="包含港股打新平滑后的全账户综合最大回撤"
     )
 
 st.write("")
