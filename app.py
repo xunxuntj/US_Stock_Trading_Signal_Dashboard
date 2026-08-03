@@ -1253,7 +1253,6 @@ with share_col1:
 <span>费用侵蚀率: <strong style="color:#A78BFA;">11.20%</strong></span>
 </div>
 </div>
-<div style="font-size: 0.65rem; color: #64748B; text-align: center; margin-top: 10px;">🔒 PRIVACY PROTECTED • ZERO ABSOLUTE AMOUNTS SHOWN</div>
 </div>"""
     st.markdown(html_card1, unsafe_allow_html=True)
 
@@ -1297,11 +1296,10 @@ with share_col2:
 
     # Render Card 2 Footer (seamlessly completing the green glow border)
     html_card2_footer = f"""<div style="width: 100%; margin: -15px 0 10px 0; padding: 10px 18px 18px 18px; background: linear-gradient(145deg, #152136 0%, #1E293B 100%); border-bottom: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15); color: #F8FAFC; box-sizing: border-box;">
-<div style="display: flex; justify-content: space-between; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 10px; font-size: 0.78rem;">
+<div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 10px; font-size: 0.78rem;">
 <span>累计实盘天数: <strong style="color:#6EE7B7;">{live_days} 天</strong></span>
 <span>胜率/盈亏比: <strong style="color:#38BDF8;">优选高夏普</strong></span>
 </div>
-<div style="font-size: 0.65rem; color: #64748B; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">🔒 PRIVACY PROTECTED • ZERO ABSOLUTE AMOUNTS SHOWN</div>
 </div>"""
     st.markdown(html_card2_footer, unsafe_allow_html=True)
 
