@@ -1,16 +1,11 @@
 name: Daily v2.29 Trading Signal Scan
 
 on:
+  workflow_dispatch: # Primary: Triggered precisely via external Cronjob / Webhook API or manual click
   schedule:
-    # 1. 首选主调度: 美股收盘后 30 分钟 (21:30 UTC Mon-Fri / 美东 16:30)
-    - cron: '30 21 * * 1-5'
-    # 2. Fallback 1 (+2小时重试): 23:30 UTC Mon-Fri (美东 19:30)
-    - cron: '30 23 * * 1-5'
-    # 3. Fallback 2 (+4小时重试): 01:30 UTC Tue-Sat (美东 21:30)
-    - cron: '30 1 * * 2-6'
-    # 4. Fallback 3 (+8小时终极对账): 05:30 UTC Tue-Sat (美东 01:30 / 次晨开盘前对账)
-    - cron: '30 5 * * 2-6'
-  workflow_dispatch: # Allows manual trigger from GitHub UI anytime
+    # Fallback backup triggers (Note: GitHub internal cron may experience delay)
+    - cron: '30 21 * * 1-5' # 21:30 UTC Mon-Fri (美东 16:30 盘后)
+    - cron: '30 5 * * 2-6'  # 05:30 UTC Tue-Sat (美东 01:30 盘前对账)
 
 jobs:
   scan:
