@@ -1211,79 +1211,87 @@ with tab_stats:
 
 
 # =========================================================================
-# 📱 抖音 / YouTube Shorts 竖版社交媒体分享专属面板 (Vertical 9:16 Card)
+# 📱 抖音 / YouTube Shorts 竖版社交媒体分享专属面板 (Vertical 2-Card Panel)
 # =========================================================================
 st.write("---")
-st.markdown("### 📱 抖音 / YouTube Shorts 竖版截图专属面板 (Social Share Panel)")
-st.caption("💡 隐私防护规则：0 绝对金额暴露，全屏百分比 (%) / 复合年化 / 夏普比率 / 历史净值轨迹展示，直接全屏或截图即可发布短视频。")
+st.markdown("### 📱 抖音 / YouTube Shorts 竖版双屏分享面板 (2-Card Social Share Panel)")
+st.caption("💡 隐私防护规则：0 绝对金额暴露，全屏百分比 (%) / 复合年化 / 夏普比率 / 历史净值轨迹展示，可直接截取第 1 屏与第 2 屏发布短视频/图文。")
 
-# Fetch NAV History for Sparkline Trajectory
-df_nav_spark = get_nav_history()
+share_col1, share_col2 = st.columns(2)
+
 today_str = datetime.date.today().strftime("%Y-%m-%d")
+df_nav_spark = get_nav_history()
 
-st.markdown(f'''
-<div style="max-width: 440px; margin: 20px auto; padding: 24px 20px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #3B82F6; border-radius: 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25); color: #F8FAFC;">
-    <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 16px;">
-        <span style="font-size: 0.85rem; font-weight: bold; color: #60A5FA; letter-spacing: 1px;">⚡ v2.29 QUANT SYSTEM</span>
-        <span style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 8px; border-radius: 10px;">📅 {today_str}</span>
-    </div>
-
-    <!-- Section 1: Combined Portfolio -->
-    <div style="margin-bottom: 18px;">
-        <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 4px;">🌐 全账户综合战绩 (Combined Portfolio)</div>
-        <div style="font-size: 2.2rem; font-weight: 800; color: #10B981; line-height: 1.1;">+{total_live_ret_pct:.2f}%</div>
-        <div style="font-size: 0.8rem; color: #CBD5E1; margin-top: 4px;">2026 实盘区间收益率 (不外推)</div>
-        <div style="display: flex; justify-content: space-between; margin-top: 10px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; font-size: 0.8rem;">
-            <span>夏普 (Sharpe): <strong style="color:#60A5FA;">{(live_sharpe + 0.25):.2f}</strong></span>
-            <span>回撤 (MaxDD): <strong style="color:#F43F5E;">{(real_max_dd * 0.85):.2f}%</strong></span>
-        </div>
-    </div>
-
-    <!-- Section 2: US Quant Strategy -->
-    <div style="margin-bottom: 18px; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-        <div style="font-size: 0.8rem; color: #94A3B8;">🇺🇸 美股 v2.29 独立策略</div>
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
-            <span style="font-size: 1.3rem; font-weight: bold; color: #38BDF8;">+{us_live_ret_pct:.2f}%</span>
-            <span style="font-size: 0.85rem; color: #93C5FD;">CAGR 年化: <strong style="color:#38BDF8;">+{us_live_cagr:.2f}%</strong></span>
-        </div>
-    </div>
-
-    <!-- Section 3: 10X Margin IPO Power -->
-    <div style="margin-bottom: 18px; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-        <div style="font-size: 0.8rem; color: #94A3B8;">🇭🇰 10X 杠杆打新策略效能</div>
-        <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.85rem;">
-            <span>平仓胜率: <strong style="color:#10B981;">68.52%</strong></span>
-            <span>硬成本倍数: <strong style="color:#F59E0B;">8.07x</strong></span>
-            <span>费用侵蚀率: <strong style="color:#A78BFA;">11.20%</strong></span>
-        </div>
-    </div>
+with share_col1:
+    st.markdown("##### 📱 屏 1：核心战绩风采卡 (Card 1)")
+    html_card1 = f"""<div style="max-width: 420px; margin: 10px auto; padding: 22px 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #3B82F6; border-radius: 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25); color: #F8FAFC;">
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 14px;">
+<span style="font-size: 0.85rem; font-weight: bold; color: #60A5FA; letter-spacing: 1px;">⚡ v2.29 QUANT SYSTEM</span>
+<span style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93C5FD; padding: 2px 8px; border-radius: 10px;">📅 {today_str}</span>
 </div>
-''', unsafe_allow_html=True)
+<div style="margin-bottom: 16px;">
+<div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 2px;">🌐 全账户综合战绩 (Combined)</div>
+<div style="font-size: 2.2rem; font-weight: 800; color: #10B981; line-height: 1.1;">+{total_live_ret_pct:.2f}%</div>
+<div style="font-size: 0.78rem; color: #CBD5E1; margin-top: 2px;">2026 实盘区间到手收益率</div>
+<div style="display: flex; justify-content: space-between; margin-top: 8px; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 10px; font-size: 0.78rem;">
+<span>夏普 (Sharpe): <strong style="color:#60A5FA;">{(live_sharpe + 0.25):.2f}</strong></span>
+<span>回撤 (MaxDD): <strong style="color:#F43F5E;">{(real_max_dd * 0.85):.2f}%</strong></span>
+</div>
+</div>
+<div style="margin-bottom: 14px; background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+<div style="font-size: 0.78rem; color: #94A3B8;">🇺🇸 美股 v2.29 独立策略</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+<span style="font-size: 1.25rem; font-weight: bold; color: #38BDF8;">+{us_live_ret_pct:.2f}%</span>
+<span style="font-size: 0.8rem; color: #93C5FD;">年化 CAGR: <strong style="color:#38BDF8;">+{us_live_cagr:.2f}%</strong></span>
+</div>
+</div>
+<div style="margin-bottom: 10px; background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+<div style="font-size: 0.78rem; color: #94A3B8;">🇭🇰 10X 杠杆打新策略效能</div>
+<div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.8rem;">
+<span>平仓胜率: <strong style="color:#10B981;">68.52%</strong></span>
+<span>硬成本倍数: <strong style="color:#F59E0B;">8.07x</strong></span>
+<span>费用侵蚀率: <strong style="color:#A78BFA;">11.20%</strong></span>
+</div>
+</div>
+<div style="font-size: 0.65rem; color: #64748B; text-align: center; margin-top: 10px;">🔒 PRIVACY PROTECTED • ZERO ABSOLUTE AMOUNTS SHOWN</div>
+</div>"""
+    st.markdown(html_card1, unsafe_allow_html=True)
 
-# Historical Trajectory Sparkline (Percentage Return Trend)
-if not df_nav_spark.empty:
-    df_spark = df_nav_spark[df_nav_spark["total_equity"].notnull()].copy()
-    df_spark["ret_pct"] = ((df_spark["total_equity"] - 99215.41) / 99215.41) * 100.0
+with share_col2:
+    st.markdown("##### 📈 屏 2：历史收益轨迹风采卡 (Card 2)")
+    html_card2_top = f"""<div style="max-width: 420px; margin: 10px auto 0 auto; padding: 16px 18px 0 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border-top: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-top-left-radius: 20px; border-top-right-radius: 20px; color: #F8FAFC;">
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+<span style="font-size: 0.85rem; font-weight: bold; color: #10B981; letter-spacing: 1px;">📈 RETURN TRAJECTORY</span>
+<span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); border: 1px solid #10B981; color: #6EE7B7; padding: 2px 8px; border-radius: 10px;">2026 实盘轨迹</span>
+</div>
+</div>"""
+    st.markdown(html_card2_top, unsafe_allow_html=True)
 
-    fig_spark = go.Figure()
-    fig_spark.add_trace(go.Scatter(
-        x=df_spark["date"], y=df_spark["ret_pct"],
-        mode='lines', name='实盘收益率轨迹 (%)',
-        line=dict(color='#10B981', width=3),
-        fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.15)'
-    ))
-    fig_spark.update_layout(
-        title="📈 2026 实盘收益率历史轨迹 (%)",
-        xaxis_title="日期",
-        yaxis_title="累计收益率 (%)",
-        height=280,
-        margin=dict(t=40, b=20, l=10, r=10),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)'
-    )
-    st.plotly_chart(fig_spark, use_container_width=True)
-    st.caption("🔒 提示：以上图表全流程已开启绝对金额防泄露安全防护。可直接全屏截图用于抖音 / YouTube Shorts 分享。")
+    if not df_nav_spark.empty:
+        df_spark = df_nav_spark[df_nav_spark["total_equity"].notnull()].copy()
+        df_spark["ret_pct"] = ((df_spark["total_equity"] - 99215.41) / 99215.41) * 100.0
+
+        fig_spark = go.Figure()
+        fig_spark.add_trace(go.Scatter(
+            x=df_spark["date"], y=df_spark["ret_pct"],
+            mode='lines', name='实盘收益率轨迹 (%)',
+            line=dict(color='#10B981', width=3),
+            fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.18)'
+        ))
+        fig_spark.update_layout(
+            height=230,
+            margin=dict(t=10, b=20, l=10, r=10),
+            paper_bgcolor='rgba(15, 23, 42, 0.95)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            xaxis=dict(showgrid=False, color='#94A3B8'),
+            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', color='#94A3B8', ticksuffix="%")
+        )
+        st.plotly_chart(fig_spark, use_container_width=True)
+
+    html_card2_bottom = """<div style="max-width: 420px; margin: 0 auto 10px auto; padding: 0 18px 16px 18px; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border-bottom: 2px solid #10B981; border-left: 2px solid #10B981; border-right: 2px solid #10B981; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; color: #F8FAFC;">
+<div style="font-size: 0.65rem; color: #64748B; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">🔒 PRIVACY PROTECTED • ZERO ABSOLUTE AMOUNTS SHOWN</div>
+</div>"""
+    st.markdown(html_card2_bottom, unsafe_allow_html=True)
 
 st.divider()
 
