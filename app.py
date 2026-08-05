@@ -1294,11 +1294,29 @@ if actions:
                 <span style="color:#93C5FD;">建议仓位 <strong style="color:#38BDF8;">{weight_str}</strong></span>
             </div>""")
 else:
-    signals_html_items.append("""
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
-            <span>实盘持仓: <strong style="color:#10B981;">🟢 策略运行中 (动态轮动)</strong></span>
-            <span style="color:#93C5FD;">状态 <strong style="color:#38BDF8;">多头持仓</strong></span>
-        </div>""")
+    # When no new actions (or actions reconciled into DB), dynamically render active trend positions with weight %, zero dollar/share leakage
+    pos_active_df = get_positions()
+    trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])] if not pos_active_df.empty else pd.DataFrame()
+    
+    if not trend_pos.empty:
+        for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):
+            tkr = pos_row['ticker']
+            shares = pos_row['shares']
+            px = current_prices.get(tkr, pos_row['cost_basis']) if 'current_prices' in locals() else pos_row['cost_basis']
+            mkt_val = shares * px
+            weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 12.5
+            
+            signals_html_items.append(f"""
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
+                    <span>持仓 {idx}: <strong style="color:#10B981;">🟢 多头持有 [{tkr}]</strong></span>
+                    <span style="color:#93C5FD;">仓位 <strong style="color:#38BDF8;">{weight_pct:.1f}%</strong></span>
+                </div>""")
+    else:
+        signals_html_items.append("""
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
+                <span>实盘状态: <strong style="color:#10B981;">🛡️ 组合防守/贴息运行中</strong></span>
+                <span style="color:#93C5FD;">现金仓位 <strong style="color:#38BDF8;">100%</strong></span>
+            </div>""")
 
 html_signals_rows = "\n".join(signals_html_items)
 
