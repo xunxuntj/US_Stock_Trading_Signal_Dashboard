@@ -371,21 +371,47 @@ st.divider()
 st.subheader("🚨 今日交易指令控制台 (Command Center)")
 
 if actions:
-    st.markdown('<div class="action-card">', unsafe_allow_html=True)
-    st.markdown(f"### ⚠️ 今日触发 {len(actions)} 项实盘交易指令（请在券商 App 完成手工下单）：")
+    action_items_html = ""
     for idx, act in enumerate(actions, 1):
-        action_color = "🔴 卖出平仓" if act['action'] == 'SELL' else "🟢 买入建仓"
-        funding_info = " (资金归集入 SGOV 闲置贴息)" if act['action'] == 'SELL' else " (资金源：优先卖出变现 SGOV)"
-        st.markdown(f"**指令 {idx}**: {action_color} **`{act['ticker']}`** | 目标金额: **${act['target_val']:,.2f}**{funding_info}")
-        st.caption(f"触发原因: {act['reason']}")
-    st.markdown('</div>', unsafe_allow_html=True)
+        is_buy = (act['action'] == 'BUY')
+        action_title = f"🟢 买入建仓 {act['ticker']}" if is_buy else f"🔴 卖出平仓 {act['ticker']}"
+        action_bg = "rgba(16, 185, 129, 0.10)" if is_buy else "rgba(239, 68, 68, 0.10)"
+        action_border = "rgba(16, 185, 129, 0.35)" if is_buy else "rgba(239, 68, 68, 0.35)"
+        badge_color = "#10B981" if is_buy else "#EF4444"
+        funding_info = "(资金源: 优先卖出变现 SGOV 货币基金)" if is_buy else "(资金自动归集入 SGOV 闲置贴息)"
+        
+        action_items_html += f"""
+        <div style="background: {action_bg}; border: 1.5px solid {action_border}; padding: 14px 16px; border-radius: 14px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 8px;">
+                <span style="font-size: 1.05rem; font-weight: bold; color: {badge_color};">指令 {idx}: {action_title}</span>
+                <span style="font-size: 0.95rem; font-weight: bold; color: #F59E0B; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 8px;">目标金额: ${act['target_val']:,.2f}</span>
+            </div>
+            <div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 4px;">
+                💳 <strong>执行说明:</strong> {funding_info}
+            </div>
+            <div style="font-size: 0.78rem; color: #94A3B8; background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 8px;">
+                🧠 <strong>触发逻辑:</strong> {act['reason']}
+            </div>
+        </div>
+        """
+
+    command_center_html = f"""
+    <div style="background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #F59E0B; border-radius: 20px; padding: 20px 22px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18); color: #F8FAFC; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+            <span style="font-size: 1.1rem; font-weight: 800; color: #F59E0B; letter-spacing: 0.5px;">⚠️ 今日触发 {len(actions)} 项实盘交易指令</span>
+            <span style="font-size: 0.8rem; background: rgba(245, 158, 11, 0.2); border: 1px solid #F59E0B; color: #FDE047; padding: 3px 10px; border-radius: 10px; font-weight: bold;">请在券商 App 完成手工下单</span>
+        </div>
+        {action_items_html}
+    </div>
+    """
+    st.markdown(command_center_html, unsafe_allow_html=True)
     
-    col_a, col_b = st.columns([1, 4])
+    col_a, col_b = st.columns([1.2, 3.8])
     with col_a:
         if st.button("✅ [已在券商完成下单对账]", type="primary"):
             st.success("已完成今日交易对账，持仓数据库已自动同步！")
     with col_b:
-        st.info("提示：完成手工下单后点击上方按钮，系统将自动扣减 SGOV 现金并入库新持仓。")
+        st.info("💡 提示：完成手工下单后点击左侧按钮，系统将自动扣减 SGOV 现金并入库新持仓。")
 else:
     st.success(f"✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 {s5fi_val:.1f}%，60% JEPQ + 40% SGOV + 趋势层持仓运行稳健！")
 
