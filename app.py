@@ -1268,7 +1268,7 @@ body {{
 }}
 .card-box {{
     width: 370px;
-    height: 675px;
+    height: 740px;
     padding: 22px 20px;
     background: linear-gradient(155deg, #0F172A 0%, #1E293B 50%, #090D16 100%);
     border: 2.5px solid #3B82F6;
@@ -1318,13 +1318,31 @@ body {{
         </div>
     </div>
 
+    <!-- Section 2.5: Concise Live Trading Signals (No Absolute Dollar Amounts) -->
+    <div style="background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.08) 100%); padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(16,185,129,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px;">
+            <span style="font-size: 0.78rem; font-weight: bold; color: #38BDF8; letter-spacing: 0.5px;">🎯 最新交易信号 (LIVE SIGNALS)</span>
+            <span style="font-size: 0.68rem; background: rgba(16,185,129,0.25); color: #6EE7B7; padding: 1px 6px; border-radius: 6px; font-weight: bold;">🟢 信号生效中</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
+                <span>🇺🇸 选股指令: <strong style="color:#10B981;">🟢 买入/持仓 [TQQQ/SOXL]</strong></span>
+                <span style="color:#93C5FD;">仓位 <strong style="color:#38BDF8;">35%</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
+                <span>🇭🇰 打新指令: <strong style="color:#F59E0B;">🟡 申购观望/首日平仓</strong></span>
+                <span style="color:#93C5FD;">杠杆 <strong style="color:#F59E0B;">10X</strong></span>
+            </div>
+        </div>
+    </div>
+
     <!-- Section 3: Embedded SVG Sparkline Trajectory -->
-    <div style="background: rgba(15, 23, 42, 0.7); padding: 10px 12px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.25);">
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+    <div style="background: rgba(15, 23, 42, 0.7); padding: 8px 12px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.25);">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
             <span style="font-size: 0.78rem; font-weight: bold; color: #10B981;">📈 2026 收益率历史轨迹 (%)</span>
             <span style="font-size: 0.72rem; color: #6EE7B7;">实盘 {live_days} 天</span>
         </div>
-        <svg width="310" height="110" style="overflow: hidden;">
+        <svg width="310" height="95" style="overflow: hidden;">
             <defs>
                 <linearGradient id="grad_spark" x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="0%" stop-color="#10B981" stop-opacity="0.4" />
@@ -1335,7 +1353,6 @@ body {{
             <path d="{svg_path}" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" />
         </svg>
     </div>
-
 
     <!-- Section 4: Performance Matrix Footer -->
     <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 12px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.06);">
@@ -1353,7 +1370,7 @@ body {{
 </html>
 """
 
-components.html(html_pure_card, height=710)
+components.html(html_pure_card, height=775)
 
 st.divider()
 
