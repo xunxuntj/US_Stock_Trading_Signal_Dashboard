@@ -422,32 +422,11 @@ else:
             mkt_val = shares * curr_p
             weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
             
-            rows_html += f"""
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-                <td style="padding: 8px 12px; color: #94A3B8; font-weight: bold; width: 15%;">持仓 {idx}</td>
-                <td style="padding: 8px 12px; width: 20%;"><strong style="color:#10B981; font-size: 1rem;">{tkr}</strong></td>
-                <td style="padding: 8px 12px; width: 22%;"><code style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px; color:#E2E8F0;">{shares_str} 股</code></td>
-                <td style="padding: 8px 12px; width: 23%;"><strong style="color:#F59E0B; font-size: 0.98rem;">${mkt_val:,.2f}</strong></td>
-                <td style="padding: 8px 12px; width: 20%;">占比 <strong style="color:#38BDF8; font-size: 0.98rem;">{weight_pct:.1f}%</strong></td>
-            </tr>"""
+            rows_html += f'<tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:8px 12px;color:#94A3B8;font-weight:bold;width:15%;">持仓 {idx}</td><td style="padding:8px 12px;width:20%;"><strong style="color:#10B981;font-size:1rem;">{tkr}</strong></td><td style="padding:8px 12px;width:22%;"><code style="background:rgba(255,255,255,0.08);padding:3px 8px;border-radius:6px;color:#E2E8F0;">{shares_str} 股</code></td><td style="padding:8px 12px;width:23%;"><strong style="color:#F59E0B;font-size:0.98rem;">${mkt_val:,.2f}</strong></td><td style="padding:8px 12px;width:20%;">占比 <strong style="color:#38BDF8;font-size:0.98rem;">{weight_pct:.1f}%</strong></td></tr>'
         
-        holdings_detail_html = f"""<div style="margin: 10px 0; background: rgba(0,0,0,0.25); border-radius: 12px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.06);">
-<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-<tbody>
-{rows_html}
-</tbody>
-</table>
-</div>"""
+        holdings_detail_html = f'<div style="margin:10px 0;background:rgba(0,0,0,0.25);border-radius:12px;padding:4px 12px;border:1px solid rgba(255,255,255,0.06);"><table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.9rem;"><tbody>{rows_html}</tbody></table></div>'
     
-    command_no_signal_html = f"""<div style="background: rgba(16, 185, 129, 0.10); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 18px; padding: 18px 22px; color: #F8FAFC; margin-bottom: 15px;">
-<div style="font-size: 1.05rem; font-weight: bold; color: #10B981; margin-bottom: 6px;">
-✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 <span style="color:#F59E0B;">{s5fi_val:.1f}%</span>，实盘已建仓：
-</div>
-{holdings_detail_html}
-<div style="font-size: 0.88rem; color: #CBD5E1; margin-top: 6px;">
-🚀 趋势多头阵列，JEPQ 收益底仓与 SGOV 贴息按计划稳健运行中！
-</div>
-</div>"""
+    command_no_signal_html = f'<div style="background:rgba(16,185,129,0.10);border:1.5px solid rgba(16,185,129,0.35);border-radius:18px;padding:18px 22px;color:#F8FAFC;margin-bottom:15px;"><div style="font-size:1.05rem;font-weight:bold;color:#10B981;margin-bottom:6px;">✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 <span style="color:#F59E0B;">{s5fi_val:.1f}%</span>，实盘已建仓：</div>{holdings_detail_html}<div style="font-size:0.88rem;color:#CBD5E1;margin-top:6px;">🚀 趋势多头阵列，JEPQ 收益底仓与 SGOV 贴息按计划稳健运行中！</div></div>'
     st.markdown(command_no_signal_html, unsafe_allow_html=True)
 
 st.divider()
