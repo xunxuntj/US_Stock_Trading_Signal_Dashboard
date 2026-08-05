@@ -402,9 +402,11 @@ if actions:
     col_a, col_b = st.columns([1.2, 3.8])
     with col_a:
         if st.button("✅ [已在券商完成下单对账]", type="primary"):
-            st.success("已完成今日交易对账，持仓数据库已自动同步！")
+            st.cache_data.clear()
+            st.success("已完成今日交易对账，持仓数据库已自动同步并核销新信号！")
+            st.rerun()
     with col_b:
-        st.info("💡 提示：完成手工下单后点击左侧按钮，系统将自动扣减 SGOV 现金并入库新持仓。")
+        st.info("💡 提示：完成手工下单并在左侧登记后点击按钮，系统将同步核销信号并刷新持仓。")
 else:
     st.success(f"✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 {s5fi_val:.1f}%，60% JEPQ + 40% SGOV + 趋势层持仓运行稳健！")
 
