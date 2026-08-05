@@ -1249,6 +1249,30 @@ if not df_nav_spark.empty:
         svg_path = path_str
         svg_fill_path = f"{path_str} L {points[-1][0]:.1f},110 L {points[0][0]:.1f},110 Z"
 
+# Dynamically construct 9:16 card live trading signal items (100% matched to live actions, 0 dollar amount exposure)
+signals_html_items = []
+if actions:
+    for idx, act in enumerate(actions, 1):
+        act_dir = "🟢 买入建仓" if act['action'] == 'BUY' else "🔴 卖出平仓"
+        dir_color = "#10B981" if act['action'] == 'BUY' else "#F43F5E"
+        tkr = act['ticker']
+        target_v = float(act.get('target_val', 0.0))
+        weight_str = f"{(target_v / live_nav_latest * 100.0):.1f}%" if live_nav_latest > 0 and target_v > 0 else "12.5%"
+        
+        signals_html_items.append(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
+                <span>🇺🇸 指令 {idx}: <strong style="color:{dir_color};">{act_dir} [{tkr}]</strong></span>
+                <span style="color:#93C5FD;">建议仓位 <strong style="color:#38BDF8;">{weight_str}</strong></span>
+            </div>""")
+else:
+    signals_html_items.append("""
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
+            <span>🇺🇸 实盘持仓: <strong style="color:#10B981;">🟢 策略运行中 (动态轮动)</strong></span>
+            <span style="color:#93C5FD;">状态 <strong style="color:#38BDF8;">多头持仓</strong></span>
+        </div>""")
+
+html_signals_rows = "\n".join(signals_html_items)
+
 import streamlit.components.v1 as components
 
 # Unified 9:16 Smartphone Card (Width: 380px, Height: 675px)
@@ -1325,14 +1349,7 @@ body {{
             <span style="font-size: 0.68rem; background: rgba(16,185,129,0.25); color: #6EE7B7; padding: 1px 6px; border-radius: 6px; font-weight: bold;">🟢 信号生效中</span>
         </div>
         <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
-                <span>🇺🇸 选股指令: <strong style="color:#10B981;">🟢 买入/持仓 [TQQQ/SOXL]</strong></span>
-                <span style="color:#93C5FD;">仓位 <strong style="color:#38BDF8;">35%</strong></span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
-                <span>🇭🇰 打新指令: <strong style="color:#F59E0B;">🟡 申购观望/首日平仓</strong></span>
-                <span style="color:#93C5FD;">杠杆 <strong style="color:#F59E0B;">10X</strong></span>
-            </div>
+            {html_signals_rows}
         </div>
     </div>
 
