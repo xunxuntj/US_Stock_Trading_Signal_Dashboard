@@ -368,7 +368,7 @@ st.divider()
 
 
 # Section 1: Command Center & Action Card
-st.subheader("🚨 今日交易指令控制台 (Command Center)")
+st.subheader("🚨 今日交易信号控制台 (Command Center)")
 
 if actions:
     action_items_html = ""
@@ -382,7 +382,7 @@ if actions:
         
         item_str = f"""<div style="background: {action_bg}; border: 1.5px solid {action_border}; padding: 14px 16px; border-radius: 14px; margin-bottom: 10px;">
 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 8px;">
-<span style="font-size: 1.05rem; font-weight: bold; color: {badge_color};">指令 {idx}: {action_title}</span>
+<span style="font-size: 1.05rem; font-weight: bold; color: {badge_color};">信号 {idx}: {action_title}</span>
 <span style="font-size: 0.95rem; font-weight: bold; color: #F59E0B; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 8px;">目标金额: ${act['target_val']:,.2f}</span>
 </div>
 <div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 6px;">💳 <strong>执行说明:</strong> {funding_info}</div>
@@ -392,7 +392,7 @@ if actions:
 
     command_center_html = f"""<div style="background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #F59E0B; border-radius: 20px; padding: 20px 22px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18); color: #F8FAFC; margin-bottom: 15px;">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-<span style="font-size: 1.1rem; font-weight: 800; color: #F59E0B; letter-spacing: 0.5px;">⚠️ 今日触发 {len(actions)} 项实盘交易指令</span>
+<span style="font-size: 1.1rem; font-weight: 800; color: #F59E0B; letter-spacing: 0.5px;">⚠️ 今日触发 {len(actions)} 项实盘交易信号</span>
 <span style="font-size: 0.8rem; background: rgba(245, 158, 11, 0.2); border: 1px solid #F59E0B; color: #FDE047; padding: 3px 10px; border-radius: 10px; font-weight: bold;">请在券商 App 完成手工下单</span>
 </div>
 {action_items_html}
@@ -1280,13 +1280,13 @@ if actions:
         
         signals_html_items.append(f"""
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
-                <span>🇺🇸 指令 {idx}: <strong style="color:{dir_color};">{act_dir} [{tkr}]</strong></span>
+                <span>信号 {idx}: <strong style="color:{dir_color};">{act_dir} [{tkr}]</strong></span>
                 <span style="color:#93C5FD;">建议仓位 <strong style="color:#38BDF8;">{weight_str}</strong></span>
             </div>""")
 else:
     signals_html_items.append("""
         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 8px;">
-            <span>🇺🇸 实盘持仓: <strong style="color:#10B981;">🟢 策略运行中 (动态轮动)</strong></span>
+            <span>实盘持仓: <strong style="color:#10B981;">🟢 策略运行中 (动态轮动)</strong></span>
             <span style="color:#93C5FD;">状态 <strong style="color:#38BDF8;">多头持仓</strong></span>
         </div>""")
 
