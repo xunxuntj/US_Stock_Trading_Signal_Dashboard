@@ -1,0 +1,97 @@
+//@version=6
+strategy("US Stock & Cross-Asset Multi-Layered Trend Backtest v2.29", shorttitle="v2.29 Backtest Strategy", overlay=true, initial_capital=100000, default_qty_type=strategy.percent_of_equity, default_qty_value=10, commission_type=strategy.commission.percent, commission_value=0.0005)
+
+// ==========================================
+// 1. Inputs
+// ==========================================
+grp_breadth = "=== S5FI Breadth / 宽度指标参数 ==="
+s5fi_symbol = input.symbol("INDEX:S5FI", title="S5FI Ticker / 宽度指标代码", group=grp_breadth)
+s5fi_l1_gate = input.float(45.0, title="L1 S5FI Gate Threshold (%) / L1 宽度闸门", group=grp_breadth)
+s5fi_l2_gate = input.float(55.0, title="L2 S5FI Gate Threshold (%) / L2 宽度闸门", group=grp_breadth)
+
+grp_indicators = "=== Moving Average & SuperTrend ==="
+ema_len = input.int(200, title="EMA 200 Length", group=grp_indicators)
+st_period = input.int(10, title="SuperTrend Period", group=grp_indicators)
+st_mult = input.float(3.0, title="SuperTrend Multiplier", group=grp_indicators, step=0.1)
+
+// ==========================================
+// 2. Data Fetching & Indicators
+// ==========================================
+ema200 = ta.ema(close, ema_len)
+plot(ema200, color=color.gray, linewidth=2, title="EMA 200")
+
+[st_val, st_dir] = ta.supertrend(st_mult, st_period)
+st_color = st_dir < 0 ? color.green : color.red
+plot(st_val, color=st_color, linewidth=2, title="SuperTrend")
+
+s5fi_val = request.security(s5fi_symbol, "D", close, ignore_invalid_symbol=true)
+
+[spy_close, spy_ema, spy_dir, spy_dir_prev] = request.security("SPY", "D", [close, ta.ema(close, ema_len), st_dir, st_dir[1]], ignore_invalid_symbol=true)
+[qqq_close, qqq_ema, qqq_dir, qqq_dir_prev] = request.security("QQQ", "D", [close, ta.ema(close, ema_len), st_dir, st_dir[1]], ignore_invalid_symbol=true)
+
+// ==========================================
+// 3. Asset Identification
+// ==========================================
+curr_ticker = syminfo.ticker
+
+is_spy  = (curr_ticker == "SPY")
+is_qqq  = (curr_ticker == "QQQ")
+is_soxx = (curr_ticker == "SOXX")
+is_qld  = (curr_ticker == "QLD")
+
+is_gld  = (curr_ticker == "GLD")
+is_tlt  = (curr_ticker == "TLT")
+is_dbc  = (curr_ticker == "DBC")
+is_bito = (curr_ticker == "BITO")
+
+is_equity_l1 = is_spy or is_qqq or is_soxx
+is_equity_l2 = is_qqq or is_soxx or is_qld
+is_non_equity = is_gld or is_tlt or is_dbc or is_bito
+
+parent_close     = is_qqq ? spy_close : qqq_close
+parent_ema       = is_qqq ? spy_ema : qqq_ema
+parent_dir       = is_qqq ? spy_dir : qqq_dir
+parent_dir_prev  = is_qqq ? spy_dir_prev : qqq_dir_prev
+
+// ==========================================
+// 4. Signals Logic
+// ==========================================
+st_bullish_change = (st_dir[1] >= 0 and st_dir < 0)
+st_bearish_change = (st_dir[1] < 0 and st_dir >= 0)
+
+parent_st_bullish_change = (parent_dir_prev >= 0 and parent_dir < 0)
+parent_st_bearish_change = (parent_dir_prev < 0 and parent_dir >= 0)
+
+l1_gate_open = not na(s5fi_val) ? (s5fi_val >= s5fi_l1_gate) : true
+l2_gate_open = not na(s5fi_val) ? (s5fi_val >= s5fi_l2_gate) : true
+
+// Equity L1
+equity_l1_buy  = is_equity_l1 and (close > ema200) and st_bullish_change and l1_gate_open
+equity_l1_sell = is_equity_l1 and st_bearish_change
+
+// Equity L2
+parent_bullish = (parent_close > parent_ema) and (parent_dir < 0)
+parent_l1_buy_signal = (parent_close > parent_ema) and parent_st_bullish_change
+
+l2_buy_cond = (parent_bullish and st_bullish_change) or ((st_dir < 0) and parent_l1_buy_signal)
+equity_l2_buy  = is_equity_l2 and l2_buy_cond and l2_gate_open
+equity_l2_sell = is_equity_l2 and (st_bearish_change or parent_st_bearish_change)
+
+// Non-Equity L1 (S5FI Exempt)
+non_equity_buy  = is_non_equity and (close > ema200) and st_bullish_change
+non_equity_sell = is_non_equity and st_bearish_change
+
+// Master Buy/Sell Signals
+buy_signal  = equity_l1_buy or equity_l2_buy or non_equity_buy
+sell_signal = equity_l1_sell or equity_l2_sell or non_equity_sell
+
+// ==========================================
+// 5. Strategy Execution
+// ==========================================
+alloc_pct = is_equity_l2 ? 8.0 : 10.0
+
+if (buy_signal and strategy.position_size == 0)
+    strategy.entry("v229_Long", strategy.long, qty=(strategy.equity * (alloc_pct / 100.0)) / close)
+
+if (sell_signal and strategy.position_size > 0)
+    strategy.close("v229_Long", comment="v229_Exit")

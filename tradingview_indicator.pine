@@ -1,17 +1,19 @@
 //@version=6
-indicator("US Stock Multi-Layered Trend System v2.2", shorttitle="US-MT v2.2", overlay=true)
+indicator("US Stock & Cross-Asset Multi-Layered Trend System v2.29", shorttitle="v2.29 Quant System", overlay=true)
 
 // ==========================================
-// 1. Inputs & Configuration (Bilingual Support / English Default)
+// 1. Inputs & Configuration (Bilingual Support / 默认中文)
 // ==========================================
 grp_lang = "=== Language Setting / 语言设定 ==="
-lang_input = input.string("English", title="Language / 语言", options=["English", "中文"], group=grp_lang)
+lang_input = input.string("中文", title="Language / 语言", options=["中文", "English"], group=grp_lang)
 
 grp_mode = "=== Capital Allocation / 资金配置 ==="
 nav_input = input.float(100000.0, title="Account NAV ($) / 账户总NAV", group=grp_mode)
 
 grp_breadth = "=== S5FI Breadth / 宽度指标参数 ==="
 s5fi_symbol = input.symbol("INDEX:S5FI", title="S5FI Ticker / 宽度指标代码", group=grp_breadth)
+s5fi_l1_gate = input.float(45.0, title="L1 S5FI Gate Threshold (%) / L1 宽度闸门", group=grp_breadth)
+s5fi_l2_gate = input.float(55.0, title="L2 S5FI Gate Threshold (%) / L2 宽度闸门", group=grp_breadth)
 
 grp_indicators = "=== Moving Average & SuperTrend / 均线与 SuperTrend ==="
 ema_len = input.int(200, title="EMA 200 Length / EMA 200 长度", group=grp_indicators)
@@ -21,252 +23,260 @@ st_mult = input.float(3.0, title="SuperTrend Multiplier / SuperTrend 乘数", gr
 grp_display = "=== UI Display / 显示设定 ==="
 table_pos_input = input.string("Top Right", title="Dashboard Position / 看板位置", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grp_display)
 
-table_pos = table_pos_input == "Top Right" ? position.top_right :
-            table_pos_input == "Top Left" ? position.top_left :
-            table_pos_input == "Bottom Right" ? position.bottom_right :
-            position.bottom_left
+// Clean switch statement to prevent line continuation syntax errors
+table_pos = switch table_pos_input
+    "Top Right" => position.top_right
+    "Top Left" => position.top_left
+    "Bottom Right" => position.bottom_right
+    => position.bottom_left
 
 // ==========================================
-// 2. Technical Indicators & Data Fetching (Automatic Matching)
+// 2. Technical Indicators & Multi-Asset Data Fetching
 // ==========================================
-// Local EMA 200
 ema200 = ta.ema(close, ema_len)
 plot(ema200, color=color.rgb(156, 163, 175), linewidth=2, title="EMA 200")
 
-// Local SuperTrend (10, 3)
 [st_val, st_dir] = ta.supertrend(st_mult, st_period)
 st_color = st_dir < 0 ? color.rgb(0, 255, 204) : color.rgb(255, 94, 98)
 plot(st_val, color=st_color, linewidth=2, title="SuperTrend")
 
-// Local ATR (20) for informational purposes
-atr20 = ta.atr(20)
-atr_pct = (atr20 / close) * 100.0
-
 // Fetch S5FI Market Breadth Index
 s5fi_val = request.security(s5fi_symbol, "D", close, ignore_invalid_symbol=true)
 
-// Fetch parent L1 data (SPY and QQQ EMAs and SuperTrend directions) in the background
+// Fetch parent L1 data (SPY and QQQ EMAs and SuperTrend directions)
 [spy_close, spy_ema, spy_dir, spy_dir_prev] = request.security("SPY", "D", [close, ta.ema(close, ema_len), st_dir, st_dir[1]], ignore_invalid_symbol=true)
 [qqq_close, qqq_ema, qqq_dir, qqq_dir_prev] = request.security("QQQ", "D", [close, ta.ema(close, ema_len), st_dir, st_dir[1]], ignore_invalid_symbol=true)
 
 // ==========================================
-// 3. Auto-Identify Current Asset Role & Parent
+// 3. Auto-Identify Ticker Role in v2.29 System
 // ==========================================
-is_spy  = (syminfo.ticker == "SPY")
-is_qqq  = (syminfo.ticker == "QQQ")
-is_soxx = (syminfo.ticker == "SOXX")
-is_tqqq = (syminfo.ticker == "TQQQ")
-is_qld  = (syminfo.ticker == "QLD")
+curr_ticker = syminfo.ticker
 
-has_l1_role = is_spy or is_qqq or is_soxx
-has_l2_role = is_qqq or is_soxx or is_tqqq or is_qld
+is_spy  = (curr_ticker == "SPY")
+is_qqq  = (curr_ticker == "QQQ")
+is_soxx = (curr_ticker == "SOXX")
+is_qld  = (curr_ticker == "QLD")
 
+is_gld  = (curr_ticker == "GLD")
+is_tlt  = (curr_ticker == "TLT")
+is_dbc  = (curr_ticker == "DBC")
+is_bito = (curr_ticker == "BITO")
+
+is_jepq = (curr_ticker == "JEPQ")
+is_sgov = (curr_ticker == "SGOV")
+
+is_equity_l1 = is_spy or is_qqq or is_soxx
+is_equity_l2 = is_qqq or is_soxx or is_qld
+is_non_equity = is_gld or is_tlt or is_dbc or is_bito
+is_base_l0 = is_jepq
+is_cash_pool = is_sgov
+
+parent_name      = is_qqq ? "SPY" : (is_soxx or is_qld ? "QQQ" : "")
 parent_close     = is_qqq ? spy_close : qqq_close
 parent_ema       = is_qqq ? spy_ema : qqq_ema
 parent_dir       = is_qqq ? spy_dir : qqq_dir
 parent_dir_prev  = is_qqq ? spy_dir_prev : qqq_dir_prev
-parent_name      = is_qqq ? "SPY" : "QQQ"
 
 // ==========================================
-// 4. L1 & L2 Signals & S5FI Gates
+// 4. Signal Calculations
 // ==========================================
-// SuperTrend crossovers (Bullish / Bearish shifts)
 st_bullish_change = (st_dir[1] >= 0 and st_dir < 0)
 st_bearish_change = (st_dir[1] < 0 and st_dir >= 0)
 
-// Parent SuperTrend crossovers
 parent_st_bullish_change = (parent_dir_prev >= 0 and parent_dir < 0)
 parent_st_bearish_change = (parent_dir_prev < 0 and parent_dir >= 0)
 
-// S5FI Gate check status
-l1_gate_open = not na(s5fi_val) ? (s5fi_val >= 45.0) : true
-l2_gate_open = not na(s5fi_val) ? (s5fi_val >= 55.0) : true
+l1_gate_open = not na(s5fi_val) ? (s5fi_val >= s5fi_l1_gate) : true
+l2_gate_open = not na(s5fi_val) ? (s5fi_val >= s5fi_l2_gate) : true
 
-// --- L1 Logic ---
-l1_buy_signal  = (close > ema200) and st_bullish_change
-l1_sell_signal = st_bearish_change
+// Equity L1
+equity_l1_buy_signal  = is_equity_l1 and (close > ema200) and st_bullish_change
+equity_l1_sell_signal = is_equity_l1 and st_bearish_change
 
-// --- L2 Logic ---
+// Equity L2
 parent_bullish = (parent_close > parent_ema) and (parent_dir < 0)
 parent_l1_buy_signal = (parent_close > parent_ema) and parent_st_bullish_change
 
-l2_buy_a = parent_bullish and st_bullish_change
-l2_buy_b = (st_dir < 0) and parent_l1_buy_signal
-l2_buy_signal  = l2_buy_a or l2_buy_b
-l2_sell_signal = st_bearish_change or parent_st_bearish_change
+l2_buy_cond_a = parent_bullish and st_bullish_change
+l2_buy_cond_b = (st_dir < 0) and parent_l1_buy_signal
+equity_l2_buy_signal  = is_equity_l2 and (l2_buy_cond_a or l2_buy_cond_b)
+equity_l2_sell_signal = is_equity_l2 and (st_bearish_change or parent_st_bearish_change)
+
+// Non-Equity L1 (S5FI Exempt)
+non_equity_buy_signal  = is_non_equity and (close > ema200) and st_bullish_change
+non_equity_sell_signal = is_non_equity and st_bearish_change
+
+gen_buy_signal  = (is_equity_l1 and equity_l1_buy_signal and l1_gate_open) or (is_equity_l2 and equity_l2_buy_signal and l2_gate_open) or (is_non_equity and non_equity_buy_signal)
+gen_sell_signal = (is_equity_l1 and equity_l1_sell_signal) or (is_equity_l2 and equity_l2_sell_signal) or (is_non_equity and non_equity_sell_signal)
 
 // ==========================================
-// 5. Vertical Price Offset Shapes (Stacked Labels)
+// 5. Visual Signal Overlay (Stacked Labels)
 // ==========================================
-// Uses 14-period ATR to calculate dynamic stack distances to avoid overlaps
 atr_val = ta.atr(14)
-l1_buy_price  = low - (0.4 * atr_val)
+l1_buy_price  = low - (0.5 * atr_val)
 l2_buy_price  = low - (2.0 * atr_val)
-l1_sell_price = high + (0.4 * atr_val)
+l1_sell_price = high + (0.5 * atr_val)
 l2_sell_price = high + (2.0 * atr_val)
 
-// Plot L1 signals (Closer to candles, Mint Green / Crimson Red)
-plotshape(has_l1_role and l1_buy_signal ? l1_buy_price : na, title="L1 Buy", style=shape.labelup, location=location.absolute, color=color.rgb(0, 255, 204), text="L1 BUY", textcolor=color.black, size=size.normal)
-plotshape(has_l1_role and l1_sell_signal ? l1_sell_price : na, title="L1 Sell", style=shape.labeldown, location=location.absolute, color=color.rgb(255, 94, 98), text="L1 SELL", textcolor=color.white, size=size.normal)
+plotshape(is_equity_l1 and equity_l1_buy_signal and l1_gate_open ? l1_buy_price : na, title="L1 Buy", style=shape.labelup, location=location.absolute, color=color.rgb(0, 255, 204), text="L1 BUY", textcolor=color.black, size=size.normal)
+plotshape(is_equity_l1 and equity_l1_sell_signal ? l1_sell_price : na, title="L1 Sell", style=shape.labeldown, location=location.absolute, color=color.rgb(255, 94, 98), text="L1 SELL", textcolor=color.white, size=size.normal)
 
-// Plot L2 signals (Outer stacked, Bright Blue / Golden Orange)
-plotshape(has_l2_role and l2_buy_signal ? l2_buy_price : na, title="L2 Buy", style=shape.labelup, location=location.absolute, color=color.rgb(0, 162, 255), text="L2 BUY", textcolor=color.white, size=size.normal)
-plotshape(has_l2_role and l2_sell_signal ? l2_sell_price : na, title="L2 Sell", style=shape.labeldown, location=location.absolute, color=color.rgb(255, 166, 0), text="L2 SELL", textcolor=color.black, size=size.normal)
+plotshape(is_equity_l2 and equity_l2_buy_signal and l2_gate_open ? l2_buy_price : na, title="L2 Buy", style=shape.labelup, location=location.absolute, color=color.rgb(0, 162, 255), text="L2 BUY", textcolor=color.white, size=size.normal)
+plotshape(is_equity_l2 and equity_l2_sell_signal ? l2_sell_price : na, title="L2 Sell", style=shape.labeldown, location=location.absolute, color=color.rgb(255, 166, 0), text="L2 SELL", textcolor=color.black, size=size.normal)
+
+plotshape(is_non_equity and non_equity_buy_signal ? l1_buy_price : na, title="Cross-Asset Buy", style=shape.labelup, location=location.absolute, color=color.rgb(245, 158, 11), text="CROSS BUY", textcolor=color.black, size=size.normal)
+plotshape(is_non_equity and non_equity_sell_signal ? l1_sell_price : na, title="Cross-Asset Sell", style=shape.labeldown, location=location.absolute, color=color.rgb(239, 68, 68), text="CROSS SELL", textcolor=color.white, size=size.normal)
 
 // ==========================================
 // 6. Sizing Calculation
 // ==========================================
-l1_alloc_dollars = nav_input * 0.10
-l1_shares = math.round(l1_alloc_dollars / close)
-
-l2_alloc_dollars = nav_input * 0.08
-l2_shares = math.round(l2_alloc_dollars / close)
+l1_alloc_pct = is_equity_l2 ? 0.08 : 0.10
+alloc_dollars = nav_input * l1_alloc_pct
+suggested_shares = math.round(alloc_dollars / close)
 
 // ==========================================
-// 7. Bilingual Translation Dictionary
+// 7. Bilingual Translation & HUD Formatting
 // ==========================================
 is_cn = (lang_input == "中文")
+t_header = is_cn ? "⚡ 美股/跨资产 v2.29 量化指挥台" : "⚡ v2.29 Quant Command HUD"
+t_s5fi   = is_cn ? "S5FI 宽度指标" : "S5FI Market Breadth"
+t_role_col = is_cn ? "标的角色" : "Asset Role"
+t_action_col = is_cn ? "★ 实盘指令建议" : "★ Signal Recommendation"
+t_shares_col = is_cn ? "★ 建议建仓份额" : "★ Suggested Order Size"
+t_cap_check = is_cn ? "趋势层容量限制" : "Trend Capacity Limits"
+t_cap_rule1 = is_cn ? "单标的: L1/跨资产 10%, L2 8% NAV" : "Single Asset: L1/Cross 10%, L2 8% NAV"
+t_cap_rule2 = is_cn ? "趋势层上限: ≤ 55% NAV" : "Trend Total Cap: <= 55% NAV"
+t_hierarchy_title = is_cn ? "资金调拨与底仓" : "Capital Hierarchy"
+t_hierarchy_desc = is_cn ? "60% JEPQ(DRIP) + 40% SGOV利息池" : "60% JEPQ(DRIP) + 40% SGOV Cash"
 
-// Base Headers & Labels
-t_header = is_cn ? "美股多层趋势系统 v2.2" : "US Stock Multi-Layered Trend System v2.2"
-t_ticker = is_cn ? "监控标的" : "Ticker / Price"
-t_s5fi   = is_cn ? "S5FI 市场宽度" : "S5FI Market Breadth"
-t_role_col = is_cn ? "交易层级角色" : "Trading Role"
-t_action_col = is_cn ? "★ 实盘操作建议" : "★ Action Recommendation"
-t_shares_col = is_cn ? "★ 建议执行份额 (股数)" : "★ Suggested Order Size (Shares)"
-t_cap_check = is_cn ? "全局限额校验 (手动自检)" : "Global Cap Checks (Manual)"
-t_cap_rule1 = is_cn ? "1. 单一标的持仓不超过 10% NAV" : "1. Single asset exposure <= 10% NAV"
-t_cap_rule2 = is_cn ? "2. 趋势层总持仓不超过 35% NAV" : "2. Total trend exposure <= 35% NAV"
-t_formula_title = is_cn ? "股数计算公式" : "Shares Formula"
-t_note_formula = is_cn ? "股数 = (NAV * 占比) / 当前价格" : "Shares = (NAV * % Size) / Current Price"
-t_note_cooling = is_cn ? "平仓冷静期：翻空后强制空仓 4 天" : "Cooling: 4 days off after Sell"
+string role_desc = "Custom Asset"
+if is_base_l0
+    role_desc := is_cn ? "L0 高股息底仓 (60% NAV)" : "L0 Base Allocation (60% NAV)"
+else if is_cash_pool
+    role_desc := is_cn ? "SGOV 闲置贴息池 (40% Initial)" : "SGOV Cash Pool (40% Initial)"
+else if is_equity_l1
+    role_desc := is_cn ? "美股权益 L1 母仓 (10% NAV)" : "Equity L1 Mother (10% NAV)"
+else if is_equity_l2
+    role_desc := is_cn ? "美股权益 L2 加速 (8% NAV, 对应: " + parent_name + ")" : "Equity L2 Accel (8% NAV, Parent: " + parent_name + ")"
+else if is_non_equity
+    role_desc := is_cn ? "跨资产趋势标的 (10% NAV, S5FI豁免)" : "Cross-Asset Trend (10% NAV, S5FI Exempt)"
 
-// Roles Info
-t_l1_role = is_cn ? "L1 母仓角色 (10% NAV)" : "L1 Core Role (10% NAV)"
-t_l2_role = is_cn ? "L2 加速角色 (8% NAV, 对应母仓 " + parent_name + ")" : "L2 Accelerator (8% NAV, Parent: " + parent_name + ")"
-t_l1_no_role = is_cn ? "当前标的无 L1 角色" : "No L1 Role for this Ticker"
-t_l2_no_role = is_cn ? "当前标的无 L2 角色" : "No L2 Role for this Ticker"
+var string rec_action = "-"
+var color rec_color = color.gray
+var string rec_shares = "-"
 
-// Actions & Recommendations
-t_act_sell   = is_cn ? "卖出平仓" : "Sell to Close"
-t_val_sell   = is_cn ? "全部平仓离场" : "Sell all positions"
-t_act_buy    = is_cn ? "买入开仓" : "Buy to Open"
-t_act_hold   = is_cn ? "继续持股" : "Hold Position"
-t_val_hold   = is_cn ? "持有中" : "Holding"
-t_act_wait   = is_cn ? "观望中" : "Waiting"
-t_val_wait   = is_cn ? "0 股" : "0 shares"
-t_act_blocked = is_cn ? "S5FI 闸门关闭 (禁买)" : "S5FI Gate Closed (Block)"
-t_no_role    = is_cn ? "无此角色" : "N/A"
-
-// ==========================================
-// 8. Execution Logic Processing
-// ==========================================
-// --- L1 Recommendation ---
-var string l1_action = t_no_role
-var color l1_color = color.gray
-var string l1_shares_str = "-"
-
-if has_l1_role
-    if l1_sell_signal
-        l1_action := t_act_sell
-        l1_color := color.rgb(255, 94, 98)
-        l1_shares_str := t_val_sell
-    else if l1_buy_signal
+if is_base_l0
+    rec_action := is_cn ? "长期持有 (DRIP)" : "Long-term Hold (DRIP)"
+    rec_color  := color.rgb(59, 130, 246)
+    rec_shares := is_cn ? "目标 60% NAV ($" + str.tostring(nav_input * 0.60, "#,###") + ")" : "Target 60% NAV ($" + str.tostring(nav_input * 0.60, "#,###") + ")"
+else if is_cash_pool
+    rec_action := is_cn ? "闲置利息池" : "Cash Yield Pool"
+    rec_color  := color.rgb(16, 185, 129)
+    rec_shares := is_cn ? "变现优先: SGOV -> JEPQ" : "Sell Priority: SGOV -> JEPQ"
+else if is_equity_l1
+    if equity_l1_sell_signal
+        rec_action := is_cn ? "🔴 卖出平仓" : "🔴 SELL TO CLOSE"
+        rec_color  := color.rgb(255, 94, 98)
+        rec_shares := is_cn ? "全仓卖出" : "Sell All Shares"
+    else if equity_l1_buy_signal
         if not l1_gate_open
-            l1_action := t_act_blocked
-            l1_color := color.orange
-            l1_shares_str := is_cn ? "0 股 (S5FI < 45%)" : "0 shares (S5FI < 45%)"
+            rec_action := is_cn ? "🟠 S5FI 宽度拦截" : "🟠 BLOCKED (S5FI < 45%)"
+            rec_color  := color.orange
+            rec_shares := is_cn ? "0 股 (禁买)" : "0 shares (Blocked)"
         else
-            l1_action := t_act_buy
-            l1_color := color.rgb(0, 255, 204)
-            l1_shares_str := is_cn ? 
-                 str.tostring(l1_shares, "#") + " 股 (约 $" + str.tostring(l1_alloc_dollars, "#,###") + ")" : 
-                 str.tostring(l1_shares, "#") + " shares (approx $" + str.tostring(l1_alloc_dollars, "#,###") + ")"
+            rec_action := is_cn ? "🟢 买入开仓" : "🟢 BUY TO OPEN"
+            rec_color  := color.rgb(0, 255, 204)
+            rec_shares := str.tostring(suggested_shares, "#") + (is_cn ? " 股 (约 $" : " shares (~$") + str.tostring(alloc_dollars, "#,###") + ")"
     else
         if st_dir < 0
-            l1_action := t_act_hold
-            l1_color := color.rgb(59, 130, 246)
-            l1_shares_str := t_val_hold
+            rec_action := is_cn ? "🔵 继续持股" : "🔵 HOLD POSITION"
+            rec_color  := color.rgb(59, 130, 246)
+            rec_shares := is_cn ? "保持 10% NAV 持仓" : "Hold 10% NAV Position"
         else
-            l1_action := t_act_wait
-            l1_color := color.gray
-            l1_shares_str := t_val_wait
-
-// --- L2 Recommendation ---
-var string l2_action = t_no_role
-var color l2_color = color.gray
-var string l2_shares_str = "-"
-
-if has_l2_role
-    if l2_sell_signal
-        l2_action := t_act_sell
-        l2_color := color.rgb(255, 166, 0)
-        l2_shares_str := t_val_sell
-    else if l2_buy_signal
+            rec_action := is_cn ? "⚪ 空仓观望" : "⚪ WAIT / NO POSITION"
+            rec_color  := color.gray
+            rec_shares := "0 股"
+else if is_equity_l2
+    if equity_l2_sell_signal
+        rec_action := is_cn ? "🔴 卖出平仓" : "🔴 SELL TO CLOSE"
+        rec_color  := color.rgb(255, 166, 0)
+        rec_shares := is_cn ? "全仓卖出 (母仓或自身翻空)" : "Sell All (Parent/Self Bearish)"
+    else if equity_l2_buy_signal
         if not l2_gate_open
-            l2_action := t_act_blocked
-            l2_color := color.orange
-            l2_shares_str := is_cn ? "0 股 (S5FI < 55%)" : "0 shares (S5FI < 55%)"
+            rec_action := is_cn ? "🟠 S5FI 宽度拦截" : "🟠 BLOCKED (S5FI < 55%)"
+            rec_color  := color.orange
+            rec_shares := is_cn ? "0 股 (禁买)" : "0 shares (Blocked)"
         else
-            l2_action := t_act_buy
-            l2_color := color.rgb(0, 162, 255)
-            l2_shares_str := is_cn ? 
-                 str.tostring(l2_shares, "#") + " 股 (约 $" + str.tostring(l2_alloc_dollars, "#,###") + ")" : 
-                 str.tostring(l2_shares, "#") + " shares (approx $" + str.tostring(l2_alloc_dollars, "#,###") + ")"
+            rec_action := is_cn ? "🟢 买入开仓" : "🟢 BUY TO OPEN"
+            rec_color  := color.rgb(0, 162, 255)
+            rec_shares := str.tostring(suggested_shares, "#") + (is_cn ? " 股 (约 $" : " shares (~$") + str.tostring(alloc_dollars, "#,###") + ")"
     else
         if st_dir < 0 and parent_bullish
-            l2_action := t_act_hold
-            l2_color := color.rgb(59, 130, 246)
-            l2_shares_str := t_val_hold
+            rec_action := is_cn ? "🔵 继续持股" : "🔵 HOLD POSITION"
+            rec_color  := color.rgb(59, 130, 246)
+            rec_shares := is_cn ? "保持 8% NAV 持仓" : "Hold 8% NAV Position"
         else
-            l2_action := t_act_wait
-            l2_color := color.gray
-            l2_shares_str := t_val_wait
+            rec_action := is_cn ? "⚪ 空仓观望" : "⚪ WAIT / NO POSITION"
+            rec_color  := color.gray
+            rec_shares := "0 股"
+else if is_non_equity
+    if non_equity_sell_signal
+        rec_action := is_cn ? "🔴 卖出平仓" : "🔴 SELL TO CLOSE"
+        rec_color  := color.rgb(239, 68, 68)
+        rec_shares := is_cn ? "全仓卖出" : "Sell All Shares"
+    else if non_equity_buy_signal
+        rec_action := is_cn ? "🟢 买入开仓 (豁免S5FI)" : "🟢 BUY TO OPEN (S5FI Exempt)"
+        rec_color  := color.rgb(245, 158, 11)
+        rec_shares := str.tostring(suggested_shares, "#") + (is_cn ? " 股 (约 $" : " shares (~$") + str.tostring(alloc_dollars, "#,###") + ")"
+    else
+        if st_dir < 0
+            rec_action := is_cn ? "🔵 继续持股" : "🔵 HOLD POSITION"
+            rec_color  := color.rgb(59, 130, 246)
+            rec_shares := is_cn ? "保持 10% NAV 持仓" : "Hold 10% NAV Position"
+        else
+            rec_action := is_cn ? "⚪ 空仓观望" : "⚪ WAIT / NO POSITION"
+            rec_color  := color.gray
+            rec_shares := "0 股"
 
 // ==========================================
-// 9. Dashboard Drawing (Bilingual Layout)
+// 8. Drawing Dashboard HUD Table
 // ==========================================
-var table infoTable = table.new(position = table_pos, columns = 3, rows = 7, 
-     bgcolor = color.new(color.black, 15), 
-     border_width = 1, 
-     border_color = color.rgb(255, 255, 255, 15))
+var table hudTable = table.new(position = table_pos, columns = 3, rows = 6, bgcolor = color.new(color.black, 15), border_width = 1, border_color = color.rgb(255, 255, 255, 15))
 
 if barstate.islast
-    // Header Row
-    table.cell(infoTable, 0, 0, t_header, bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 0, (is_cn ? "标的: " : "Symbol: ") + syminfo.ticker + " @ $" + str.tostring(close, "0.00"), bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 2, 0, (is_cn ? "账户 NAV: $" : "Account NAV: $") + str.tostring(nav_input, "#,###"), bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
+    table.cell(hudTable, 0, 0, t_header, bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
+    table.cell(hudTable, 1, 0, (is_cn ? "标的: " : "Ticker: ") + curr_ticker + " @ $" + str.tostring(close, "0.00"), bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
+    table.cell(hudTable, 2, 0, (is_cn ? "账户 NAV: $" : "Account NAV: $") + str.tostring(nav_input, "#,###"), bgcolor=color.rgb(31, 41, 55), text_color=color.white, text_size=size.small)
     
-    // Breadth Width & Gates Status Row
     s5fi_str = na(s5fi_val) ? (is_cn ? "加载中" : "Loading") : str.tostring(s5fi_val, "0.0") + "%"
-    t_gate_open = is_cn ? "开放" : "Open"
-    t_gate_closed = is_cn ? "关闭" : "Closed"
-    table.cell(infoTable, 0, 1, t_s5fi, text_color=color.rgb(209, 213, 219), text_size=size.small)
-    table.cell(infoTable, 1, 1, (is_cn ? "当前宽度: " : "Current Width: ") + s5fi_str, text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 2, 1, "L1 " + (is_cn ? "闸门" : "Gate") + " (45%): " + (l1_gate_open ? t_gate_open : t_gate_closed) + " | L2 " + (is_cn ? "闸门" : "Gate") + " (55%): " + (l2_gate_open ? t_gate_open : t_gate_closed), text_color=l2_gate_open ? color.green : color.orange, text_size=size.small)
+    t_open = is_cn ? "开放" : "Open"
+    t_closed = is_cn ? "关闭" : "Closed"
+    gate_desc = is_non_equity ? (is_cn ? "跨资产: 豁免宽度限制" : "Cross-Asset: S5FI Exempt") : ("L1(45%): " + (l1_gate_open ? t_open : t_closed) + " | L2(55%): " + (l2_gate_open ? t_open : t_closed))
     
-    // Table Column Titles
-    table.cell(infoTable, 0, 2, t_role_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 2, t_action_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 2, 2, t_shares_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
+    table.cell(hudTable, 0, 1, t_s5fi, text_color=color.rgb(209, 213, 219), text_size=size.small)
+    table.cell(hudTable, 1, 1, (is_cn ? "当前宽度: " : "Current Width: ") + s5fi_str, text_color=color.white, text_size=size.small)
+    table.cell(hudTable, 2, 1, gate_desc, text_color=is_non_equity ? color.yellow : (l2_gate_open ? color.green : color.orange), text_size=size.small)
     
-    // L1 Mother Position Row
-    table.cell(infoTable, 0, 3, t_l1_role, text_color=color.rgb(147, 197, 253), text_size=size.small)
-    table.cell(infoTable, 1, 3, l1_action, text_color=l1_color, text_size=size.small)
-    table.cell(infoTable, 2, 3, l1_shares_str, text_color=l1_color, text_size=size.small)
+    table.cell(hudTable, 0, 2, t_role_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
+    table.cell(hudTable, 1, 2, t_action_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
+    table.cell(hudTable, 2, 2, t_shares_col, bgcolor=color.rgb(17, 24, 39), text_color=color.white, text_size=size.small)
     
-    // L2 Acceleration Position Row
-    l2_role_desc = has_l2_role ? t_l2_role : t_l2_no_role
-    table.cell(infoTable, 0, 4, l2_role_desc, text_color=color.rgb(244, 114, 182), text_size=size.small)
-    table.cell(infoTable, 1, 4, l2_action, text_color=l2_color, text_size=size.small)
-    table.cell(infoTable, 2, 4, l2_shares_str, text_color=l2_color, text_size=size.small)
+    table.cell(hudTable, 0, 3, role_desc, text_color=color.rgb(147, 197, 253), text_size=size.small)
+    table.cell(hudTable, 1, 3, rec_action, text_color=rec_color, text_size=size.small)
+    table.cell(hudTable, 2, 3, rec_shares, text_color=rec_color, text_size=size.small)
     
-    // Wind Control Info Row
-    table.cell(infoTable, 0, 5, t_cap_check, text_color=color.rgb(156, 163, 175), text_size=size.small)
-    table.cell(infoTable, 1, 5, t_cap_rule1, text_color=color.rgb(156, 163, 175), text_size=size.small)
-    table.cell(infoTable, 2, 5, t_cap_rule2, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(hudTable, 0, 4, t_cap_check, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(hudTable, 1, 4, t_cap_rule1, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(hudTable, 2, 4, t_cap_rule2, text_color=color.rgb(156, 163, 175), text_size=size.small)
     
-    // Formulas & Explanations Row
-    table.cell(infoTable, 0, 6, t_formula_title, text_color=color.rgb(156, 163, 175), text_size=size.small)
-    table.cell(infoTable, 1, 6, t_note_formula, text_color=color.rgb(156, 163, 175), text_size=size.small)
-    table.cell(infoTable, 2, 6, t_note_cooling, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(hudTable, 0, 5, t_hierarchy_title, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(hudTable, 1, 5, t_hierarchy_desc, text_color=color.rgb(156, 163, 175), text_size=size.small)
+    table.cell(hudTable, 2, 5, is_cn ? "建仓资金卖出顺序: SGOV -> JEPQ" : "Funding Sell Order: SGOV -> JEPQ", text_color=color.rgb(156, 163, 175), text_size=size.small)
+
+// ==========================================
+// 9. Alert Conditions for TradingView Alerts
+// ==========================================
+alertcondition(gen_buy_signal, title="v2.29 Buy Signal / 触发买入信号", message="[v2.29 Quant System] 🟢 BUY SIGNAL triggered on {{ticker}} at price {{close}}. Check dashboard for suggested order size.")
+alertcondition(gen_sell_signal, title="v2.29 Sell Signal / 触发卖出信号", message="[v2.29 Quant System] 🔴 SELL SIGNAL triggered on {{ticker}} at price {{close}}. Close position on next market open.")
+alertcondition(st_bullish_change, title="SuperTrend Bullish Flip / ST翻多", message="[v2.29 Quant System] ⚡ SuperTrend (10, 3) turned BULLISH on {{ticker}} at {{close}}.")
+alertcondition(st_bearish_change, title="SuperTrend Bearish Flip / ST翻空", message="[v2.29 Quant System] ⚠️ SuperTrend (10, 3) turned BEARISH on {{ticker}} at {{close}}.")
