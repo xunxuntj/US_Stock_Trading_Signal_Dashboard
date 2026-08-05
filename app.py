@@ -408,7 +408,15 @@ if actions:
     with col_b:
         st.info("💡 提示：完成手工下单并在左侧登记后点击按钮，系统将同步核销信号并刷新持仓。")
 else:
-    st.success(f"✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 {s5fi_val:.1f}%，60% JEPQ + 40% SGOV + 趋势层持仓运行稳健！")
+    pos_active_df = get_positions()
+    trend_holdings_str = ""
+    if not pos_active_df.empty:
+        trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])]
+        if not trend_pos.empty:
+            t_items = [f"{row['ticker']} ({row['shares']:.0f}股)" for _, row in trend_pos.iterrows()]
+            trend_holdings_str = f"实盘已建仓 **{' + '.join(t_items)}** 趋势多头阵列，"
+    
+    st.success(f"✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 **{s5fi_val:.1f}%**，{trend_holdings_str}JEPQ 收益底仓与 SGOV 贴息按计划稳健运行中！")
 
 st.divider()
 
