@@ -409,14 +409,31 @@ if actions:
         st.info("💡 提示：完成手工下单并在左侧登记后点击按钮，系统将同步核销信号并刷新持仓。")
 else:
     pos_active_df = get_positions()
-    trend_holdings_str = ""
-    if not pos_active_df.empty:
-        trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])]
-        if not trend_pos.empty:
-            t_items = [f"{row['ticker']} ({row['shares']:.0f}股)" for _, row in trend_pos.iterrows()]
-            trend_holdings_str = f"实盘已建仓 **{' + '.join(t_items)}** 趋势多头阵列，"
+    trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])] if not pos_active_df.empty else pd.DataFrame()
     
-    st.success(f"✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 **{s5fi_val:.1f}%**，{trend_holdings_str}JEPQ 收益底仓与 SGOV 贴息按计划稳健运行中！")
+    holdings_detail_html = ""
+    if not trend_pos.empty:
+        items = []
+        for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):
+            tkr = pos_row['ticker']
+            shares = pos_row['shares']
+            curr_p = current_prices.get(tkr, pos_row['cost_basis']) if 'current_prices' in locals() else pos_row['cost_basis']
+            mkt_val = shares * curr_p
+            weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
+            items.append(f"<b>持仓 {idx}:</b> <strong style='color:#10B981;'>{tkr}</strong> &nbsp;&nbsp;&nbsp; <code>{shares:.0f} 股</code> &nbsp;&nbsp;&nbsp; <strong style='color:#F59E0B;'>${mkt_val:,.2f}</strong> &nbsp;&nbsp;&nbsp; 占比 <strong style='color:#38BDF8;'>{weight_pct:.1f}%</strong>")
+        
+        holdings_detail_html = "<div style='margin: 8px 0; padding: 10px 14px; background: rgba(0,0,0,0.25); border-radius: 12px; font-size: 0.92rem; line-height: 2.0;'>" + "<br>".join(items) + "</div>"
+    
+    command_no_signal_html = f"""<div style="background: rgba(16, 185, 129, 0.10); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 18px; padding: 18px 22px; color: #F8FAFC; margin-bottom: 15px;">
+<div style="font-size: 1.05rem; font-weight: bold; color: #10B981; margin-bottom: 6px;">
+✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 <span style="color:#F59E0B;">{s5fi_val:.1f}%</span>，实盘已建仓：
+</div>
+{holdings_detail_html}
+<div style="font-size: 0.88rem; color: #CBD5E1; margin-top: 6px;">
+🚀 趋势多头阵列，JEPQ 收益底仓与 SGOV 贴息按计划稳健运行中！
+</div>
+</div>"""
+    st.markdown(command_no_signal_html, unsafe_allow_html=True)
 
 st.divider()
 
@@ -1302,8 +1319,8 @@ else:
         for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):
             tkr = pos_row['ticker']
             shares = pos_row['shares']
-            px = current_prices.get(tkr, pos_row['cost_basis']) if 'current_prices' in locals() else pos_row['cost_basis']
-            mkt_val = shares * px
+            curr_p = current_prices.get(tkr, pos_row['cost_basis']) if 'current_prices' in locals() else pos_row['cost_basis']
+            mkt_val = shares * curr_p
             weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 12.5
             
             signals_html_items.append(f"""
