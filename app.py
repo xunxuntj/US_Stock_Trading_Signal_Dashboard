@@ -413,16 +413,31 @@ else:
     
     holdings_detail_html = ""
     if not trend_pos.empty:
-        items = []
+        rows_html = ""
         for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):
             tkr = pos_row['ticker']
             shares = pos_row['shares']
+            shares_str = f"{shares:.0f}" if shares == int(shares) else f"{shares:.2f}"
             curr_p = current_prices.get(tkr, pos_row['cost_basis']) if 'current_prices' in locals() else pos_row['cost_basis']
             mkt_val = shares * curr_p
             weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
-            items.append(f"<b>持仓 {idx}:</b> <strong style='color:#10B981;'>{tkr}</strong> &nbsp;&nbsp;&nbsp; <code>{shares:.0f} 股</code> &nbsp;&nbsp;&nbsp; <strong style='color:#F59E0B;'>${mkt_val:,.2f}</strong> &nbsp;&nbsp;&nbsp; 占比 <strong style='color:#38BDF8;'>{weight_pct:.1f}%</strong>")
+            
+            rows_html += f"""
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px 12px; color: #94A3B8; font-weight: bold; width: 15%;">持仓 {idx}</td>
+                <td style="padding: 8px 12px; width: 20%;"><strong style="color:#10B981; font-size: 1rem;">{tkr}</strong></td>
+                <td style="padding: 8px 12px; width: 22%;"><code style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px; color:#E2E8F0;">{shares_str} 股</code></td>
+                <td style="padding: 8px 12px; width: 23%;"><strong style="color:#F59E0B; font-size: 0.98rem;">${mkt_val:,.2f}</strong></td>
+                <td style="padding: 8px 12px; width: 20%;">占比 <strong style="color:#38BDF8; font-size: 0.98rem;">{weight_pct:.1f}%</strong></td>
+            </tr>"""
         
-        holdings_detail_html = "<div style='margin: 8px 0; padding: 10px 14px; background: rgba(0,0,0,0.25); border-radius: 12px; font-size: 0.92rem; line-height: 2.0;'>" + "<br>".join(items) + "</div>"
+        holdings_detail_html = f"""<div style="margin: 10px 0; background: rgba(0,0,0,0.25); border-radius: 12px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.06);">
+<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+<tbody>
+{rows_html}
+</tbody>
+</table>
+</div>"""
     
     command_no_signal_html = f"""<div style="background: rgba(16, 185, 129, 0.10); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 18px; padding: 18px 22px; color: #F8FAFC; margin-bottom: 15px;">
 <div style="font-size: 1.05rem; font-weight: bold; color: #10B981; margin-bottom: 6px;">
