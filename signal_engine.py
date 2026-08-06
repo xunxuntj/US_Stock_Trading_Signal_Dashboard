@@ -20,7 +20,13 @@ def generate_v229_signals():
     date_str = datetime.date.today().strftime("%Y-%m-%d")
     
     current_prices = {t: data[t].loc[latest_date, 'Close'] for t in data if latest_date in data[t].index}
-    s5fi_val = float(data["S5FI"].loc[latest_date, "Close"]) if "S5FI" in data and latest_date in data["S5FI"].index else 50.0
+    if "S5FI" in data and not data["S5FI"].empty:
+        if latest_date in data["S5FI"].index:
+            s5fi_val = float(data["S5FI"].loc[latest_date, "Close"])
+        else:
+            s5fi_val = float(data["S5FI"]["Close"].iloc[-1])
+    else:
+        s5fi_val = 50.0
     
     positions_df = get_positions()
     current_positions = {row['ticker']: row for _, row in positions_df.iterrows()} if not positions_df.empty else {}
