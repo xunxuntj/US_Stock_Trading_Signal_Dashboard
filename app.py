@@ -237,6 +237,14 @@ with r2_c5:
     )
 
 
+# Sidebar Control: Force Refresh Button
+st.sidebar.markdown("### ⚡ 引擎控制")
+if st.sidebar.button("🔄 强制刷新最新信号与行情", type="primary", use_container_width=True):
+    st.cache_data.clear()
+    st.rerun()
+
+st.sidebar.divider()
+
 # Sidebar Section 1: US Live Trade Logging
 st.sidebar.markdown("### 🇺🇸 美股实盘交易登记 (US Trade Log)")
 with st.sidebar.form("us_trade_form"):
