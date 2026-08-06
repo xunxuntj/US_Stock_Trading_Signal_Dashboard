@@ -19,3 +19,10 @@ Thumbs.db
 # Scratch & Logs
 scratch/
 *.log
+
+# User Excel Files (Privacy Protection)
+*.xlsx
+*.xls
+~$*.xlsx
+~$*.xls
+
