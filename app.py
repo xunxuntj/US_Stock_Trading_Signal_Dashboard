@@ -378,6 +378,25 @@ st.divider()
 # Section 1: Command Center & Action Card
 st.subheader("🚨 今日交易信号控制台 (Command Center)")
 
+# Common active holdings table constructor
+pos_active_df = get_positions()
+trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])] if not pos_active_df.empty else pd.DataFrame()
+
+holdings_detail_html = ""
+if not trend_pos.empty:
+    rows_html = ""
+    for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):
+        tkr = pos_row['ticker']
+        shares = pos_row['shares']
+        shares_str = f"{shares:.0f}" if shares == int(shares) else f"{shares:.2f}"
+        curr_p = current_prices.get(tkr, pos_row['cost_basis']) if 'current_prices' in locals() else pos_row['cost_basis']
+        mkt_val = shares * curr_p
+        weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
+        
+        rows_html += f'<tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:8px 12px;color:#94A3B8;font-weight:bold;width:15%;">持仓 {idx}</td><td style="padding:8px 12px;width:20%;"><strong style="color:#10B981;font-size:1rem;">{tkr}</strong></td><td style="padding:8px 12px;width:22%;"><code style="background:rgba(255,255,255,0.08);padding:3px 8px;border-radius:6px;color:#E2E8F0;">{shares_str} 股</code></td><td style="padding:8px 12px;width:23%;"><strong style="color:#F59E0B;font-size:0.98rem;">${mkt_val:,.2f}</strong></td><td style="padding:8px 12px;width:20%;">占比 <strong style="color:#38BDF8;font-size:0.98rem;">{weight_pct:.1f}%</strong></td></tr>'
+    
+    holdings_detail_html = f'<div style="margin:8px 0 0 0;background:rgba(0,0,0,0.25);border-radius:12px;padding:4px 12px;border:1px solid rgba(255,255,255,0.06);"><table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.9rem;"><tbody>{rows_html}</tbody></table></div>'
+
 if actions:
     action_items_html = ""
     for idx, act in enumerate(actions, 1):
@@ -388,23 +407,12 @@ if actions:
         badge_color = "#10B981" if is_buy else "#EF4444"
         funding_info = "(资金源: 优先卖出变现 SGOV 货币基金)" if is_buy else "(资金自动归集入 SGOV 闲置贴息)"
         
-        item_str = f"""<div style="background: {action_bg}; border: 1.5px solid {action_border}; padding: 14px 16px; border-radius: 14px; margin-bottom: 10px;">
-<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 8px;">
-<span style="font-size: 1.05rem; font-weight: bold; color: {badge_color};">信号 {idx}: {action_title}</span>
-<span style="font-size: 0.95rem; font-weight: bold; color: #F59E0B; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 8px;">目标金额: ${act['target_val']:,.2f}</span>
-</div>
-<div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 6px;">💳 <strong>执行说明:</strong> {funding_info}</div>
-<div style="font-size: 0.78rem; color: #94A3B8; background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 8px;">🧠 <strong>触发逻辑:</strong> {act['reason']}</div>
-</div>"""
+        item_str = f'<div style="background: {action_bg}; border: 1.5px solid {action_border}; padding: 14px 16px; border-radius: 14px; margin-bottom: 10px;"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 8px;"><span style="font-size: 1.05rem; font-weight: bold; color: {badge_color};">信号 {idx}: {action_title}</span><span style="font-size: 0.95rem; font-weight: bold; color: #F59E0B; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 8px;">目标金额: ${act["target_val"]:,.2f}</span></div><div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 6px;">💳 <strong>执行说明:</strong> {funding_info}</div><div style="font-size: 0.78rem; color: #94A3B8; background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 8px;">🧠 <strong>触发逻辑:</strong> {act["reason"]}</div></div>'
         action_items_html += item_str + "\n"
 
-    command_center_html = f"""<div style="background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #F59E0B; border-radius: 20px; padding: 20px 22px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18); color: #F8FAFC; margin-bottom: 15px;">
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-<span style="font-size: 1.1rem; font-weight: 800; color: #F59E0B; letter-spacing: 0.5px;">⚠️ 今日触发 {len(actions)} 项实盘交易信号</span>
-<span style="font-size: 0.8rem; background: rgba(245, 158, 11, 0.2); border: 1px solid #F59E0B; color: #FDE047; padding: 3px 10px; border-radius: 10px; font-weight: bold;">请在券商 App 完成手工下单</span>
-</div>
-{action_items_html}
-</div>"""
+    current_pos_subblock = f'<div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,255,255,0.15);"><div style="font-size:0.92rem;font-weight:bold;color:#CBD5E1;margin-bottom:6px;">📋 当前已有实盘持仓明细：</div>{holdings_detail_html}</div>' if holdings_detail_html else ""
+
+    command_center_html = f'<div style="background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border: 2px solid #F59E0B; border-radius: 20px; padding: 20px 22px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18); color: #F8FAFC; margin-bottom: 15px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;"><span style="font-size: 1.1rem; font-weight: 800; color: #F59E0B; letter-spacing: 0.5px;">⚠️ 今日触发 {len(actions)} 项实盘交易信号</span><span style="font-size: 0.8rem; background: rgba(245, 158, 11, 0.2); border: 1px solid #F59E0B; color: #FDE047; padding: 3px 10px; border-radius: 10px; font-weight: bold;">请在券商 App 完成手工下单</span></div>{action_items_html}{current_pos_subblock}</div>'
     st.markdown(command_center_html, unsafe_allow_html=True)
     
     col_a, col_b = st.columns([1.2, 3.8])
@@ -414,26 +422,8 @@ if actions:
             st.success("已完成今日交易对账，持仓数据库已自动同步并核销新信号！")
             st.rerun()
     with col_b:
-        st.info("💡 提示：完成手工下单并在左侧登记后点击按钮，系统将同步核销信号并刷新持仓。")
+        st.info("💡 提示：在左侧登记券商成交记录后点击此按钮，系统将自动核销信号并刷出最新持仓。")
 else:
-    pos_active_df = get_positions()
-    trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])] if not pos_active_df.empty else pd.DataFrame()
-    
-    holdings_detail_html = ""
-    if not trend_pos.empty:
-        rows_html = ""
-        for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):
-            tkr = pos_row['ticker']
-            shares = pos_row['shares']
-            shares_str = f"{shares:.0f}" if shares == int(shares) else f"{shares:.2f}"
-            curr_p = current_prices.get(tkr, pos_row['cost_basis']) if 'current_prices' in locals() else pos_row['cost_basis']
-            mkt_val = shares * curr_p
-            weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
-            
-            rows_html += f'<tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:8px 12px;color:#94A3B8;font-weight:bold;width:15%;">持仓 {idx}</td><td style="padding:8px 12px;width:20%;"><strong style="color:#10B981;font-size:1rem;">{tkr}</strong></td><td style="padding:8px 12px;width:22%;"><code style="background:rgba(255,255,255,0.08);padding:3px 8px;border-radius:6px;color:#E2E8F0;">{shares_str} 股</code></td><td style="padding:8px 12px;width:23%;"><strong style="color:#F59E0B;font-size:0.98rem;">${mkt_val:,.2f}</strong></td><td style="padding:8px 12px;width:20%;">占比 <strong style="color:#38BDF8;font-size:0.98rem;">{weight_pct:.1f}%</strong></td></tr>'
-        
-        holdings_detail_html = f'<div style="margin:10px 0;background:rgba(0,0,0,0.25);border-radius:12px;padding:4px 12px;border:1px solid rgba(255,255,255,0.06);"><table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.9rem;"><tbody>{rows_html}</tbody></table></div>'
-    
     command_no_signal_html = f'<div style="background:rgba(16,185,129,0.10);border:1.5px solid rgba(16,185,129,0.35);border-radius:18px;padding:18px 22px;color:#F8FAFC;margin-bottom:15px;"><div style="font-size:1.05rem;font-weight:bold;color:#10B981;margin-bottom:6px;">✅ 今日 ({date_str}) 全盘无新买入/卖出信号。当前 S5FI 宽度为 <span style="color:#F59E0B;">{s5fi_val:.1f}%</span>，实盘已建仓：</div>{holdings_detail_html}<div style="font-size:0.88rem;color:#CBD5E1;margin-top:6px;">🚀 趋势多头阵列，JEPQ 收益底仓与 SGOV 贴息按计划稳健运行中！</div></div>'
     st.markdown(command_no_signal_html, unsafe_allow_html=True)
 
