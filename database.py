@@ -370,6 +370,8 @@ def record_brokerage_nav(date_str, total_equity, hk_pnl_cum=0.0):
 def get_nav_history():
     df_cloud = fetch_supabase_df("nav_history", order="date.asc")
     if df_cloud is not None and not df_cloud.empty:
+        if 'total_equity' in df_cloud.columns:
+            df_cloud = df_cloud[df_cloud['total_equity'].notnull()]
         return df_cloud
     conn = get_connection()
     df = pd.read_sql_query(
@@ -401,6 +403,9 @@ def resolve_pending_action(action_id, new_status="CONFIRMED"):
     conn.close()
 
 def get_hk_ipo_trades_history():
+    df_cloud = fetch_supabase_df("hk_ipo_trades", order="id.desc")
+    if df_cloud is not None and not df_cloud.empty:
+        return df_cloud
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM hk_ipo_trades ORDER BY id DESC", conn)
     conn.close()
@@ -533,6 +538,9 @@ def record_kids_cash_transaction(date_str, kid_name, action_type, amount, notes)
     conn.close()
 
 def get_kids_cash_ledger():
+    df_cloud = fetch_supabase_df("kids_cash_ledger", order="id.asc")
+    if df_cloud is not None and not df_cloud.empty:
+        return df_cloud
     init_kids_ledger_table()
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM kids_cash_ledger ORDER BY id ASC", conn)
