@@ -257,7 +257,12 @@ def fetch_supabase_df(table_name, select="*", order=None):
             req_url += f"&order={order}"
         r = httpx.get(req_url, headers=headers, timeout=5.0)
         if r.status_code == 200 and r.json():
-            return pd.DataFrame(r.json())
+            df = pd.DataFrame(r.json())
+            # Convert all numeric columns to float/int to prevent Streamlit UI TypeError/KeyError
+            for col in df.columns:
+                if col not in ['date', 'ticker', 'action', 'layer', 'reason', 'notes', 'kid_name', 'action_type', 'ticker_name', 'market', 'start_date', 'settle_date', 'source', 'type', 'updated_at']:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            return df
     except Exception as e:
         print(f"Supabase REST fetch error for {table_name}: {e}")
     return None
