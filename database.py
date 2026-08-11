@@ -6,47 +6,6 @@ from config import DB_PATH, INITIAL_CAPITAL, JEPQ_TARGET_PCT, SGOV_TARGET_PCT
 import os
 
 def get_connection():
-    # 1. Check for Supabase PostgreSQL URL in Streamlit Secrets or Environment
-    postgres_url = None
-    try:
-        import streamlit as st
-        if hasattr(st, "secrets"):
-            postgres_url = st.secrets.get("POSTGRES_URL") or st.secrets.get("SUPABASE_URL")
-    except Exception:
-        pass
-    if not postgres_url:
-        postgres_url = os.environ.get("POSTGRES_URL") or os.environ.get("SUPABASE_URL")
-        
-    if postgres_url and ("postgresql://" in postgres_url or "postgres://" in postgres_url):
-        try:
-            import psycopg2
-            return psycopg2.connect(postgres_url)
-        except Exception as e:
-            print(f"Warning: Supabase Postgres connection failed ({e}), falling back to Turso/SQLite.")
-            
-    # 2. Check for Turso Serverless DB configuration
-    turso_url = None
-    turso_token = None
-    try:
-        import streamlit as st
-        if hasattr(st, "secrets"):
-            turso_url = st.secrets.get("TURSO_DATABASE_URL")
-            turso_token = st.secrets.get("TURSO_AUTH_TOKEN")
-    except Exception:
-        pass
-    
-    if not turso_url:
-        turso_url = os.environ.get("TURSO_DATABASE_URL")
-        turso_token = os.environ.get("TURSO_AUTH_TOKEN")
-
-    if turso_url and turso_token:
-        try:
-            import libsql_experimental as libsql
-            return libsql.connect(database=turso_url, auth_token=turso_token)
-        except Exception as e:
-            print(f"Warning: Turso Cloud DB connection failed ({e}), falling back to local SQLite.")
-            return sqlite3.connect(DB_PATH)
-    
     return sqlite3.connect(DB_PATH)
 
 def init_db():
