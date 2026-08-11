@@ -6,7 +6,25 @@ from config import DB_PATH, INITIAL_CAPITAL, JEPQ_TARGET_PCT, SGOV_TARGET_PCT
 import os
 
 def get_connection():
-    # 1. Check for Turso Serverless DB configuration in Streamlit Secrets or Environment
+    # 1. Check for Supabase PostgreSQL URL in Streamlit Secrets or Environment
+    postgres_url = None
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets"):
+            postgres_url = st.secrets.get("POSTGRES_URL") or st.secrets.get("SUPABASE_URL")
+    except Exception:
+        pass
+    if not postgres_url:
+        postgres_url = os.environ.get("POSTGRES_URL") or os.environ.get("SUPABASE_URL")
+        
+    if postgres_url:
+        try:
+            import psycopg2
+            return psycopg2.connect(postgres_url)
+        except Exception as e:
+            print(f"Warning: Supabase Postgres connection failed ({e}), falling back to Turso/SQLite.")
+            
+    # 2. Check for Turso Serverless DB configuration
     turso_url = None
     turso_token = None
     try:
