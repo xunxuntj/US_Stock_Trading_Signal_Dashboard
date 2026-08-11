@@ -253,6 +253,18 @@ def update_position(ticker, shares, cost_basis, layer):
     conn.commit()
     conn.close()
 
+    # Cloud Sync to Supabase
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            import httpx
+            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}
+            httpx.post(f"{url}/rest/v1/positions", json=[{
+                "ticker": ticker, "shares": float(shares), "cost_basis": float(cost_basis), "layer": layer, "updated_at": now_str
+            }], headers=headers, timeout=5.0)
+        except Exception as e:
+            print(f"Supabase update_position sync error: {e}")
+
 def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason=""):
     conn = get_connection()
     cursor = conn.cursor()
@@ -262,6 +274,20 @@ def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pn
     """, (date_str, ticker, action, shares, price, total_val, fee, pnl, layer, reason))
     conn.commit()
     conn.close()
+
+    # Cloud Sync to Supabase
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            import httpx
+            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            httpx.post(f"{url}/rest/v1/trades", json=[{
+                "date": str(date_str), "ticker": ticker, "action": action, "shares": float(shares),
+                "price": float(price), "total_val": float(total_val), "fee": float(fee), "pnl": float(pnl),
+                "layer": layer, "reason": str(reason)
+            }], headers=headers, timeout=5.0)
+        except Exception as e:
+            print(f"Supabase record_trade sync error: {e}")
 
 def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, layer="TREND", reason="实盘手工登记"):
     total_val = price * shares
@@ -349,8 +375,11 @@ def get_nav_history():
     return df
 
 def get_trades_history():
-    df_cloud = fetch_supabase_df("trades", order="id.desc")
+    df_cloud = fetch_supabase_df("trades", select="*", order="id.desc")
     if df_cloud is not None and not df_cloud.empty:
+        if 'id' in df_cloud.columns:
+            df_cloud['id'] = pd.to_numeric(df_cloud['id'], errors='coerce')
+            df_cloud = df_cloud.sort_values(by="id", ascending=False).reset_index(drop=True)
         return df_cloud
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM trades ORDER BY id DESC", conn)
