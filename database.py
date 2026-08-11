@@ -3,7 +3,32 @@ import pandas as pd
 import datetime
 from config import DB_PATH, INITIAL_CAPITAL, JEPQ_TARGET_PCT, SGOV_TARGET_PCT
 
+import os
+
 def get_connection():
+    # 1. Check for Turso Serverless DB configuration in Streamlit Secrets or Environment
+    turso_url = None
+    turso_token = None
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets"):
+            turso_url = st.secrets.get("TURSO_DATABASE_URL")
+            turso_token = st.secrets.get("TURSO_AUTH_TOKEN")
+    except Exception:
+        pass
+    
+    if not turso_url:
+        turso_url = os.environ.get("TURSO_DATABASE_URL")
+        turso_token = os.environ.get("TURSO_AUTH_TOKEN")
+
+    if turso_url and turso_token:
+        try:
+            import libsql_experimental as libsql
+            return libsql.connect(database=turso_url, auth_token=turso_token)
+        except Exception as e:
+            print(f"Warning: Turso Cloud DB connection failed ({e}), falling back to local SQLite.")
+            return sqlite3.connect(DB_PATH)
+    
     return sqlite3.connect(DB_PATH)
 
 def init_db():
