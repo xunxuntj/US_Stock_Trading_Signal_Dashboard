@@ -537,8 +537,8 @@ for item in pos_details:
             "标的": t,
             "策略层级": item["layer"],
             "持仓占比": f"{weight_pct:.1f}%",
-            "持仓股数": f"{s:,.4f}",
-            "成本单价": f"${c:,.2f}",
+            "持仓股数": f"{s:,.6f}",
+            "成本单价": f"${c:,.4f}",
             "最新现价": f"${p_now:,.2f}",
             "持仓市值": f"${mkt_val:,.2f}",
             "未实现盈亏": pnl_str
@@ -996,7 +996,7 @@ with tab_trades:
         for col in ["单价($)", "交易金额($)", "手续费($)", "已实现盈亏($)"]:
             if col in df_display_trades.columns:
                 df_display_trades[col] = df_display_trades[col].apply(lambda x: f"{x:,.2f}" if pd.notnull(x) else "-")
-        df_display_trades["股数"] = df_display_trades["股数"].apply(lambda x: f"{x:,.5f}" if pd.notnull(x) else "-")
+        df_display_trades["股数"] = df_display_trades["股数"].apply(lambda x: f"{x:,.6f}" if pd.notnull(x) else "-")
 
         # Color-code buy/sell
         def color_action(val):
