@@ -278,14 +278,14 @@ with st.sidebar.form("us_trade_form"):
     t_shares = st.number_input("成交数量 (股数 / 支持红利复投碎股)", value=10.0, step=0.0001, format="%.6f")
     t_fee = st.number_input("总手续费 ($ USD)", value=0.0, step=0.01, format="%.2f")
     t_reason = st.text_input("交易备注 / 原因", value="实盘手工登记 / 红利复投", help="可填写红利复投、调仓策略或交易原因")
-    t_pwd = st.text_input("授权校验密码 ", type="password", help="输入正确密码方可提交交易")
+    t_pwd = st.text_input("授权校验密码 ", type="password", help="默认授权密码为 790323，输入正确密码方可提交交易")
     
     us_submitted = st.form_submit_button("🔒 确认提交美股交易")
     
     if us_submitted:
         pwd_hash = hashlib.sha256(t_pwd.encode('utf-8')).hexdigest()
         if pwd_hash != HK_IPO_PWD_HASH:
-            st.sidebar.error("❌ 密码错误！无法提交美股交易。")
+            st.sidebar.error("❌ 密码错误！请输入授权密码 790323 方可提交美股交易。")
         elif t_price <= 0 or t_shares <= 0:
             st.sidebar.warning("⚠️ 价格与数量必须大于 0。")
         else:
@@ -294,8 +294,8 @@ with st.sidebar.form("us_trade_form"):
             layer_tag = "L0" if t_ticker == "JEPQ" else ("SGOV" if t_ticker == "SGOV" else "TREND")
             
             execute_live_us_trade(t_date_str, t_ticker, action_code, t_price, t_shares, t_fee, layer_tag, t_reason)
-            st.sidebar.success(f"已成功登记 {t_date_str} {action_code} {t_shares:.6f} 股 {t_ticker} (${t_price:.4f}/股)！持仓及 SGOV 余额已同步！")
             st.cache_data.clear()
+            st.sidebar.success(f"✅ 已成功登记 {t_date_str} {action_code} {t_shares:.6f} 股 {t_ticker} (${t_price:.4f}/股)！页面数据已实时更新！")
             st.rerun()
 
 st.sidebar.divider()
