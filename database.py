@@ -370,9 +370,13 @@ def record_brokerage_nav(date_str, total_equity, hk_pnl_cum=0.0):
 def get_nav_history():
     df_cloud = fetch_supabase_df("nav_history", order="date.asc")
     if df_cloud is not None and not df_cloud.empty:
-        if 'total_equity' in df_cloud.columns:
-            df_cloud = df_cloud[df_cloud['total_equity'].notnull()]
-        return df_cloud
+        # Ensure all expected columns exist to prevent KeyError on Streamlit UI
+        for col in ['total_equity', 'strategy_equity', 'jepq_val', 'sgov_val', 'trend_val', 'hk_pnl_cum', 'high_water_mark', 'drawdown_pct']:
+            if col not in df_cloud.columns:
+                df_cloud[col] = df_cloud['nav'] if 'nav' in df_cloud.columns else 0.0
+        df_cloud = df_cloud[df_cloud['total_equity'].notnull()]
+        if not df_cloud.empty:
+            return df_cloud
     conn = get_connection()
     df = pd.read_sql_query(
         "SELECT * FROM nav_history WHERE total_equity IS NOT NULL ORDER BY date ASC",
