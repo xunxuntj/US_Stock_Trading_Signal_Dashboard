@@ -17,7 +17,7 @@ def get_connection():
     if not postgres_url:
         postgres_url = os.environ.get("POSTGRES_URL") or os.environ.get("SUPABASE_URL")
         
-    if postgres_url:
+    if postgres_url and ("postgresql://" in postgres_url or "postgres://" in postgres_url):
         try:
             import psycopg2
             return psycopg2.connect(postgres_url)
@@ -230,7 +230,42 @@ def get_hk_ipo_history():
     conn.close()
     return df
 
+def get_supabase_credentials():
+    url = None
+    key = None
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets"):
+            url = st.secrets.get("SUPABASE_URL")
+            key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_SECRET_KEY")
+    except Exception:
+        pass
+    if not url:
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SECRET_KEY")
+    return url, key
+
+def fetch_supabase_df(table_name, select="*", order=None):
+    url, key = get_supabase_credentials()
+    if not url or not key:
+        return None
+    try:
+        import httpx
+        headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+        req_url = f"{url}/rest/v1/{table_name}?select={select}"
+        if order:
+            req_url += f"&order={order}"
+        r = httpx.get(req_url, headers=headers, timeout=5.0)
+        if r.status_code == 200 and r.json():
+            return pd.DataFrame(r.json())
+    except Exception as e:
+        print(f"Supabase REST fetch error for {table_name}: {e}")
+    return None
+
 def get_positions():
+    df_cloud = fetch_supabase_df("positions", order="ticker.asc")
+    if df_cloud is not None and not df_cloud.empty:
+        return df_cloud
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM positions", conn)
     conn.close()
@@ -333,6 +368,9 @@ def record_brokerage_nav(date_str, total_equity, hk_pnl_cum=0.0):
 
 
 def get_nav_history():
+    df_cloud = fetch_supabase_df("nav_history", order="date.asc")
+    if df_cloud is not None and not df_cloud.empty:
+        return df_cloud
     conn = get_connection()
     df = pd.read_sql_query(
         "SELECT * FROM nav_history WHERE total_equity IS NOT NULL ORDER BY date ASC",
@@ -341,6 +379,9 @@ def get_nav_history():
     return df
 
 def get_trades_history():
+    df_cloud = fetch_supabase_df("trades", order="id.desc")
+    if df_cloud is not None and not df_cloud.empty:
+        return df_cloud
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM trades ORDER BY id DESC", conn)
     conn.close()
