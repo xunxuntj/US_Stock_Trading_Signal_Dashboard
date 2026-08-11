@@ -237,11 +237,34 @@ with r2_c5:
     )
 
 
-# Sidebar Control: Force Refresh Button
-st.sidebar.markdown("### ⚡ 引擎控制")
-if st.sidebar.button("🔄 强制刷新最新信号与行情", type="primary", use_container_width=True):
-    st.cache_data.clear()
-    st.rerun()
+# Sidebar Control: Force Refresh & Data Safety
+st.sidebar.markdown("### ⚡ 引擎控制 & 数据安全")
+col_s1, col_s2 = st.sidebar.columns(2)
+with col_s1:
+    if st.button("🔄 刷新信号", type="primary", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+
+with col_s2:
+    if os.path.exists("portfolio.db"):
+        with open("portfolio.db", "rb") as f:
+            st.download_button(
+                label="💾 备份数据库",
+                data=f.read(),
+                file_name=f"portfolio_backup_{datetime.date.today().strftime('%Y%m%d')}.db",
+                mime="application/x-sqlite3",
+                use_container_width=True
+            )
+
+with st.sidebar.expander("📤 还原/导入数据库备份"):
+    uploaded_db = st.file_uploader("上传 .db 文件还原", type=["db", "sqlite"])
+    if uploaded_db is not None:
+        if st.button("🔒 确认覆写还原", type="primary", use_container_width=True):
+            with open("portfolio.db", "wb") as f:
+                f.write(uploaded_db.getbuffer())
+            st.cache_data.clear()
+            st.success("✅ 数据库已成功还原！页面即刻刷新...")
+            st.rerun()
 
 st.sidebar.divider()
 
