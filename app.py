@@ -269,24 +269,39 @@ with st.sidebar.expander("📤 还原/导入数据库备份"):
 # Sleek Market Data Alignment Health Check Status Badge
 try:
     from database import fetch_supabase_df
-    df_latest = fetch_supabase_df("market_prices?select=ticker,date&order=date.desc")
-    if df_latest is not None and not df_latest.empty:
+    df_latest = fetch_supabase_df("market_prices", select="ticker,date", order="date.desc")
+    ticker_dates = {}
+    if df_latest is not None and not df_latest.empty and 'ticker' in df_latest.columns:
         df_latest['date'] = df_latest['date'].astype(str)
         ticker_dates = df_latest.groupby('ticker')['date'].max().to_dict()
-        core_tickers = ["DBC", "SPY", "QQQ", "SOXX", "QLD", "GLD", "TLT", "BITO", "JEPQ", "SGOV"]
-        dates_set = set(ticker_dates.get(t, "2026-08-12") for t in core_tickers if t in ticker_dates)
-        is_synced = len(dates_set) <= 1
-        max_d = max(dates_set) if dates_set else "2026-08-12"
-        
-        with st.sidebar.expander(f"📡 各标的行情对齐监控 {'🟢 齐平' if is_synced else '⚠️ 存在差异'} ({max_d})", expanded=False):
-            st.caption("检查各标的云端 K 线最新对齐日期:")
-            cols_m = st.sidebar.columns(2)
-            for idx, t in enumerate(core_tickers):
-                d_val = ticker_dates.get(t, "2026-08-12")
-                col_m = cols_m[idx % 2]
-                col_m.markdown(f"• **{t}**: `{d_val}`")
-except Exception:
-    pass
+    
+    # Fallback/Supplemental check from local CSV files
+    core_tickers = ["DBC", "SPY", "QQQ", "SOXX", "QLD", "GLD", "TLT", "BITO", "JEPQ", "SGOV"]
+    for t in core_tickers:
+        if t not in ticker_dates:
+            fpath = os.path.join(DATA_DIR, f"{t}.csv")
+            if os.path.exists(fpath):
+                try:
+                    df_c = pd.read_csv(fpath)
+                    if not df_c.empty:
+                        d_col = 'Date' if 'Date' in df_c.columns else df_c.columns[0]
+                        ticker_dates[t] = str(df_c[d_col].iloc[-1])[:10]
+                except Exception:
+                    pass
+
+    dates_set = set(ticker_dates.get(t, "2026-08-12") for t in core_tickers if t in ticker_dates)
+    is_synced = len(dates_set) <= 1
+    max_d = max(dates_set) if dates_set else "2026-08-12"
+    
+    with st.sidebar.expander(f"📡 各标的行情对齐监控 {'🟢 齐平' if is_synced else '⚠️ 存在差异'} ({max_d})", expanded=False):
+        st.caption("检查各标的云端/本地 K 线最新对齐日期:")
+        cols_m = st.sidebar.columns(2)
+        for idx, t in enumerate(core_tickers):
+            d_val = ticker_dates.get(t, "2026-08-12")
+            col_m = cols_m[idx % 2]
+            col_m.markdown(f"• **{t}**: `{d_val}`")
+except Exception as err:
+    st.sidebar.caption(f"📡 行情对齐监控: `{err}`")
 
 st.sidebar.divider()
 
