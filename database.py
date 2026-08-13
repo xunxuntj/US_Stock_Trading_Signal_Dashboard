@@ -535,14 +535,39 @@ def record_kids_cash_transaction(date_str, kid_name, action_type, amount, notes)
     conn.close()
 
 def get_kids_cash_ledger():
-    df_cloud = fetch_supabase_df("kids_cash_ledger", order="id.asc")
+    df_cloud = fetch_supabase_df("kids_cash_ledger", order="date.asc")
     if df_cloud is not None and not df_cloud.empty:
         return df_cloud
-    init_kids_ledger_table()
     conn = get_connection()
-    df = pd.read_sql_query("SELECT * FROM kids_cash_ledger ORDER BY id ASC", conn)
+    df = pd.read_sql_query("SELECT * FROM kids_cash_ledger ORDER BY date ASC", conn)
     conn.close()
     return df
+
+def fetch_cloud_market_prices(ticker):
+    """ Fetch historical price data from Supabase Cloud market_prices table """
+    df_cloud = fetch_supabase_df(f"market_prices?ticker=eq.{ticker}&order=date.asc")
+    if df_cloud is not None and not df_cloud.empty:
+        df_cloud['Date'] = pd.to_datetime(df_cloud['date'])
+        df_cloud = df_cloud.rename(columns={
+            'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'
+        })
+        for c in ['Open', 'High', 'Low', 'Close', 'Volume']:
+            if c in df_cloud.columns:
+                df_cloud[c] = pd.to_numeric(df_cloud[c], errors='coerce')
+        df_cloud = df_cloud.sort_values('Date').reset_index(drop=True)
+        return df_cloud
+    return None
+
+def upsert_cloud_market_price_rows(rows):
+    """ Upsert a list of daily price bar dictionaries to Supabase market_prices table """
+    url, key = get_supabase_credentials()
+    if url and key and rows:
+        try:
+            import httpx
+            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}
+            httpx.post(f"{url}/rest/v1/market_prices", json=rows, headers=headers, timeout=10.0)
+        except Exception as e:
+            print(f"upsert_cloud_market_price_rows error: {e}")
 
 def get_kids_account_summary(kid_name):
     init_kids_ledger_table()

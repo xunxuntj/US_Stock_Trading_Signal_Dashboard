@@ -37,6 +37,21 @@ def ensure_latest_market_data():
                                     df_new.index = pd.to_datetime(df_new.index).tz_localize(None)
                                     df_comb = pd.concat([df_old, df_new]).loc[~pd.concat([df_old, df_new]).index.duplicated(keep='last')].sort_index()
                                     df_comb.to_csv(csv_file)
+                                    
+                                    # Sync fresh bars to Supabase Cloud market_prices table
+                                    cloud_rows = []
+                                    for idx_dt, r_bar in df_new.iterrows():
+                                        cloud_rows.append({
+                                            "ticker": t,
+                                            "date": idx_dt.strftime('%Y-%m-%d'),
+                                            "open": float(r_bar['Open']) if pd.notnull(r_bar.get('Open')) else None,
+                                            "high": float(r_bar['High']) if pd.notnull(r_bar.get('High')) else None,
+                                            "low": float(r_bar['Low']) if pd.notnull(r_bar.get('Low')) else None,
+                                            "close": float(r_bar['Close']) if pd.notnull(r_bar.get('Close')) else None,
+                                            "volume": int(r_bar['Volume']) if pd.notnull(r_bar.get('Volume')) else None
+                                        })
+                                    if cloud_rows:
+                                        database.upsert_cloud_market_price_rows(cloud_rows)
                         except Exception:
                             pass
     except Exception as e:

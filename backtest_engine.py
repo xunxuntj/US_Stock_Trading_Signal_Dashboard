@@ -54,11 +54,16 @@ def prepare_data(data_dir="data"):
     for ticker in tickers:
         file_path = os.path.join(data_dir, f"{ticker}.csv")
         if not os.path.exists(file_path):
-            print(f"Warning: Missing data file: {file_path}, skipping.")
-            continue
-        
-        df = pd.read_csv(file_path)
-        df['Date'] = pd.to_datetime(df['Date'])
+            from database import fetch_cloud_market_prices
+            df_cloud = fetch_cloud_market_prices(ticker)
+            if df_cloud is not None and not df_cloud.empty:
+                df = df_cloud
+            else:
+                print(f"Warning: Missing data file and cloud data for {ticker}, skipping.")
+                continue
+        else:
+            df = pd.read_csv(file_path)
+            df['Date'] = pd.to_datetime(df['Date'])
         
         rename_dict = {}
         for col in df.columns:
