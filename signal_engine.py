@@ -10,8 +10,41 @@ from config import (
 )
 from database import get_positions, get_connection
 
+def ensure_latest_market_data():
+    """ Automatically check if local data CSVs are stale and fetch latest daily bars silently """
+    try:
+        import datetime, os, pandas as pd, yfinance as yf
+        from config import DATA_DIR, BASE_TICKERS
+        today = datetime.date.today()
+        spy_path = os.path.join(DATA_DIR, "SPY.csv")
+        if os.path.exists(spy_path):
+            df_spy = pd.read_csv(spy_path)
+            if not df_spy.empty and 'Date' in df_spy.columns:
+                last_date = pd.to_datetime(df_spy['Date'].iloc[-1]).date()
+                # If local data is more than 1 day old on a weekday, fetch fresh bars
+                if (today - last_date).days >= 1:
+                    for t in list(set(BASE_TICKERS + ["JEPQ", "SGOV"])):
+                        try:
+                            tk = yf.Ticker(t)
+                            df_new = tk.history(period="5d")
+                            if not df_new.empty:
+                                csv_file = os.path.join(DATA_DIR, f"{t}.csv")
+                                if os.path.exists(csv_file):
+                                    df_old = pd.read_csv(csv_file)
+                                    if 'Date' in df_old.columns:
+                                        df_old['Date'] = pd.to_datetime(df_old['Date'])
+                                        df_old = df_old.set_index('Date')
+                                    df_new.index = pd.to_datetime(df_new.index).tz_localize(None)
+                                    df_comb = pd.concat([df_old, df_new]).loc[~pd.concat([df_old, df_new]).index.duplicated(keep='last')].sort_index()
+                                    df_comb.to_csv(csv_file)
+                        except Exception:
+                            pass
+    except Exception as e:
+        print(f"ensure_latest_market_data error: {e}")
+
 def generate_v229_signals():
     """ Runs daily scan on latest market data to check for v2.29 Buy/Sell signals """
+    ensure_latest_market_data()
     data = be.prepare_data(DATA_DIR)
     spy_df = data["SPY"]
     latest_date = spy_df.index[-1]
