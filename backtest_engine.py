@@ -52,18 +52,24 @@ def prepare_data(data_dir="data"):
     data = {}
     
     for ticker in tickers:
-        file_path = os.path.join(data_dir, f"{ticker}.csv")
-        if not os.path.exists(file_path):
+        # Option C Architecture: Priority fetch from Supabase Cloud market_prices table (Single Source of Truth)
+        df = None
+        try:
             from database import fetch_cloud_market_prices
             df_cloud = fetch_cloud_market_prices(ticker)
-            if df_cloud is not None and not df_cloud.empty:
+            if df_cloud is not None and not df_cloud.empty and len(df_cloud) >= 50:
                 df = df_cloud
+        except Exception:
+            pass
+            
+        if df is None or df.empty:
+            file_path = os.path.join(data_dir, f"{ticker}.csv")
+            if os.path.exists(file_path):
+                df = pd.read_csv(file_path)
+                df['Date'] = pd.to_datetime(df['Date'])
             else:
-                print(f"Warning: Missing data file and cloud data for {ticker}, skipping.")
+                print(f"Warning: Missing data for {ticker}, skipping.")
                 continue
-        else:
-            df = pd.read_csv(file_path)
-            df['Date'] = pd.to_datetime(df['Date'])
         
         rename_dict = {}
         for col in df.columns:

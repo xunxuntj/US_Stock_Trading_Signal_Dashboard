@@ -1,0 +1,33 @@
+name: Daily Market Data Sync to Supabase
+
+on:
+  schedule:
+    # Runs at 22:00 UTC Monday-Friday (which is 06:00 AM CST Tuesday-Saturday, right after US Market Close)
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+
+jobs:
+  sync_market_data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy yfinance httpx
+
+      - name: Run Market Data Sync to Supabase Cloud
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python scratch/sync_all_latest_market_data.py

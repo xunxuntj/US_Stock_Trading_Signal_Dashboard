@@ -397,6 +397,26 @@ with st.sidebar.form("brokerage_nav_form"):
             st.sidebar.success(f"✅ 已写入 {bn_date} 券商净值 ${bn_total:,.2f}（🏦 BROKERAGE）")
             st.rerun()
 
+try:
+    from database import fetch_supabase_df
+    df_latest = fetch_supabase_df("market_prices?select=ticker,date&order=date.desc")
+    if df_latest is not None and not df_latest.empty:
+        df_latest['date'] = df_latest['date'].astype(str)
+        ticker_dates = df_latest.groupby('ticker')['date'].max().to_dict()
+        core_tickers = ["DBC", "SPY", "QQQ", "SOXX", "QLD", "GLD", "TLT", "BITO", "JEPQ", "SGOV"]
+        dates_set = set(ticker_dates.get(t, "2026-08-12") for t in core_tickers if t in ticker_dates)
+        is_synced = len(dates_set) <= 1
+        max_d = max(dates_set) if dates_set else "2026-08-12"
+        
+        st.sidebar.divider()
+        with st.sidebar.expander(f"📡 行情对齐监控 {'🟢' if is_synced else '⚠️'} ({max_d})"):
+            st.caption("各标的云端 K 线最新对齐日期:")
+            for t in core_tickers:
+                d_val = ticker_dates.get(t, "2026-08-12")
+                st.sidebar.markdown(f"• **{t}**: `{d_val}`")
+except Exception:
+    pass
+
 st.divider()
 
 
