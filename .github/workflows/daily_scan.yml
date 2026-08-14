@@ -31,6 +31,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Download Live Market Data & Run Scan
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           python download_data.py
           python run_daily_scan.py
