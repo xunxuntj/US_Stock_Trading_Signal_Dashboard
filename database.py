@@ -543,6 +543,27 @@ def get_kids_cash_ledger():
     conn.close()
     return df
 
+def get_cloud_market_prices_latest_dates(tickers=None):
+    """ Efficiently fetch latest alignment date for each ticker from Supabase market_prices """
+    url, key = get_supabase_credentials()
+    if not url or not key:
+        return {}
+    if tickers is None:
+        tickers = ["DBC", "SPY", "QQQ", "SOXX", "QLD", "GLD", "TLT", "BITO", "JEPQ", "SGOV"]
+    import httpx
+    headers = {"apikey": str(key), "Authorization": f"Bearer {str(key)}"}
+    result = {}
+    for t in tickers:
+        for _ in range(2):
+            try:
+                r = httpx.get(f"{str(url)}/rest/v1/market_prices?ticker=eq.{t}&select=date&order=date.desc&limit=1", headers=headers, timeout=4.0)
+                if r.status_code == 200 and r.json():
+                    result[t] = str(r.json()[0]['date'])[:10]
+                    break
+            except Exception:
+                pass
+    return result
+
 def fetch_cloud_market_prices(ticker):
     """ Fetch historical price data from Supabase Cloud market_prices table """
     df_cloud = fetch_supabase_df(f"market_prices?ticker=eq.{ticker}&order=date.asc")
@@ -564,8 +585,15 @@ def upsert_cloud_market_price_rows(rows):
     if url and key and rows:
         try:
             import httpx
-            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}
-            httpx.post(f"{url}/rest/v1/market_prices", json=rows, headers=headers, timeout=10.0)
+            url_str = str(url)
+            key_str = str(key)
+            headers = {
+                "apikey": key_str,
+                "Authorization": f"Bearer {key_str}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            }
+            httpx.post(f"{url_str}/rest/v1/market_prices", json=rows, headers=headers, timeout=15.0)
         except Exception as e:
             print(f"upsert_cloud_market_price_rows error: {e}")
 
