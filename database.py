@@ -194,15 +194,15 @@ def get_supabase_credentials():
     key = None
     try:
         import streamlit as st
-        if hasattr(st, "secrets"):
+        if hasattr(st, "secrets") and st.secrets:
             url = st.secrets.get("SUPABASE_URL")
             key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_SECRET_KEY")
     except Exception:
         pass
     if not url:
-        url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SECRET_KEY")
-    return url, key
+        url = os.environ.get("SUPABASE_URL") or "https://eoqpkgnkbbadvppucxej.supabase.co"
+        key = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SECRET_KEY") or "sb_publishable_YH5zDJNieHeqO61hkzovcA_YIBbWzia"
+    return str(url), str(key)
 
 def fetch_supabase_df(table_name, select="*", order=None):
     url, key = get_supabase_credentials()
@@ -593,7 +593,8 @@ def upsert_cloud_market_price_rows(rows):
                 "Content-Type": "application/json",
                 "Prefer": "resolution=merge-duplicates"
             }
-            httpx.post(f"{url_str}/rest/v1/market_prices", json=rows, headers=headers, timeout=15.0)
+            # Explicitly specify on_conflict=ticker,date for PostgREST UPSERT
+            httpx.post(f"{url_str}/rest/v1/market_prices?on_conflict=ticker,date", json=rows, headers=headers, timeout=15.0)
         except Exception as e:
             print(f"upsert_cloud_market_price_rows error: {e}")
 
