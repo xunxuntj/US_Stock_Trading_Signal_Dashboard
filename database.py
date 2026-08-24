@@ -210,7 +210,12 @@ def fetch_supabase_df(table_name, select="*", order=None):
         return None
     try:
         import httpx
-        headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+        headers = {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+        }
         req_url = f"{url}/rest/v1/{table_name}?select={select}"
         if order:
             req_url += f"&order={order}"

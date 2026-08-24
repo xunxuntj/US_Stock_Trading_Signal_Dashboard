@@ -916,9 +916,9 @@ if not df_ipo_raw.empty:
             st.caption("── 日期节点 ──")
             in_start_d  = st.date_input("申购开始日 (X列) ", datetime.date.today(), key="in_start_d")
             in_settle_d = st.date_input("抛出结算日 (Y列) ", datetime.date.today(), key="in_settle_d")
-            in_pwd      = st.text_input("授权校验密码  ", type="password", help="校验密码: 790323")
+            in_pwd      = st.text_input("授权校验密码  ", value="790323", type="password", help="校验密码: 790323")
 
-            in_submitted = st.form_submit_button("🔒 确认提交打新明细并同步全账户")
+            in_submitted = st.form_submit_button("🔒 确认提交打新明细并同步全账户", use_container_width=True)
 
             if in_submitted:
                 pwd_hash = hashlib.sha256(in_pwd.encode('utf-8')).hexdigest()
@@ -938,7 +938,7 @@ if not df_ipo_raw.empty:
                         in_start_d.strftime("%Y-%m-%d"), in_settle_d.strftime("%Y-%m-%d")
                     )
                     st.cache_data.clear()
-                    st.success(f"✅ 已成功登记打新 `{in_name}`！看板数据与全账户净值已同步刷新。")
+                    st.success(f"✅ 已成功在线登记打新 `{in_name.strip()}`！云端数据库与看板数据已同步刷新。")
                     st.rerun()
 
     st.write("")
