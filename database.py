@@ -491,7 +491,14 @@ def record_hk_ipo_trade(
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json"
             }
+            # Self-Healing: Compute next_id to prevent Postgres sequence offset 409 conflicts
+            df_cur = fetch_supabase_df("hk_ipo_trades", select="id", order="id.desc")
+            next_id = 1
+            if df_cur is not None and not df_cur.empty and 'id' in df_cur.columns:
+                next_id = int(df_cur['id'].max()) + 1
+
             payload = {
+                "id": next_id,
                 "ticker_name": ticker_name,
                 "market": market,
                 "margin_principal": float(margin_principal),
@@ -521,6 +528,8 @@ def record_hk_ipo_trade(
             resp = httpx.post(f"{url}/rest/v1/hk_ipo_trades", json=payload, headers=headers, timeout=10.0)
             if resp.status_code not in [200, 201, 204]:
                 print(f"record_hk_ipo_trade Supabase Sync Warning: {resp.status_code} {resp.text}")
+            else:
+                print(f"✅ Successfully inserted HK IPO trade to Supabase Cloud with id={next_id}!")
         except Exception as e:
             print(f"record_hk_ipo_trade Supabase Sync Exception: {e}")
 
@@ -582,13 +591,18 @@ def record_kids_cash_transaction(date_str, kid_name, action_type, amount, notes)
     conn.commit()
     conn.close()
     
-    # Sync to Supabase kids_cash_ledger table
+    # Sync to Supabase kids_cash_ledger table with Self-Healing Next ID
     url, key = get_supabase_credentials()
     if url and key:
         try:
             import httpx
             headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            df_cur_k = fetch_supabase_df("kids_cash_ledger", select="id", order="id.desc")
+            next_kid_id = 1
+            if df_cur_k is not None and not df_cur_k.empty and 'id' in df_cur_k.columns:
+                next_kid_id = int(df_cur_k['id'].max()) + 1
             payload = {
+                "id": next_kid_id,
                 "date": date_str,
                 "kid_name": kid_name,
                 "action_type": action_type,
