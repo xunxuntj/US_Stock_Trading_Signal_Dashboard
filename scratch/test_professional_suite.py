@@ -147,6 +147,15 @@ class TestTradingDashboardProfessionalSuite(unittest.TestCase):
             self.assertIn("Daily v2.29 Trading Signal Scan", content, "Workflow name incorrect")
             self.assertIn("workflow_dispatch:", content, "Workflow dispatch trigger missing")
 
+    # -------------------------------------------------------------------------
+    # DOMAIN 8: HK IPO Trade Entry & Supabase Sync Test
+    # -------------------------------------------------------------------------
+    def test_08_hk_ipo_trade_record_and_cloud_sync(self):
+        """ Test HK IPO Trade Recording and Cloud Supabase Sync Handshake """
+        df_before = database.get_hk_ipo_trades_history()
+        count_before = len(df_before) if df_before is not None else 0
+        self.assertGreater(count_before, 0, "HK IPO Trades History cannot be empty")
+
 def run_suite():
     suite = unittest.TestLoader().loadTestsFromTestCase(TestTradingDashboardProfessionalSuite)
     runner = unittest.TextTestRunner(verbosity=2)

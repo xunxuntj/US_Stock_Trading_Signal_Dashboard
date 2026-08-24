@@ -476,6 +476,49 @@ def record_hk_ipo_trade(
     # Auto sync total profit to NAV history table
     sync_hk_ipo_pnl_to_nav()
     
+    # Sync to Supabase Cloud hk_ipo_trades table
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            import httpx
+            headers = {
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "ticker_name": ticker_name,
+                "market": market,
+                "margin_principal": float(margin_principal),
+                "allocated_shares": float(allocated_shares),
+                "ipo_fee": float(ipo_fee),
+                "won_shares": float(won_shares),
+                "won_price": float(won_price) if won_price is not None else None,
+                "sell_price": float(sell_price) if sell_price is not None else None,
+                "trade_fee": float(trade_fee),
+                "total_fee": float(total_fee),
+                "profit_amt": float(profit_amt),
+                "roi": float(roi),
+                "multiplier": float(multiplier),
+                "hiro_capital": float(hiro_capital),
+                "hiro_profit": float(hiro_profit),
+                "hiro_return": float(hiro_return),
+                "caspar_capital": float(caspar_capital),
+                "caspar_profit": float(caspar_profit),
+                "caspar_return": float(caspar_return),
+                "exchange_rate": 1.0,
+                "hkd_principal": float(margin_principal),
+                "hkd_total_fee": float(total_fee),
+                "hkd_profit": float(profit_amt),
+                "start_date": start_date,
+                "settle_date": settle_date
+            }
+            resp = httpx.post(f"{url}/rest/v1/hk_ipo_trades", json=payload, headers=headers, timeout=10.0)
+            if resp.status_code not in [200, 201, 204]:
+                print(f"record_hk_ipo_trade Supabase Sync Warning: {resp.status_code} {resp.text}")
+        except Exception as e:
+            print(f"record_hk_ipo_trade Supabase Sync Exception: {e}")
+
     # Log kids IPO settlement
     if hiro_profit != 0:
         record_kids_cash_transaction(settle_date, 'HIRO', 'IPO_SETTLE', hiro_profit, f"{ticker_name} 打新结算收益")
@@ -533,6 +576,24 @@ def record_kids_cash_transaction(date_str, kid_name, action_type, amount, notes)
     """, (date_str, kid_name, action_type, amount, new_bal, notes))
     conn.commit()
     conn.close()
+    
+    # Sync to Supabase kids_cash_ledger table
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            import httpx
+            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            payload = {
+                "date": date_str,
+                "kid_name": kid_name,
+                "action_type": action_type,
+                "amount": float(amount),
+                "balance_after": float(new_bal),
+                "notes": notes
+            }
+            httpx.post(f"{url}/rest/v1/kids_cash_ledger", json=payload, headers=headers, timeout=5.0)
+        except Exception:
+            pass
 
 def get_kids_cash_ledger():
     df_cloud = fetch_supabase_df("kids_cash_ledger", order="date.asc")
