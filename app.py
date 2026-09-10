@@ -139,7 +139,10 @@ us_live_ret_pct = ((live_nav_latest - 99215.41) / 99215.41) * 100.0
 us_live_cagr = ((1.0 + us_live_ret_pct / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
 
 # 2. Combined Portfolio (US + 2026 Time-Matched HK IPO)
-total_combined_nav = live_nav_latest + hk_2026_profit_usd
+if 'latest_nav_row' in locals() and isinstance(latest_nav_row, pd.Series) and latest_nav_row.get('source') == 'BROKERAGE':
+    total_combined_nav = float(latest_nav_row['total_equity'])
+else:
+    total_combined_nav = live_nav_latest + hk_2026_profit_usd
 total_live_ret_pct = ((total_combined_nav - 99215.41) / 99215.41) * 100.0
 total_live_cagr = ((1.0 + total_live_ret_pct / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
 
