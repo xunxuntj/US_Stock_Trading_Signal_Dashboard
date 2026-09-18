@@ -441,7 +441,7 @@ st.subheader("🚨 今日交易信号控制台 (Command Center)")
 
 # Common active holdings table constructor
 pos_active_df = get_positions()
-trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])] if not pos_active_df.empty else pd.DataFrame()
+trend_pos = pos_active_df[(pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])) & (pos_active_df['shares'] > 0.0001)] if not pos_active_df.empty else pd.DataFrame()
 
 holdings_detail_html = ""
 if not trend_pos.empty:
@@ -1366,7 +1366,7 @@ if actions:
 else:
     # When no new actions (or actions reconciled into DB), dynamically render active trend positions with weight %, zero dollar/share leakage
     pos_active_df = get_positions()
-    trend_pos = pos_active_df[pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])] if not pos_active_df.empty else pd.DataFrame()
+    trend_pos = pos_active_df[(pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])) & (pos_active_df['shares'] > 0.0001)] if not pos_active_df.empty else pd.DataFrame()
     
     if not trend_pos.empty:
         for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):

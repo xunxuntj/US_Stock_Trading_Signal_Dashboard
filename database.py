@@ -234,9 +234,12 @@ def fetch_supabase_df(table_name, select="*", order=None):
 def get_positions():
     df_cloud = fetch_supabase_df("positions", order="ticker.asc")
     if df_cloud is not None and not df_cloud.empty:
+        if 'shares' in df_cloud.columns:
+            df_cloud['shares'] = pd.to_numeric(df_cloud['shares'], errors='coerce')
+            df_cloud = df_cloud[df_cloud['shares'] > 0.00001].copy()
         return df_cloud
     conn = get_connection()
-    df = pd.read_sql_query("SELECT * FROM positions", conn)
+    df = pd.read_sql_query("SELECT * FROM positions WHERE shares > 0.00001", conn)
     conn.close()
     return df
 
@@ -263,10 +266,15 @@ def update_position(ticker, shares, cost_basis, layer):
     if url and key:
         try:
             import httpx
-            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}
-            httpx.post(f"{url}/rest/v1/positions", json=[{
-                "ticker": ticker, "shares": float(shares), "cost_basis": float(cost_basis), "layer": layer, "updated_at": now_str
-            }], headers=headers, timeout=5.0)
+            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            if shares <= 0:
+                # Fully delete the closed position from Supabase Cloud
+                httpx.delete(f"{url}/rest/v1/positions?ticker=eq.{ticker}", headers=headers, timeout=5.0)
+            else:
+                headers["Prefer"] = "resolution=merge-duplicates"
+                httpx.post(f"{url}/rest/v1/positions", json=[{
+                    "ticker": ticker, "shares": float(shares), "cost_basis": float(cost_basis), "layer": layer, "updated_at": now_str
+                }], headers=headers, timeout=5.0)
         except Exception as e:
             print(f"Supabase update_position sync error: {e}")
 

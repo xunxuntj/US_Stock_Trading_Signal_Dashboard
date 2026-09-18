@@ -106,9 +106,9 @@ class TestTradingDashboardProfessionalSuite(unittest.TestCase):
         self.assertTrue('ticker' in df_pos.columns, "Positions table missing ticker column")
         self.assertTrue('shares' in df_pos.columns, "Positions table missing shares column")
         
-        # Test positions shares numeric validity
+        # Test positions shares numeric validity (must be strictly positive, no 0-share residue)
         for _, r in df_pos.iterrows():
-            self.assertGreaterEqual(r['shares'], 0, f"Position {r['ticker']} shares cannot be negative")
+            self.assertGreater(r['shares'], 0, f"Position {r['ticker']} shares must be strictly positive (> 0), found {r['shares']}")
 
     # -------------------------------------------------------------------------
     # DOMAIN 6: UI Component & Market Alignment Health Monitor Tests
