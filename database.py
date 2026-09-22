@@ -541,11 +541,6 @@ def record_hk_ipo_trade(
         except Exception as e:
             print(f"record_hk_ipo_trade Supabase Sync Exception: {e}")
 
-    # Log kids IPO settlement
-    if hiro_profit != 0:
-        record_kids_cash_transaction(settle_date, 'HIRO', 'IPO_SETTLE', hiro_profit, f"{ticker_name} 打新结算收益")
-    if caspar_profit != 0:
-        record_kids_cash_transaction(settle_date, 'CASPAR', 'IPO_SETTLE', caspar_profit, f"{ticker_name} 打新结算收益")
 
 def init_kids_ledger_table():
     conn = get_connection()

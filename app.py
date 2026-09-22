@@ -878,6 +878,8 @@ if not df_ipo_raw.empty:
     # ── Kids Cash Flow Audit Ledger Table ─────────────────────────────────────
     df_kids_ledger = get_kids_cash_ledger()
     if not df_kids_ledger.empty:
+        if "action_type" in df_kids_ledger.columns:
+            df_kids_ledger = df_kids_ledger[df_kids_ledger["action_type"] != "IPO_SETTLE"]
         with st.expander("📜 查看 Hiro & Caspar 资金变动与提现审计流水账本 (Kids Ledger)"):
             df_kl_disp = df_kids_ledger.rename(columns={
                 "id": "流水ID", "date": "变动日期", "kid_name": "成员",
