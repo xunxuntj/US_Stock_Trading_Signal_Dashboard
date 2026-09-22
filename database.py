@@ -685,30 +685,40 @@ def upsert_cloud_market_price_rows(rows):
 
 def get_kids_account_summary(kid_name):
     init_kids_ledger_table()
-    conn = get_connection()
     
-    # 1. Net Cash Deposits and Withdrawals from kids_cash_ledger
-    df_ledger = pd.read_sql_query(
-        "SELECT action_type, amount FROM kids_cash_ledger WHERE kid_name = ?",
-        conn, params=(kid_name,)
-    )
-    tot_dep = float(df_ledger[df_ledger['action_type'] == 'DEPOSIT']['amount'].sum()) if not df_ledger.empty else 100.0
-    tot_wd  = float(df_ledger[df_ledger['action_type'] == 'WITHDRAWAL']['amount'].sum()) if not df_ledger.empty else 0.0
-    
-    # 2. Cumulative IPO Profits from hk_ipo_trades
-    df_trades = pd.read_sql_query("SELECT id, hiro_profit, caspar_profit FROM hk_ipo_trades ORDER BY id ASC", conn)
-    conn.close()
-    
-    if kid_name == 'HIRO':
-        # Active profits starting at 首钢朗泽 (ID >= 93)
-        active_prof = float(df_trades[df_trades['id'] >= 93]['hiro_profit'].sum()) if not df_trades.empty else 43.85
-        # Early settled profits before 首钢朗泽 (ID < 93)
-        early_settled_prof = float(df_trades[df_trades['id'] < 93]['hiro_profit'].sum()) if not df_trades.empty else -0.43
+    # 1. Net Cash Deposits and Withdrawals from kids_cash_ledger (Cloud first)
+    df_ledger = get_kids_cash_ledger()
+    if df_ledger is not None and not df_ledger.empty and 'kid_name' in df_ledger.columns:
+        df_k = df_ledger[df_ledger['kid_name'] == kid_name]
+        tot_dep = float(df_k[df_k['action_type'] == 'DEPOSIT']['amount'].sum()) if not df_k.empty else 100.0
+        tot_wd  = float(df_k[df_k['action_type'] == 'WITHDRAWAL']['amount'].sum()) if not df_k.empty else 0.0
     else:
-        # Active profits starting at 创想三维 (ID >= 92)
-        active_prof = float(df_trades[df_trades['id'] >= 92]['caspar_profit'].sum()) if not df_trades.empty else 43.80
-        # Early settled profits before 创想三维 (ID < 92)
-        early_settled_prof = float(df_trades[df_trades['id'] < 92]['caspar_profit'].sum()) if not df_trades.empty else -6.71
+        tot_dep = 100.0
+        tot_wd = 0.0
+    
+    # 2. Cumulative IPO Profits from hk_ipo_trades (Cloud first)
+    df_trades = get_hk_ipo_trades_history()
+    
+    if df_trades is not None and not df_trades.empty and 'id' in df_trades.columns:
+        df_trades['id'] = pd.to_numeric(df_trades['id'], errors='coerce')
+        if 'hiro_profit' in df_trades.columns:
+            df_trades['hiro_profit'] = pd.to_numeric(df_trades['hiro_profit'], errors='coerce').fillna(0.0)
+        if 'caspar_profit' in df_trades.columns:
+            df_trades['caspar_profit'] = pd.to_numeric(df_trades['caspar_profit'], errors='coerce').fillna(0.0)
+            
+        if kid_name == 'HIRO':
+            # Active profits starting at 首钢朗泽 (ID >= 93)
+            active_prof = float(df_trades[df_trades['id'] >= 93]['hiro_profit'].sum())
+            # Early settled profits before 首钢朗泽 (ID < 93)
+            early_settled_prof = float(df_trades[df_trades['id'] < 93]['hiro_profit'].sum())
+        else:
+            # Active profits starting at 创想三维 (ID >= 92)
+            active_prof = float(df_trades[df_trades['id'] >= 92]['caspar_profit'].sum())
+            # Early settled profits before 创想三维 (ID < 92)
+            early_settled_prof = float(df_trades[df_trades['id'] < 92]['caspar_profit'].sum())
+    else:
+        active_prof = 65.29 if kid_name == 'HIRO' else 65.23
+        early_settled_prof = -0.43 if kid_name == 'HIRO' else -6.71
         
     tot_bal = (tot_dep - tot_wd) + active_prof
     lifetime_total_profit = active_prof + early_settled_prof
