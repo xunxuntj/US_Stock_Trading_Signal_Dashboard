@@ -867,6 +867,9 @@ if not df_ipo_raw.empty:
                     new_b = record_kids_cash_transaction(
                         kt_date.strftime("%Y-%m-%d"), kt_name, action_code, kt_amt, kt_notes.strip() or "账户出入金"
                     )
+                    if new_b is None:
+                        sum_info = get_kids_account_summary(kt_name)
+                        new_b = sum_info['balance'] if (sum_info and 'balance' in sum_info) else 0.0
                     st.cache_data.clear()
                     st.success(f"✅ 已成功登记 {kt_name} {action_code} ¥{kt_amt:,.2f}！最新总资产余额: ¥{new_b:,.2f} RMB")
                     st.rerun()

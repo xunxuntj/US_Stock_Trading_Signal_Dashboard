@@ -622,6 +622,8 @@ def record_kids_cash_transaction(date_str, kid_name, action_type, amount, notes)
         except Exception:
             pass
 
+    return new_bal
+
 def get_kids_cash_ledger():
     df_cloud = fetch_supabase_df("kids_cash_ledger", order="date.asc")
     if df_cloud is not None and not df_cloud.empty:
