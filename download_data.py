@@ -83,6 +83,32 @@ def main():
         except Exception as e:
             print(f"❌ Error downloading {ticker}: {str(e)}")
 
+    # 5. Update S5FI Market Breadth (% S&P 500 stocks above 50-day SMA)
+    try:
+        import io, requests, database
+        url_sp = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        headers_sp = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        tables_sp = pd.read_html(io.StringIO(requests.get(url_sp, headers=headers_sp, timeout=15).text))
+        sp_tickers = tables_sp[0]['Symbol'].str.replace('.', '-', regex=False).tolist()
+        df_sp_close = yf.download(sp_tickers, period="4mo", progress=False)['Close']
+        sma50 = df_sp_close.rolling(window=50).mean()
+        s5fi_series = ((df_sp_close > sma50).sum(axis=1) / df_sp_close.notna().sum(axis=1) * 100).dropna()
+        if not s5fi_series.empty:
+            df_s5fi_new = pd.DataFrame({'Date': pd.to_datetime(s5fi_series.index).tz_localize(None).strftime('%Y-%m-%d'), 'Close': s5fi_series.values})
+            s5fi_path = os.path.join(data_dir, "S5FI.csv")
+            if os.path.exists(s5fi_path):
+                df_s5fi_old = pd.read_csv(s5fi_path)
+                df_s5fi_old['Date'] = pd.to_datetime(df_s5fi_old['Date']).dt.strftime('%Y-%m-%d')
+                df_s5fi_comb = pd.concat([df_s5fi_old, df_s5fi_new]).drop_duplicates(subset=['Date'], keep='last').sort_values('Date').reset_index(drop=True)
+            else:
+                df_s5fi_comb = df_s5fi_new
+            df_s5fi_comb.to_csv(s5fi_path, index=False)
+            s5fi_rows = [{"ticker": "S5FI", "date": r['Date'], "open": float(r['Close']), "high": float(r['Close']), "low": float(r['Close']), "close": float(r['Close']), "volume": 0} for _, r in df_s5fi_comb.tail(30).iterrows()]
+            database.upsert_cloud_market_price_rows(s5fi_rows)
+            print(f"  ✅ Updated S5FI.csv & Cloud (Latest: {df_s5fi_comb['Date'].iloc[-1]} = {df_s5fi_comb['Close'].iloc[-1]:.2f}%)")
+    except Exception as s5fi_err:
+        print(f"  ⚠️ S5FI update warning: {s5fi_err}")
+
     print(f"--------------------------------------------------")
     print(f"🎉 MARKET DATA SYNC COMPLETED SUCCESSFULLY!")
     print(f"==================================================")
