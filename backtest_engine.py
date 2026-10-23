@@ -57,7 +57,27 @@ def prepare_data(data_dir="data"):
         try:
             from database import fetch_cloud_market_prices
             df_cloud = fetch_cloud_market_prices(ticker)
-            if df_cloud is not None and not df_cloud.empty and len(df_cloud) >= 50:
+        except Exception:
+            df_cloud = None
+        file_path = os.path.join(data_dir, f"{ticker}.csv")
+        df_local = None
+        if os.path.exists(file_path):
+            df_local = pd.read_csv(file_path)
+            df_local['Date'] = pd.to_datetime(df_local['Date'])
+        if df_local is not None and df_cloud is not None and not df_cloud.empty:
+            df = pd.concat([df_local, df_cloud]).drop_duplicates(subset=['Date'], keep='last').sort_values('Date').reset_index(drop=True)
+        elif df_cloud is not None and not df_cloud.empty and len(df_cloud) >= 50:
+            df = df_cloud
+        elif df_local is not None:
+            df = df_local
+        else:
+            print(f"Warning: Missing data for {ticker}, skipping.")
+            continue
+        try:
+            pass
+            from database import fetch_cloud_market_prices
+            df_cloud = fetch_cloud_market_prices(ticker)
+            if False:
                 df = df_cloud
         except Exception:
             pass
@@ -119,6 +139,13 @@ def prepare_data(data_dir="data"):
     if os.path.exists(s5fi_path):
         s5fi_df = pd.read_csv(s5fi_path)
         s5fi_df['Date'] = pd.to_datetime(s5fi_df['Date'])
+        try:
+            from database import fetch_cloud_market_prices
+            s5fi_cloud = fetch_cloud_market_prices("S5FI")
+            if s5fi_cloud is not None and not s5fi_cloud.empty:
+                s5fi_df = pd.concat([s5fi_df, s5fi_cloud[['Date', 'Close']]]).drop_duplicates(subset=['Date'], keep='last').sort_values('Date').reset_index(drop=True)
+        except Exception:
+            pass
         data["S5FI"] = s5fi_df.set_index('Date')
         print("Loaded S5FI market breadth data.")
     else:

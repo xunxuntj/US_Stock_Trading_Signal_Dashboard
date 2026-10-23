@@ -327,7 +327,7 @@ with st.sidebar.form("us_trade_form"):
         else:
             action_code = "BUY" if "BUY" in t_action else "SELL"
             t_date_str = t_date.strftime("%Y-%m-%d")
-            layer_tag = "L0" if t_ticker == "JEPQ" else ("SGOV" if t_ticker == "SGOV" else "TREND")
+            layer_tag = "L0" if t_ticker == "JEPQ" else ("SGOV" if t_ticker == "SGOV" else ("L2" if t_ticker == "QLD" else ("Non-Equity" if t_ticker in ["GLD", "TLT", "DBC", "BITO"] else ("L1" if t_ticker in ["SPY", "QQQ", "SOXX"] else "TREND"))))
             
             execute_live_us_trade(t_date_str, t_ticker, action_code, t_price, t_shares, t_fee, layer_tag, t_reason)
             st.cache_data.clear()
@@ -441,7 +441,7 @@ st.subheader("🚨 今日交易信号控制台 (Command Center)")
 
 # Common active holdings table constructor
 pos_active_df = get_positions()
-trend_pos = pos_active_df[(pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])) & (pos_active_df['shares'] > 0.0001)] if not pos_active_df.empty else pd.DataFrame()
+trend_pos = pos_active_df[(pos_active_df['layer'].isin(['L1', 'L2', 'Non-Equity', 'TREND'])) & (pos_active_df['shares'] > 0.0001)] if not pos_active_df.empty else pd.DataFrame()
 
 holdings_detail_html = ""
 if not trend_pos.empty:
@@ -1371,7 +1371,7 @@ if actions:
 else:
     # When no new actions (or actions reconciled into DB), dynamically render active trend positions with weight %, zero dollar/share leakage
     pos_active_df = get_positions()
-    trend_pos = pos_active_df[(pos_active_df['layer'].isin(['L1', 'L2', 'TREND'])) & (pos_active_df['shares'] > 0.0001)] if not pos_active_df.empty else pd.DataFrame()
+    trend_pos = pos_active_df[(pos_active_df['layer'].isin(['L1', 'L2', 'Non-Equity', 'TREND'])) & (pos_active_df['shares'] > 0.0001)] if not pos_active_df.empty else pd.DataFrame()
     
     if not trend_pos.empty:
         for idx, (_, pos_row) in enumerate(trend_pos.iterrows(), 1):

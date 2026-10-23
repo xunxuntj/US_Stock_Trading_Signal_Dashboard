@@ -216,7 +216,8 @@ def fetch_supabase_df(table_name, select="*", order=None):
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache"
         }
-        req_url = f"{url}/rest/v1/{table_name}?select={select}"
+        sep = "&" if "?" in table_name else "?"
+        req_url = f"{url}/rest/v1/{table_name}{sep}select={select}"
         if order:
             req_url += f"&order={order}"
         r = httpx.get(req_url, headers=headers, timeout=5.0)
@@ -256,6 +257,7 @@ def update_position(ticker, shares, cost_basis, layer):
         ON CONFLICT(ticker) DO UPDATE SET
             shares = excluded.shares,
             cost_basis = excluded.cost_basis,
+            layer = excluded.layer,
             updated_at = excluded.updated_at
         """, (ticker, shares, cost_basis, layer, now_str))
     conn.commit()
@@ -311,6 +313,15 @@ def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, laye
     row = cursor.fetchone()
     current_shares = row[0] if row else 0.0
     current_cost = row[1] if row else price
+    if layer == "TREND":
+        layer = "L0" if ticker == "JEPQ" else ("SGOV" if ticker == "SGOV" else ("L2" if ticker == "QLD" else ("Non-Equity" if ticker in ["GLD", "TLT", "DBC", "BITO"] else ("L1" if ticker in ["SPY", "QQQ", "SOXX"] else "TREND"))))
+    pos_df = get_positions()
+    existing_row = pos_df[pos_df['ticker'] == ticker] if not pos_df.empty and 'ticker' in pos_df.columns else pd.DataFrame()
+    if not existing_row.empty:
+        current_shares = float(existing_row.iloc[0]['shares'])
+        current_cost = float(existing_row.iloc[0]['cost_basis'])
+        if str(existing_row.iloc[0]['layer']) in ['L0', 'SGOV', 'L1', 'L2', 'Non-Equity', 'LEGACY']:
+            layer = str(existing_row.iloc[0]['layer'])
     
     pnl = 0.0
     if action.upper() == "BUY":
@@ -651,7 +662,7 @@ def get_cloud_market_prices_latest_dates(tickers=None):
 
 def fetch_cloud_market_prices(ticker):
     """ Fetch historical price data from Supabase Cloud market_prices table """
-    df_cloud = fetch_supabase_df(f"market_prices?ticker=eq.{ticker}&order=date.asc")
+    df_cloud = fetch_supabase_df(f"market_prices?ticker=eq.{ticker}", order="date.desc&limit=1000")
     if df_cloud is not None and not df_cloud.empty:
         df_cloud['Date'] = pd.to_datetime(df_cloud['date'])
         df_cloud = df_cloud.rename(columns={

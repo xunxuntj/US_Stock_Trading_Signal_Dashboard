@@ -14,7 +14,8 @@ def ensure_latest_market_data():
     """ Automatically check if local data CSVs are stale and fetch latest daily bars silently """
     try:
         import datetime, os, pandas as pd, yfinance as yf
-        from config import DATA_DIR, BASE_TICKERS
+        from config import DATA_DIR, BASE_TICKERS, EQUITY_L1_TICKERS, NON_EQUITY_TICKERS
+        import database
         today = datetime.date.today()
         spy_path = os.path.join(DATA_DIR, "SPY.csv")
         if os.path.exists(spy_path):
@@ -23,7 +24,7 @@ def ensure_latest_market_data():
                 last_date = pd.to_datetime(df_spy['Date'].iloc[-1]).date()
                 # If local data is more than 1 day old on a weekday, fetch fresh bars
                 if (today - last_date).days >= 1:
-                    for t in list(set(BASE_TICKERS + ["JEPQ", "SGOV"])):
+                    for t in list(set(EQUITY_L1_TICKERS + ["QLD"] + NON_EQUITY_TICKERS + BASE_TICKERS + ["JEPQ", "SGOV"])):
                         try:
                             tk = yf.Ticker(t)
                             df_new = tk.history(period="5d")
@@ -84,7 +85,7 @@ def generate_v229_signals():
     # 1. Exit Checks for Active Trend Positions
     for ticker, pos in current_positions.items():
         layer = pos['layer']
-        if layer in ['L0', 'SGOV']:
+        if layer in ['L0', 'L0+', 'SGOV', 'LEGACY', 'CASH']:
             continue
         if ticker not in data or latest_date not in data[ticker].index:
             continue
@@ -92,7 +93,7 @@ def generate_v229_signals():
         df_t = data[ticker]
         st_trend = df_t.loc[latest_date, 'ST_trend']
         
-        if layer == 'L2':
+        if layer == 'L2' or ticker == 'QLD':
             # Check L2 self or parent ST_trend
             parent_ticker = "QQQ" if ticker in ["SOXX", "QLD"] else "SPY"
             parent_st = data[parent_ticker].loc[latest_date, 'ST_trend'] if parent_ticker in data and latest_date in data[parent_ticker].index else -1
@@ -103,7 +104,7 @@ def generate_v229_signals():
                     "reason": f"Exit L2 ({ticker}): SuperTrend turned Bearish (-1)",
                     "layer": layer
                 })
-        elif layer in ['L1', 'Non-Equity']:
+        elif layer in ['L1', 'Non-Equity', 'TREND']:
             if st_trend == -1:
                 actions.append({
                     "date": date_str, "ticker": ticker, "action": "SELL",
@@ -144,7 +145,7 @@ def generate_v229_signals():
                     
     # Equity L2
     for l1_t in EQUITY_L1_TICKERS:
-        if l1_t not in current_positions or current_positions[l1_t]['layer'] != 'L1':
+        if l1_t not in current_positions or current_positions[l1_t]['layer'] not in ['L1', 'TREND']:
             continue
         if data[l1_t].loc[latest_date, 'ST_trend'] != 1:
             continue
