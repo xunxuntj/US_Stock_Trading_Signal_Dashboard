@@ -114,8 +114,6 @@ class TigerBrokerConnector(BaseBrokerConnector):
             try:
                 pos_list = self._client.get_positions(account=self.account_id)
                 for p in pos_list:
-                    print(f"DEBUG POS: sym={getattr(p, 'symbol', getattr(getattr(p, 'contract', None), 'symbol', ''))} qty={getattr(p, 'quantity', None)} scale={getattr(p, 'position_scale', None)} pos_qty={getattr(p, 'position_qty', None)}")
-                for p in pos_list:
                     raw_sym = getattr(p, 'symbol', None)
                     if not raw_sym and hasattr(p, 'contract'):
                         raw_sym = getattr(p.contract, 'symbol', '')
@@ -123,9 +121,8 @@ class TigerBrokerConnector(BaseBrokerConnector):
                     if not symbol:
                         continue
 
-                    raw_qty = float(getattr(p, 'quantity', 0.0) or 0.0)
-                    scale = float(getattr(p, 'position_scale', 1.0) or 1.0)
-                    quantity = raw_qty / scale if scale > 1.0 else raw_qty
+                    # Tiger SDK provides pre-normalized fractional shares in position_qty / pos_qty
+                    quantity = float(getattr(p, 'position_qty', getattr(p, 'pos_qty', getattr(p, 'quantity', 0.0))) or 0.0)
 
                     if quantity <= 0.0001:
                         continue
