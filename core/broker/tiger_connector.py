@@ -36,26 +36,32 @@ class TigerBrokerConnector(BaseBrokerConnector):
             return
 
         try:
-            from tigeropen.common.util.signature_utils import read_private_key
-            from tigeropen.tiger_open_config import TigerOpenConfig
+            from tigeropen.tiger_open_config import TigerOpenClientConfig
             from tigeropen.trade.trade_client import TradeClient
 
-            client_config = TigerOpenConfig(sandbox_debug=self.is_sandbox)
-            client_config.tiger_id = self.tiger_id
-            client_config.account = self.account_id
-            
-            pk_val = self.private_key_path.strip() if self.private_key_path else ""
-            if pk_val and not os.path.exists(pk_val):
-                # Auto-wrap with PEM headers if raw base64 is provided
-                if "-----BEGIN" not in pk_val:
-                    pk_val = f"-----BEGIN RSA PRIVATE KEY-----\n{pk_val}\n-----END RSA PRIVATE KEY-----"
-                client_config.private_key = pk_val
-            elif os.path.exists(pk_val):
-                client_config.private_key = read_private_key(pk_val)
+            client_config = TigerOpenClientConfig(sandbox_debug=self.is_sandbox)
+            client_config.tiger_id = str(self.tiger_id).strip()
+            client_config.account = str(self.account_id).strip()
+
+            pk_val = str(self.private_key_path).strip() if self.private_key_path else ""
+            if os.path.exists(pk_val):
+                with open(pk_val, "r", encoding="utf-8") as f:
+                    pk_val = f.read().strip()
+
+            # Tiger SDK expects pure base64 key string with PEM headers stripped
+            clean_key = (
+                pk_val.replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                .replace("-----END RSA PRIVATE KEY-----", "")
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .strip()
+            )
+            client_config.private_key = clean_key
 
             self._client = TradeClient(client_config)
+            print(f"✅ Tiger TradeClient initialized for account {self.account_id} (Tiger ID: {self.tiger_id})")
         except Exception as e:
-            # SDK not installed or keys invalid
+            print(f"⚠️ Tiger client init failed for account {self.account_id}: {e}")
             self._client = None
 
     def is_live_connected(self) -> bool:
@@ -65,10 +71,20 @@ class TigerBrokerConnector(BaseBrokerConnector):
     def get_account_balance(self) -> AccountBalance:
         if self._client:
             try:
-                asset_obj = self._client.get_assets(account=self.account_id)
+                asset_obj = None
+                try:
+                    asset_obj = self._client.get_assets(account=self.account_id)
+                except Exception:
+                    pass
+                if not asset_obj:
+                    try:
+                        asset_obj = self._client.get_prime_assets(account=self.account_id)
+                    except Exception:
+                        pass
+
                 if asset_obj and len(asset_obj) > 0:
                     a = asset_obj[0]
-                    total_eq = float(getattr(a, 'net_liquidation', 0.0) or 0.0)
+                    total_eq = float(getattr(a, 'net_liquidation', 0.0) or getattr(a, 'total_equity', 0.0) or 0.0)
                     cash_val = float(getattr(a, 'cash_balance', 0.0) or getattr(a, 'cash', 0.0) or 0.0)
                     mkt_val = total_eq - cash_val
                     return AccountBalance(
@@ -98,7 +114,13 @@ class TigerBrokerConnector(BaseBrokerConnector):
             try:
                 pos_list = self._client.get_positions(account=self.account_id)
                 for p in pos_list:
-                    symbol = str(getattr(p, 'symbol', '')).upper()
+                    raw_sym = getattr(p, 'symbol', None)
+                    if not raw_sym and hasattr(p, 'contract'):
+                        raw_sym = getattr(p.contract, 'symbol', '')
+                    symbol = str(raw_sym or '').upper().strip()
+                    if not symbol:
+                        continue
+
                     quantity = float(getattr(p, 'quantity', 0.0) or 0.0)
                     if quantity <= 0.0001:
                         continue
@@ -129,13 +151,19 @@ class TigerBrokerConnector(BaseBrokerConnector):
                 # Query historical filled orders
                 tiger_orders = self._client.get_filled_orders(account=self.account_id)
                 for o in tiger_orders:
-                    order_id = str(getattr(o, 'order_id', ''))
-                    symbol = str(getattr(o, 'symbol', '')).upper()
+                    order_id = str(getattr(o, 'order_id', getattr(o, 'id', '')))
+                    raw_sym = getattr(o, 'symbol', None)
+                    if not raw_sym and hasattr(o, 'contract'):
+                        raw_sym = getattr(o.contract, 'symbol', '')
+                    symbol = str(raw_sym or '').upper().strip()
+                    if not symbol:
+                        continue
+
                     action = str(getattr(o, 'action', 'BUY')).upper()
-                    filled_qty = float(getattr(o, 'filled_quantity', 0.0) or 0.0)
+                    filled_qty = float(getattr(o, 'filled_quantity', getattr(o, 'filled', 0.0)) or 0.0)
                     avg_fill_price = float(getattr(o, 'avg_fill_price', 0.0) or 0.0)
                     commission = float(getattr(o, 'commission', 0.0) or 0.0)
-                    fill_time = str(getattr(o, 'trade_time', getattr(o, 'updated_time', '')))
+                    fill_time = str(getattr(o, 'trade_time', getattr(o, 'order_time', '')))
 
                     orders.append(FilledOrder(
                         order_id=order_id,
