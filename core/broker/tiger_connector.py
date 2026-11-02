@@ -69,43 +69,64 @@ class TigerBrokerConnector(BaseBrokerConnector):
         return self._client is not None
 
     def get_account_balance(self) -> AccountBalance:
-        if self._client:
-            try:
-                asset_obj = None
-                try:
-                    asset_obj = self._client.get_assets(account=self.account_id)
-                except Exception:
-                    pass
-                if not asset_obj:
-                    try:
-                        asset_obj = self._client.get_prime_assets(account=self.account_id)
-                    except Exception:
-                        pass
+        total_eq = 0.0
+        cash_val = 0.0
+        mkt_val = 0.0
 
+        if self._client:
+            # 1. Query Global Account asset summary
+            try:
+                asset_obj = self._client.get_assets(account=self.account_id)
                 if asset_obj and len(asset_obj) > 0:
                     a = asset_obj[0]
-                    total_eq = float(getattr(a, 'net_liquidation', 0.0) or getattr(a, 'total_equity', 0.0) or 0.0)
-                    cash_val = float(getattr(a, 'cash_balance', 0.0) or getattr(a, 'cash', 0.0) or 0.0)
-                    mkt_val = total_eq - cash_val
-                    return AccountBalance(
-                        account_id=self.account_id,
-                        broker=self.broker,
-                        account_name=self.account_name,
-                        total_equity=total_eq,
-                        cash=cash_val,
-                        market_value=mkt_val
-                    )
+                    summary = getattr(a, 'summary', None)
+                    if summary:
+                        net_liq = float(getattr(summary, 'net_liquidation', 0.0) or 0.0)
+                        if net_liq != float('inf') and net_liq > 0:
+                            total_eq = net_liq
+                        c_val = float(getattr(summary, 'cash', 0.0) or 0.0)
+                        if c_val != float('inf') and c_val > 0:
+                            cash_val = c_val
+                        gp_val = float(getattr(summary, 'gross_position_value', 0.0) or 0.0)
+                        if gp_val != float('inf') and gp_val > 0:
+                            mkt_val = gp_val
             except Exception as e:
-                print(f"Warning: Tiger API get_assets failed ({e}), using fallback")
+                print(f"Notice: Tiger get_assets ({self.account_id}): {e}")
 
-        # Fallback when credentials aren't live yet
+            # 2. Query Prime Account assets (consolidates Securities + Funds/钱袋子)
+            if total_eq <= 0.0:
+                try:
+                    prime_obj = self._client.get_prime_assets(account=self.account_id, consolidated=True)
+                    if prime_obj:
+                        segs = getattr(prime_obj, 'segments', {})
+                        for seg_name, seg in segs.items():
+                            s_eq = float(getattr(seg, 'net_liquidation', 0.0) or 0.0)
+                            s_cash = float(getattr(seg, 'cash_balance', 0.0) or getattr(seg, 'cash_available_for_trade', 0.0) or 0.0)
+                            s_mkt = float(getattr(seg, 'gross_position_value', 0.0) or 0.0)
+                            if s_eq != float('inf') and s_eq > 0:
+                                total_eq += s_eq
+                            if s_cash != float('inf') and s_cash > 0:
+                                cash_val += s_cash
+                            if s_mkt != float('inf') and s_mkt > 0:
+                                mkt_val += s_mkt
+                except Exception as e:
+                    print(f"Notice: Tiger get_prime_assets ({self.account_id}): {e}")
+
+            # 3. Fallback / Cross-Validation: sum position market values
+            positions = self.get_positions()
+            pos_mkt_val = sum(p.market_value for p in positions)
+            if pos_mkt_val > 0:
+                if mkt_val <= 0 or total_eq < pos_mkt_val:
+                    mkt_val = pos_mkt_val
+                    total_eq = mkt_val + cash_val
+
         return AccountBalance(
             account_id=self.account_id,
             broker=self.broker,
             account_name=self.account_name,
-            total_equity=0.0,
-            cash=0.0,
-            market_value=0.0
+            total_equity=round(total_eq, 2),
+            cash=round(cash_val, 2),
+            market_value=round(mkt_val, 2)
         )
 
     def get_positions(self) -> List[PositionItem]:

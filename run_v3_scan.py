@@ -84,8 +84,20 @@ def run_pipeline() -> Dict[str, Any]:
         print(f"⚠️ Data Sanity Warnings: {data_report.warnings}")
 
     spy_df = data["SPY"]
+    market_open_now = is_us_market_open_now()
     latest_date = spy_df.index[-1]
-    prev_date = spy_df.index[-2] if len(spy_df) >= 2 else latest_date
+    today_et_str = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).strftime('%Y-%m-%d')
+
+    # Session Guard: strictly adhere to v2.29 rule that signals require completed daily candle.
+    # If triggered during active trading hours, exclude the fluctuating unfinished intraday candle.
+    if market_open_now and str(latest_date)[:10] == today_et_str and len(spy_df) >= 2:
+        print(f"⚠️ [Session Guard] US market is currently OPEN (Intraday: {today_et_str}).")
+        print(f"   Excluding unclosed candle to prevent premature signals and noise.")
+        print(f"   Signals strictly evaluated on last completed close: {spy_df.index[-2]}")
+        latest_date = spy_df.index[-2]
+        prev_date = spy_df.index[-3] if len(spy_df) >= 3 else latest_date
+    else:
+        prev_date = spy_df.index[-2] if len(spy_df) >= 2 else latest_date
 
     # S5FI Market Breadth
     if "S5FI" in data and not data["S5FI"].empty:

@@ -15,6 +15,24 @@ US_HOLIDAYS_FIXED = [
     # New Year's Day, MLK Day, Washington's Birthday, Good Friday, Memorial Day, Juneteenth, Independence Day, Labor Day, Thanksgiving, Christmas
 ]
 
+
+def is_us_market_open_now() -> bool:
+    """Returns True if current time is within regular US equity trading hours (09:30 - 16:00 ET on weekday)."""
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    try:
+        import zoneinfo
+        et_tz = zoneinfo.ZoneInfo("America/New_York")
+        now_et = now_utc.astimezone(et_tz)
+    except Exception:
+        now_et = now_utc - datetime.timedelta(hours=4)
+        
+    if now_et.weekday() >= 5:  # Saturday or Sunday
+        return False
+        
+    market_open = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+    market_close = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
+    return market_open <= now_et < market_close
+
 def is_us_trading_day(dt: Optional[datetime.date] = None) -> bool:
     """Check if date is a weekday (Monday-Friday)."""
     if dt is None:
