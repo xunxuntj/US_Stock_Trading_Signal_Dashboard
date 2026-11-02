@@ -43,8 +43,12 @@ class TigerBrokerConnector(BaseBrokerConnector):
             client_config = TigerOpenConfig(sandbox_debug=self.is_sandbox)
             client_config.tiger_id = self.tiger_id
             client_config.account = self.account_id
-            if os.path.exists(self.private_key_path):
-                client_config.private_key = read_private_key(self.private_key_path)
+            
+            pk_val = self.private_key_path.strip() if self.private_key_path else ""
+            if "-----BEGIN" in pk_val:
+                client_config.private_key = pk_val
+            elif os.path.exists(pk_val):
+                client_config.private_key = read_private_key(pk_val)
 
             self._client = TradeClient(client_config)
         except Exception as e:
