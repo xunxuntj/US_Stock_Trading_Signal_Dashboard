@@ -114,6 +114,8 @@ class TigerBrokerConnector(BaseBrokerConnector):
             try:
                 pos_list = self._client.get_positions(account=self.account_id)
                 for p in pos_list:
+                    print(f"DEBUG POS: sym={getattr(p, 'symbol', getattr(getattr(p, 'contract', None), 'symbol', ''))} qty={getattr(p, 'quantity', None)} scale={getattr(p, 'position_scale', None)} pos_qty={getattr(p, 'position_qty', None)}")
+                for p in pos_list:
                     raw_sym = getattr(p, 'symbol', None)
                     if not raw_sym and hasattr(p, 'contract'):
                         raw_sym = getattr(p.contract, 'symbol', '')
@@ -153,7 +155,8 @@ class TigerBrokerConnector(BaseBrokerConnector):
             try:
                 if not start_date:
                     start_date = (datetime.datetime.now() - datetime.timedelta(days=90)).strftime('%Y-%m-%d')
-                tiger_orders = self._client.get_filled_orders(account=self.account_id, start_date=start_date, start_time=start_date)
+                end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                tiger_orders = self._client.get_filled_orders(account=self.account_id, start_date=start_date, end_date=end_date, start_time=start_date, end_time=end_date)
                 for o in tiger_orders:
                     order_id = str(getattr(o, 'order_id', getattr(o, 'id', '')))
                     raw_sym = getattr(o, 'symbol', None)
