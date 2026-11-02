@@ -219,6 +219,7 @@ def run_pipeline() -> Dict[str, Any]:
     print("\n[Step 3] Multi-Broker API Ingestion & Reconcile (Tiger + Schwab)...")
     broker_mgr = MultiBrokerManager(use_mock_if_no_keys=True)
     aggregated_balances = broker_mgr.get_aggregated_balances()
+    print(f"💰 [Balances Detail] total_equity={aggregated_balances['total_equity']}, cash={aggregated_balances['total_cash']}, accounts={aggregated_balances['accounts']}")
     aggregated_positions = broker_mgr.get_aggregated_positions()
 
     # Compare DB positions vs Broker API positions
