@@ -31,7 +31,7 @@ from database import (
 import backtest_engine as be
 
 # v3.0 Core Modules
-from core.sanity.data_guard import check_universe_data_health, is_us_trading_day
+from core.sanity.data_guard import check_universe_data_health, is_us_trading_day, is_us_market_open_now
 from core.sanity.signal_guard import exhaustive_scan_trend_exits, get_canonical_layer
 from core.broker.manager import MultiBrokerManager
 from core.sync.reconcile_engine import check_position_drift, ingest_broker_orders
