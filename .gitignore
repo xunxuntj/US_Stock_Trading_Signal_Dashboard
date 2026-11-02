@@ -26,3 +26,7 @@ scratch/
 ~$*.xlsx
 ~$*.xls
 
+
+# Local Environment & Database Backups
+.env
+*.backup*
