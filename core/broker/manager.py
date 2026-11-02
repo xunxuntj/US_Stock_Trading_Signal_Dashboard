@@ -5,6 +5,7 @@ Charles Schwab, and Futu (HK IPO cash). Aggregates balances, combines positions
 across migrating accounts, and fetches cross-broker order fills.
 """
 
+import os
 from typing import Dict, List, Optional, Any
 import pandas as pd
 from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder
@@ -21,28 +22,38 @@ class MultiBrokerManager:
         self._init_default_connectors()
 
     def _init_default_connectors(self):
-        # 1. Tiger Universal Account
-        tiger_uni = TigerBrokerConnector(
-            account_id="TIGER_UNIVERSAL",
-            account_name="Tiger Brokers (环球账户)"
-        )
-        # 2. Tiger Consolidated Account
-        tiger_cons = TigerBrokerConnector(
-            account_id="TIGER_CONSOLIDATED",
-            account_name="Tiger Brokers (综合账户)"
-        )
-        # 3. Charles Schwab Main Account
+        # 1. Tiger Brokers (supports single account or comma-separated multiple accounts)
+        raw_tiger_accounts = os.getenv("TIGER_ACCOUNT", "").strip()
+        tiger_accounts = [
+            a.strip() for a in raw_tiger_accounts.split(",")
+            if a.strip() and a.strip() != "TO_BE_FILLED"
+        ]
+        if not tiger_accounts:
+            tiger_accounts = ["TIGER_UNIVERSAL", "TIGER_CONSOLIDATED"]
+
+        tiger_connectors = []
+        for idx, acc in enumerate(tiger_accounts, 1):
+            conn = TigerBrokerConnector(
+                account_id=acc,
+                account_name=f"Tiger ({acc})"
+            )
+            tiger_connectors.append(conn)
+            self.register_connector(f"tiger_{idx}", conn)
+
+        # 2. Charles Schwab Main Account
         schwab = SchwabBrokerConnector(
             account_name="Charles Schwab (嘉信理财)"
         )
+        self.register_connector("schwab_main", schwab)
 
+        # Check if any live credentials are functional
         has_any_live = (
-            getattr(tiger_uni, 'is_live_connected', lambda: False)() or
+            any(getattr(c, 'is_live_connected', lambda: False)() for c in tiger_connectors) or
             getattr(schwab, 'is_live_connected', lambda: False)()
         )
 
         if not has_any_live and self.use_mock_if_no_keys:
-            # Provide high-fidelity mock connector matching existing portfolio.db snapshot
+            # High-fidelity mock fallback matching portfolio.db
             mock_tiger = MockBrokerConnector(
                 account_id="TIGER_LIVE_SIM",
                 account_name="Tiger Brokers (实盘同步仿真通道)",
@@ -51,10 +62,6 @@ class MultiBrokerManager:
                 initial_cash=1617.84
             )
             self.register_connector("tiger_mock", mock_tiger)
-        else:
-            self.register_connector("tiger_universal", tiger_uni)
-            self.register_connector("tiger_consolidated", tiger_cons)
-            self.register_connector("schwab_main", schwab)
 
     def register_connector(self, name: str, connector: BaseBrokerConnector):
         self.connectors[name] = connector
@@ -90,7 +97,7 @@ class MultiBrokerManager:
     def get_aggregated_positions(self) -> pd.DataFrame:
         """
         Aggregate positions from all accounts.
-        If a ticker is held in both Tiger and Schwab, merges total shares
+        If a ticker is held in multiple accounts, merges total shares
         and computes weighted average cost basis.
         """
         records: Dict[str, Dict[str, Any]] = {}

@@ -45,7 +45,10 @@ class TigerBrokerConnector(BaseBrokerConnector):
             client_config.account = self.account_id
             
             pk_val = self.private_key_path.strip() if self.private_key_path else ""
-            if "-----BEGIN" in pk_val:
+            if pk_val and not os.path.exists(pk_val):
+                # Auto-wrap with PEM headers if raw base64 is provided
+                if "-----BEGIN" not in pk_val:
+                    pk_val = f"-----BEGIN RSA PRIVATE KEY-----\n{pk_val}\n-----END RSA PRIVATE KEY-----"
                 client_config.private_key = pk_val
             elif os.path.exists(pk_val):
                 client_config.private_key = read_private_key(pk_val)
