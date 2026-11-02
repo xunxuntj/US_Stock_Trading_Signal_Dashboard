@@ -13,7 +13,11 @@ class TelegramDispatcher:
     def __init__(self, bot_token: Optional[str] = None, chat_id: Optional[str] = None, proxy_url: Optional[str] = None):
         self.bot_token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN")
         self.chat_id = chat_id or os.getenv("TELEGRAM_CHAT_ID")
-        self.proxy_url = proxy_url or os.getenv("TELEGRAM_PROXY_URL") or os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+        raw_proxy = proxy_url or os.getenv("TELEGRAM_PROXY_URL") or os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+        if raw_proxy and any(raw_proxy.startswith(p) for p in ["http://", "https://", "socks5://"]):
+            self.proxy_url = raw_proxy
+        else:
+            self.proxy_url = None
 
     def is_configured(self) -> bool:
         return bool(
