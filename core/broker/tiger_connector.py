@@ -121,7 +121,10 @@ class TigerBrokerConnector(BaseBrokerConnector):
                     if not symbol:
                         continue
 
-                    quantity = float(getattr(p, 'quantity', 0.0) or 0.0)
+                    raw_qty = float(getattr(p, 'quantity', 0.0) or 0.0)
+                    scale = float(getattr(p, 'position_scale', 1.0) or 1.0)
+                    quantity = raw_qty / scale if scale > 1.0 else raw_qty
+
                     if quantity <= 0.0001:
                         continue
                     cost_basis = float(getattr(p, 'average_cost', 0.0) or 0.0)
@@ -132,7 +135,7 @@ class TigerBrokerConnector(BaseBrokerConnector):
                         account_id=self.account_id,
                         broker=self.broker,
                         ticker=symbol,
-                        shares=quantity,
+                        shares=round(quantity, 4),
                         cost_basis=cost_basis,
                         market_price=market_price,
                         market_value=market_val,
@@ -148,8 +151,9 @@ class TigerBrokerConnector(BaseBrokerConnector):
         orders: List[FilledOrder] = []
         if self._client:
             try:
-                # Query historical filled orders
-                tiger_orders = self._client.get_filled_orders(account=self.account_id)
+                if not start_date:
+                    start_date = (datetime.datetime.now() - datetime.timedelta(days=90)).strftime('%Y-%m-%d')
+                tiger_orders = self._client.get_filled_orders(account=self.account_id, start_date=start_date, start_time=start_date)
                 for o in tiger_orders:
                     order_id = str(getattr(o, 'order_id', getattr(o, 'id', '')))
                     raw_sym = getattr(o, 'symbol', None)
@@ -160,7 +164,9 @@ class TigerBrokerConnector(BaseBrokerConnector):
                         continue
 
                     action = str(getattr(o, 'action', 'BUY')).upper()
-                    filled_qty = float(getattr(o, 'filled_quantity', getattr(o, 'filled', 0.0)) or 0.0)
+                    raw_filled = float(getattr(o, 'filled_quantity', getattr(o, 'filled', 0.0)) or 0.0)
+                    f_scale = float(getattr(o, 'filled_scale', getattr(o, 'quantity_scale', 1.0)) or 1.0)
+                    filled_qty = raw_filled / f_scale if f_scale > 1.0 else raw_filled
                     avg_fill_price = float(getattr(o, 'avg_fill_price', 0.0) or 0.0)
                     commission = float(getattr(o, 'commission', 0.0) or 0.0)
                     fill_time = str(getattr(o, 'trade_time', getattr(o, 'order_time', '')))
