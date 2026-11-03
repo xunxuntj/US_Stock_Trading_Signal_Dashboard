@@ -182,6 +182,21 @@ class TestV3SystemSuite(unittest.TestCase):
         self.assertIn("卖出平仓", card_text)
         self.assertIn("$10,000.00", card_text)
 
+    def test_08_metrics_calculation_and_card_display(self):
+        from core.sync.metrics import compute_strategy_metrics
+        metrics = compute_strategy_metrics()
+        self.assertIn("strat_ret_pct", metrics)
+        self.assertIn("strat_cagr", metrics)
+        self.assertIn("sharpe", metrics)
+        self.assertIn("alpha_pct", metrics)
+        self.assertGreater(metrics["strat_ret_pct"], 0)
+
+        notifier = ProactiveNotifier()
+        # Test signal card with metrics badge
+        card = notifier.format_signal_card_markdown("2026-11-02", nav=150000.0, s5fi_val=50.0, actions=[], metrics=metrics)
+        self.assertIn("策略实盘收益", card)
+        self.assertIn("夏普", card)
+
 
 if __name__ == "__main__":
     unittest.main()

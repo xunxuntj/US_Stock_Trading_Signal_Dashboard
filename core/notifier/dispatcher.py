@@ -31,12 +31,25 @@ class ProactiveNotifier:
         date_str: str,
         nav: float,
         s5fi_val: float,
-        actions: List[Dict[str, Any]]
+        actions: List[Dict[str, Any]],
+        metrics: Optional[Dict[str, Any]] = None
     ) -> str:
+        metrics_badge = ""
+        if metrics:
+            metrics_badge = (
+                f"📈 策略实盘收益: **+{metrics['strat_ret_pct']:.2f}%** (CAGR: **+{metrics['strat_cagr']:.2f}%**) | "
+                f"回撤: **{metrics['curr_dd_pct']:.2f}%** (Max: **{metrics['max_dd_pct']:.2f}%**) | "
+                f"夏普: **{metrics['sharpe']:.2f}**\n"
+            )
+
         if not actions:
             card = f"🟢 **【v2.29 盘后信号扫描与日终对账 - {date_str}】**\n\n"
             card += f"📊 账户估算总净值: **${nav:,.2f}**\n"
-            card += f"📈 S5FI 宏观宽度: **{s5fi_val:.1f}%**\n\n"
+            card += f"📈 S5FI 宏观宽度: **{s5fi_val:.1f}%**\n"
+            if metrics_badge:
+                card += f"{metrics_badge}\n"
+            else:
+                card += "\n"
             card += "✅ **今日无新增买入/卖出信号，全盘持仓按原策略稳定运行！**\n"
             card += "• 现金流底仓 (JEPQ 60% DRIP) 持续享红利复利\n"
             card += "• 闲置贴息池 (SGOV) 持续享 ~5.2% 无风险贴息\n"
@@ -44,6 +57,8 @@ class ProactiveNotifier:
 
         card = f"🚨 **【v2.29 实盘交易指令决策卡 - {date_str}】**\n\n"
         card += f"📊 账户基准 NAV: **${nav:,.2f}** | 宽度 S5FI: **{s5fi_val:.1f}%**\n"
+        if metrics_badge:
+            card += f"{metrics_badge}"
         card += "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 
         for idx, act in enumerate(actions, 1):
@@ -70,7 +85,8 @@ class ProactiveNotifier:
         nav: float,
         s5fi_val: float,
         actions: List[Dict[str, Any]],
-        dedup_check: bool = True
+        dedup_check: bool = True,
+        metrics: Optional[Dict[str, Any]] = None
     ) -> Dict[str, bool]:
         """Dispatch signal card to Telegram and Feishu with deduplication check."""
         filtered_actions = []
@@ -89,7 +105,7 @@ class ProactiveNotifier:
             print(f"[Notifier] All {len(actions)} signals already dispatched today, skipping duplicate push.")
             return {"telegram": False, "feishu": False, "skipped_duplicate": True}
 
-        text = self.format_signal_card_markdown(date_str, nav, s5fi_val, filtered_actions)
+        text = self.format_signal_card_markdown(date_str, nav, s5fi_val, filtered_actions, metrics=metrics)
         color = "red" if filtered_actions and any(a.get('action') == 'SELL' for a in filtered_actions) else ("green" if filtered_actions else "blue")
         title = f"📢 交易决策卡: {len(filtered_actions)} 笔信号" if filtered_actions else "📊 每日扫描: 持仓正常运行"
 
@@ -109,7 +125,8 @@ class ProactiveNotifier:
         hk_ipo_cum: float,
         cash: float,
         accounts_detail: List[Dict[str, Any]],
-        drift_summary: List[str]
+        drift_summary: List[str],
+        metrics: Optional[Dict[str, Any]] = None
     ) -> Dict[str, bool]:
         text = f"🏦 **【多券商统一对账与资产报告 - {date_str}】**\n\n"
         text += f"💰 **全账户资产总和**: **${total_equity:,.2f}**\n"
@@ -120,6 +137,15 @@ class ProactiveNotifier:
         text += "📂 **各券商账户分布**:\n"
         for acc in accounts_detail:
             text += f"• {acc['account_name']}: 资产 **${acc['equity']:,.2f}** (现金: ${acc['cash']:,.2f})\n"
+
+        if metrics:
+            text += "\n📈 **v2.29 策略核心收益指标**:\n"
+            text += f"• 策略实盘收益率: **+{metrics['strat_ret_pct']:.2f}%** (年化 CAGR: **+{metrics['strat_cagr']:.2f}%**)\n"
+            text += f"• 全账户总收益率: **+{metrics['total_ret_pct']:.2f}%** (年化 CAGR: **+{metrics['total_cagr']:.2f}%**)\n"
+            text += f"• 历史最大回撤 (MaxDD): **{metrics['max_dd_pct']:.2f}%** (当前动态回撤: **{metrics['curr_dd_pct']:.2f}%**)\n"
+            text += f"• 策略夏普比率 (Sharpe): **{metrics['sharpe']:.2f}** (无风险利率: 4.5%)\n"
+            text += f"• 标普500对比超额 (Alpha): 领先 SPY **+{metrics['alpha_pct']:.2f}%** (SPY同期: +{metrics['spy_ret_pct']:.2f}%)\n"
+            text += f"• 实盘持续跟踪: **{metrics['live_days']} 天** (基准起始: {metrics['start_date']} `${metrics['start_nav']:,.2f}`)\n"
 
         if drift_summary:
             text += "\n⚠️ **持仓偏差提醒 (Drift Alert)**:\n"

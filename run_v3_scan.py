@@ -35,6 +35,7 @@ from core.sanity.data_guard import check_universe_data_health, is_us_trading_day
 from core.sanity.signal_guard import exhaustive_scan_trend_exits, get_canonical_layer
 from core.broker.manager import MultiBrokerManager
 from core.sync.reconcile_engine import check_position_drift, ingest_broker_orders
+from core.sync.metrics import compute_strategy_metrics
 from core.notifier.dispatcher import ProactiveNotifier
 
 
@@ -240,7 +241,12 @@ def run_pipeline() -> Dict[str, Any]:
     # STEP 4: Proactive Push Notification (Telegram + Feishu)
     # -------------------------------------------------------------------------
     print("\n[Step 4] Proactively Dispatching Telegram & Feishu Notification Cards...")
-    push_res = notifier.dispatch_signal_card(date_str, nav, s5fi_val, actions, dedup_check=True)
+    strategy_metrics = compute_strategy_metrics()
+    print(f"📊 Strategy Metrics: Return=+{strategy_metrics.get('strat_ret_pct', 0):.2f}%, Sharpe={strategy_metrics.get('sharpe', 0):.2f}, Alpha=+{strategy_metrics.get('alpha_pct', 0):.2f}%")
+
+    push_res = notifier.dispatch_signal_card(
+        date_str, nav, s5fi_val, actions, dedup_check=True, metrics=strategy_metrics
+    )
     print(f"Signal Card Push Result: {push_res}")
 
     # Dispatch daily reconcile & NAV report
@@ -256,7 +262,8 @@ def run_pipeline() -> Dict[str, Any]:
         hk_ipo_cum=hk_cum,
         cash=cash_val,
         accounts_detail=aggregated_balances["accounts"],
-        drift_summary=drift_report.summary_lines
+        drift_summary=drift_report.summary_lines,
+        metrics=strategy_metrics
     )
     print(f"Daily Reconcile Report Push Result: {report_res}")
 
