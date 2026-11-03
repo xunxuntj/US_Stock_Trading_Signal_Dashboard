@@ -197,6 +197,39 @@ class TestV3SystemSuite(unittest.TestCase):
         self.assertIn("策略实盘收益", card)
         self.assertIn("夏普", card)
 
+    def test_09_hk_ipo_reconciler_and_kids_settlement(self):
+        from core.ipo.tracker import calculate_kid_ipo_settlement, get_dynamic_kids_available_capital
+        h_bal, c_bal = get_dynamic_kids_available_capital()
+        self.assertGreater(h_bal, 100.0)
+        self.assertGreater(c_bal, 100.0)
+
+        # 1. Test Profit Settlement (5x reward)
+        win_res = calculate_kid_ipo_settlement(
+            ticker_name="TEST_WIN",
+            margin_principal_hkd=50000.0,
+            net_profit_hkd=2500.0,
+            hiro_capital_rmb=h_bal,
+            caspar_capital_rmb=c_bal,
+            multiplier=5.0
+        )
+        self.assertEqual(win_res["effective_mult"], 5.0)
+        self.assertAlmostEqual(win_res["roi"], 0.05, places=3)
+        self.assertGreater(win_res["hiro"]["profit"], 0)
+        self.assertEqual(win_res["hiro"]["return_total"], round(h_bal + win_res["hiro"]["profit"], 2))
+
+        # 2. Test Loss Settlement (1x protection)
+        loss_res = calculate_kid_ipo_settlement(
+            ticker_name="TEST_LOSS",
+            margin_principal_hkd=50000.0,
+            net_profit_hkd=-500.0,
+            hiro_capital_rmb=h_bal,
+            caspar_capital_rmb=c_bal,
+            multiplier=5.0
+        )
+        self.assertEqual(loss_res["effective_mult"], 1.0)
+        self.assertLess(loss_res["hiro"]["profit"], 0)
+        self.assertEqual(loss_res["hiro"]["return_total"], round(h_bal + loss_res["hiro"]["profit"], 2))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -433,8 +433,12 @@ def get_hk_ipo_trades_history():
     return df
 
 def get_latest_kids_returns():
-    """Returns baseline accumulated total asset balance for Hiro (143.84 RMB) and Caspar (143.79 RMB)."""
-    return 143.84, 143.79
+    """Returns dynamic accumulated total asset balance for Hiro and Caspar (e.g. 165.29, 165.23 RMB)."""
+    try:
+        from core.ipo.tracker import get_dynamic_kids_available_capital
+        return get_dynamic_kids_available_capital()
+    except Exception:
+        return 165.29, 165.23
 
 def sync_hk_ipo_pnl_to_nav():
     """Sync cumulative HK IPO profit from hk_ipo_trades to latest nav_history."""
@@ -466,12 +470,14 @@ def record_hk_ipo_trade(
         profit_amt = -total_fee
         
     roi = profit_amt / margin_principal if margin_principal > 0 else 0.0
+    # Educational incentive: 5x/10x on profits, 1x on losses (protects child motivation)
+    effective_mult = multiplier if roi > 0 else 1.0
     
-    hiro_profit = hiro_capital * roi * multiplier
-    hiro_return = hiro_capital + hiro_profit
+    hiro_profit = round(hiro_capital * roi * effective_mult, 2)
+    hiro_return = round(hiro_capital + hiro_profit, 2)
     
-    caspar_profit = caspar_capital * roi * multiplier
-    caspar_return = caspar_capital + caspar_profit
+    caspar_profit = round(caspar_capital * roi * effective_mult, 2)
+    caspar_return = round(caspar_capital + caspar_profit, 2)
     
     conn = get_connection()
     cursor = conn.cursor()
