@@ -3,7 +3,7 @@ Charles Schwab OAuth Token Exchange Utility (scripts/exchange_schwab_token.py)
 Exchanges Schwab OAuth authorization code from redirect URL into:
 - access_token (valid 30 mins)
 - refresh_token (valid 7 days)
-And automatically updates .env!
+And automatically updates .env or outputs for GitHub Secrets!
 """
 
 import os
@@ -33,7 +33,6 @@ def exchange_code(redirect_url: str, app_key: str = None, app_secret: str = None
     raw_code = params.get("code", [None])[0]
 
     if not raw_code:
-        # maybe the full code string was passed directly
         if "code=" in redirect_url:
             raw_code = redirect_url.split("code=")[1].split("&")[0]
         else:
@@ -41,7 +40,6 @@ def exchange_code(redirect_url: str, app_key: str = None, app_secret: str = None
 
     # In Schwab, @ is encoded as %40, unquote if necessary
     code = urllib.parse.unquote(raw_code)
-    # Ensure it ends with @ if Schwab CDC format
     if not code.endswith("@") and "%40" in raw_code:
         code = raw_code.replace("%40", "@")
 
@@ -64,26 +62,31 @@ def exchange_code(redirect_url: str, app_key: str = None, app_secret: str = None
     }
 
     try:
-        # Check proxy if needed
-        proxy_url = os.getenv("TELEGRAM_PROXY_URL") or "socks5://127.0.0.1:10808"
-        proxies = proxy_url if proxy_url else None
-        
+        # Never use SOCKS proxy in GitHub Actions (direct US internet connection)
+        proxies = None
+        if not os.getenv("GITHUB_ACTIONS"):
+            p_val = os.getenv("TELEGRAM_PROXY_URL")
+            if p_val and "socks" not in p_val:
+                proxies = p_val
+
         with httpx.Client(timeout=15.0, proxy=proxies) as client:
             resp = client.post(token_url, headers=headers, data=payload)
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 refresh_token = data.get("refresh_token")
                 access_token = data.get("access_token")
                 expires_in = data.get("expires_in")
-                
+
                 print("\n" + "=" * 60)
                 print("🎉 SCHWAB OAUTH AUTHORIZATION SUCCESSFUL!")
                 print("=" * 60)
                 print(f"✅ access_token received (valid {expires_in}s)")
-                print(f"✅ refresh_token received: {refresh_token[:15]}... (valid 7 days)")
-                
-                # Automatically save into .env
+                print(f"\n🔑 YOUR SCHWAB REFRESH TOKEN IS:\n")
+                print(f"{refresh_token}\n")
+                print("=" * 60)
+
+                # Update .env if present
                 update_env_tokens(app_key, app_secret, refresh_token)
                 return data
             else:
@@ -129,7 +132,7 @@ def update_env_tokens(app_key: str, app_secret: str, refresh_token: str):
     with open(ENV_PATH, "w", encoding="utf-8") as f:
         f.writelines(updated)
 
-    print(f"💾 Updated {ENV_PATH} with SCHWAB_APP_KEY, SCHWAB_APP_SECRET, and SCHWAB_REFRESH_TOKEN!")
+    print(f"💾 Updated {ENV_PATH} with SCHWAB_REFRESH_TOKEN!")
 
 
 if __name__ == "__main__":
