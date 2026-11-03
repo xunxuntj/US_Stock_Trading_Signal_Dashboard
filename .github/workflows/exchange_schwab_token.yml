@@ -1,0 +1,32 @@
+name: Exchange Schwab Refresh Token
+
+on:
+  workflow_dispatch:
+    inputs:
+      callback_url:
+        description: 'Redirect Callback URL from Schwab OAuth login'
+        required: true
+        type: string
+
+jobs:
+  exchange-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install httpx python-dotenv
+
+      - name: Exchange Authorization Code for Refresh Token
+        env:
+          SCHWAB_APP_KEY: ${{ secrets.SCHWAB_APP_KEY }}
+          SCHWAB_APP_SECRET: ${{ secrets.SCHWAB_APP_SECRET }}
+        run: |
+          python scripts/exchange_schwab_token.py "${{ inputs.callback_url }}" "$SCHWAB_APP_KEY" "$SCHWAB_APP_SECRET"
