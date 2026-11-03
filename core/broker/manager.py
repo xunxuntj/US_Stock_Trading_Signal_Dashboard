@@ -78,6 +78,11 @@ class MultiBrokerManager:
         total_equity = 0.0
         total_cash = 0.0
         total_mkt_val = 0.0
+        total_vault_val = 0.0
+        total_acc_div = 0.0
+        total_acc_int = 0.0
+        total_locked = 0.0
+        total_buying_power = 0.0
         accounts_detail = []
 
         for name, conn in self.connectors.items():
@@ -85,19 +90,36 @@ class MultiBrokerManager:
             total_equity += b.total_equity
             total_cash += b.cash
             total_mkt_val += b.market_value
+            total_vault_val += getattr(b, 'vault_balance', 0.0)
+            total_acc_div += getattr(b, 'accrued_dividend', 0.0)
+            total_acc_int += getattr(b, 'accrued_interest', 0.0)
+            total_locked += getattr(b, 'locked_funds', 0.0)
+            total_buying_power += getattr(b, 'buying_power', 0.0)
+
             accounts_detail.append({
                 "connector": name,
                 "account_name": b.account_name,
                 "broker": b.broker.value,
                 "equity": round(b.total_equity, 2),
                 "cash": round(b.cash, 2),
-                "market_value": round(b.market_value, 2)
+                "market_value": round(b.market_value, 2),
+                "vault_balance": round(getattr(b, 'vault_balance', 0.0), 2),
+                "accrued_dividend": round(getattr(b, 'accrued_dividend', 0.0), 2),
+                "accrued_interest": round(getattr(b, 'accrued_interest', 0.0), 2),
+                "locked_funds": round(getattr(b, 'locked_funds', 0.0), 2),
+                "buying_power": round(getattr(b, 'buying_power', 0.0), 2),
+                "excess_liquidity": round(getattr(b, 'excess_liquidity', 0.0), 2)
             })
 
         return {
             "total_equity": round(total_equity, 2),
             "total_cash": round(total_cash, 2),
             "total_market_value": round(total_mkt_val, 2),
+            "total_vault_balance": round(total_vault_val, 2),
+            "total_accrued_dividend": round(total_acc_div, 2),
+            "total_accrued_interest": round(total_acc_int, 2),
+            "total_locked_funds": round(total_locked, 2),
+            "total_buying_power": round(total_buying_power, 2),
             "accounts": accounts_detail
         }
 

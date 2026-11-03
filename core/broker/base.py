@@ -27,6 +27,12 @@ class AccountBalance:
     cash: float
     market_value: float
     currency: str = "USD"
+    accrued_dividend: float = 0.0     # 应计待到账分红
+    accrued_interest: float = 0.0     # 应计利息
+    vault_balance: float = 0.0        # 老虎钱袋子 / 基金总资产 (货币基金)
+    locked_funds: float = 0.0         # 冻结资金
+    buying_power: float = 0.0         # 可用购买力
+    excess_liquidity: float = 0.0     # 剩余流动性
     updated_at: str = field(default_factory=lambda: datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 

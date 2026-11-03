@@ -2,6 +2,7 @@
 Strategy Performance Metrics Engine (core/sync/metrics.py)
 Computes cumulative return, annualized CAGR, Sharpe ratio, Max Drawdown,
 current drawdown from high-water mark, and SPY alpha benchmark comparison.
+Also exposes Layer 1 Macro Wealth Metrics integration.
 """
 
 import os
@@ -11,11 +12,13 @@ from typing import Dict, Any, Optional
 import pandas as pd
 import numpy as np
 from config import DB_PATH, DATA_DIR
+from .macro_metrics import compute_macro_wealth_metrics, calculate_xirr
 
 
 def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[str, Any]:
     """
-    Computes core strategy metrics based on nav_history in portfolio.db.
+    Computes Layer 2 core strategy metrics based on nav_history in portfolio.db.
+    Focuses purely on the v2.29 Quant Strategy execution on Consolidated/Schwab accounts.
     Returns return percentages, annualized CAGR, Max Drawdown, Sharpe, and SPY Alpha.
     """
     close_at_end = False
@@ -45,11 +48,11 @@ def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[
     live_days = max(1, (end_dt - start_dt).days)
     live_years = live_days / 365.0
 
-    # 1. Strategy Return & CAGR
+    # 1. Pure Strategy Return (TWR) & CAGR
     strat_ret = ((latest_nav - start_nav) / start_nav) * 100.0
     strat_cagr = ((1.0 + strat_ret / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
 
-    # 2. Total Combined Portfolio Return & CAGR (US Strategy + HK IPO)
+    # 2. Total Combined Portfolio Return (maintained for backward compatibility)
     total_nav = latest_nav + hk_cum
     total_ret = ((total_nav - start_nav) / start_nav) * 100.0
     total_cagr = ((1.0 + total_ret / 100.0) ** (1.0 / live_years) - 1.0) * 100.0

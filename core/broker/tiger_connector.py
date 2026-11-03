@@ -72,53 +72,109 @@ class TigerBrokerConnector(BaseBrokerConnector):
         total_eq = 0.0
         cash_val = 0.0
         mkt_val = 0.0
+        acc_div = 0.0
+        acc_int = 0.0
+        vault_val = 0.0
+        locked_f = 0.0
+        b_power = 0.0
+        e_liq = 0.0
 
         if self._client:
-            # 1. Query Global Account asset summary
+            is_prime_parsed = False
+            # 1. Query Prime Account assets (consolidates Segment S - Securities + Segment F - Funds/钱袋子)
             try:
-                asset_obj = self._client.get_assets(account=self.account_id)
-                if asset_obj and len(asset_obj) > 0:
-                    a = asset_obj[0]
-                    summary = getattr(a, 'summary', None)
-                    if summary:
-                        net_liq = float(getattr(summary, 'net_liquidation', 0.0) or 0.0)
-                        if net_liq != float('inf') and net_liq > 0:
-                            total_eq = net_liq
-                        c_val = float(getattr(summary, 'cash', 0.0) or 0.0)
-                        if c_val != float('inf') and c_val > 0:
-                            cash_val = c_val
-                        gp_val = float(getattr(summary, 'gross_position_value', 0.0) or 0.0)
-                        if gp_val != float('inf') and gp_val > 0:
-                            mkt_val = gp_val
-            except Exception as e:
-                print(f"Notice: Tiger get_assets ({self.account_id}): {e}")
-
-            # 2. Query Prime Account assets (consolidates Securities + Funds/钱袋子)
-            if total_eq <= 0.0:
-                try:
-                    prime_obj = self._client.get_prime_assets(account=self.account_id, consolidated=True)
-                    if prime_obj:
-                        segs = getattr(prime_obj, 'segments', {})
+                prime_obj = self._client.get_prime_assets(account=self.account_id, consolidated=True)
+                if prime_obj:
+                    segs = getattr(prime_obj, 'segments', {})
+                    if segs:
                         for seg_name, seg in segs.items():
                             s_eq = float(getattr(seg, 'net_liquidation', 0.0) or 0.0)
                             s_cash = float(getattr(seg, 'cash_balance', 0.0) or getattr(seg, 'cash_available_for_trade', 0.0) or 0.0)
                             s_mkt = float(getattr(seg, 'gross_position_value', 0.0) or 0.0)
+                            s_lock = float(getattr(seg, 'locked_funds', 0.0) or 0.0)
+                            s_bp = float(getattr(seg, 'buying_power', 0.0) or 0.0)
+                            s_ex = float(getattr(seg, 'excess_liquidation', 0.0) or 0.0)
+
+                            if seg_name == 'F' or 'FUND' in str(getattr(seg, 'category', '')).upper():
+                                vault_val += s_eq
+                            elif seg_name == 'S' or 'SEC' in str(getattr(seg, 'category', '')).upper():
+                                mkt_val += s_mkt
+
                             if s_eq != float('inf') and s_eq > 0:
                                 total_eq += s_eq
                             if s_cash != float('inf') and s_cash > 0:
                                 cash_val += s_cash
-                            if s_mkt != float('inf') and s_mkt > 0:
-                                mkt_val += s_mkt
-                except Exception as e:
-                    print(f"Notice: Tiger get_prime_assets ({self.account_id}): {e}")
+                            if s_lock != float('inf') and s_lock > 0:
+                                locked_f += s_lock
+                            if s_bp != float('inf') and s_bp > b_power:
+                                b_power = s_bp
+                            if s_ex != float('inf') and s_ex > e_liq:
+                                e_liq = s_ex
 
-            # 3. Fallback / Cross-Validation: sum position market values
+                        is_prime_parsed = (total_eq > 0.0)
+            except Exception:
+                # Normal for Global accounts (e.g. U9959007)
+                pass
+
+            # 2. Query Asset Details (for accrued dividends and Global Account fallback)
+            try:
+                asset_list = self._client.get_assets(account=self.account_id, segment=True, market_value=True)
+                if asset_list and len(asset_list) > 0:
+                    a = asset_list[0]
+                    summary = getattr(a, 'summary', None)
+                    if summary:
+                        div = float(getattr(summary, 'accrued_dividend', 0.0) or 0.0)
+                        if div != float('inf') and div > 0:
+                            acc_div = div
+                        c_acc = float(getattr(summary, 'accrued_cash', 0.0) or getattr(summary, 'accrued_interest', 0.0) or 0.0)
+                        if c_acc != float('inf') and c_acc > 0:
+                            acc_int = c_acc
+
+                        if not is_prime_parsed:
+                            net_liq = float(getattr(summary, 'net_liquidation', 0.0) or 0.0)
+                            if net_liq != float('inf') and net_liq > 0:
+                                total_eq = net_liq
+                            c_val = float(getattr(summary, 'cash', 0.0) or 0.0)
+                            if c_val != float('inf') and c_val > 0:
+                                cash_val = c_val
+                            gp_val = float(getattr(summary, 'gross_position_value', 0.0) or 0.0)
+                            if gp_val != float('inf') and gp_val > 0:
+                                mkt_val = gp_val
+
+                        bp = float(getattr(summary, 'buying_power', 0.0) or 0.0)
+                        if bp != float('inf') and bp > b_power:
+                            b_power = bp
+                        ex = float(getattr(summary, 'excess_liquidity', 0.0) or 0.0)
+                        if ex != float('inf') and ex > e_liq:
+                            e_liq = ex
+            except Exception:
+                # 3. Fallback to basic get_assets
+                try:
+                    asset_obj = self._client.get_assets(account=self.account_id)
+                    if asset_obj and len(asset_obj) > 0:
+                        a = asset_obj[0]
+                        summary = getattr(a, 'summary', None)
+                        if summary and not is_prime_parsed:
+                            net_liq = float(getattr(summary, 'net_liquidation', 0.0) or 0.0)
+                            if net_liq != float('inf') and net_liq > 0:
+                                total_eq = net_liq
+                            c_val = float(getattr(summary, 'cash', 0.0) or 0.0)
+                            if c_val != float('inf') and c_val > 0:
+                                cash_val = c_val
+                            gp_val = float(getattr(summary, 'gross_position_value', 0.0) or 0.0)
+                            if gp_val != float('inf') and gp_val > 0:
+                                mkt_val = gp_val
+                except Exception:
+                    pass
+
+            # 4. Fallback / Cross-Validation: sum position market values
             positions = self.get_positions()
             pos_mkt_val = sum(p.market_value for p in positions)
             if pos_mkt_val > 0:
-                if mkt_val <= 0 or total_eq < pos_mkt_val:
+                if mkt_val <= 0:
                     mkt_val = pos_mkt_val
-                    total_eq = mkt_val + cash_val
+                if total_eq <= 0:
+                    total_eq = mkt_val + cash_val + vault_val + acc_div
 
         return AccountBalance(
             account_id=self.account_id,
@@ -126,7 +182,13 @@ class TigerBrokerConnector(BaseBrokerConnector):
             account_name=self.account_name,
             total_equity=round(total_eq, 2),
             cash=round(cash_val, 2),
-            market_value=round(mkt_val, 2)
+            market_value=round(mkt_val, 2),
+            accrued_dividend=round(acc_div, 2),
+            accrued_interest=round(acc_int, 2),
+            vault_balance=round(vault_val, 2),
+            locked_funds=round(locked_f, 2),
+            buying_power=round(b_power, 2),
+            excess_liquidity=round(e_liq, 2)
         )
 
     def get_positions(self) -> List[PositionItem]:
@@ -172,7 +234,7 @@ class TigerBrokerConnector(BaseBrokerConnector):
         if self._client:
             try:
                 if not start_date:
-                    start_date = (datetime.datetime.now() - datetime.timedelta(days=90)).strftime('%Y-%m-%d')
+                    start_date = (datetime.datetime.now() - datetime.timedelta(days=85)).strftime('%Y-%m-%d')
                 end_date = datetime.datetime.now().strftime('%Y-%m-%d')
                 tiger_orders = self._client.get_filled_orders(account=self.account_id, start_date=start_date, end_date=end_date, start_time=start_date, end_time=end_date)
                 for o in tiger_orders:
