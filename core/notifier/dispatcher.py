@@ -169,9 +169,6 @@ class ProactiveNotifier:
             detail_str = f" *({' | '.join(extra_parts)})*" if extra_parts else f" *(现金: ${c_val:,.2f})*"
             text += f"• **{acc_name}**: 资产 **${eq:,.2f}**{detail_str}\n"
 
-        if hk_ipo_cum > 0:
-            text += f"• **港股打新专项账户**: 累计利润贡献 **${hk_ipo_cum:,.2f}**\n"
-
         # Layer 1 Macro Performance & Capital Efficiency
         if macro_metrics:
             net_pnl = macro_metrics.get('cumulative_net_pnl', 0.0)
@@ -189,7 +186,7 @@ class ProactiveNotifier:
             text += f"• 资金加权真实年化 (MWR / XIRR): **+{mwr:.2f}%**\n"
             text += f"• 2026 自然年内创利 (YTD): **{ytd_sign}${ytd_pnl:,.2f}** ({ytd_sign}{ytd_ret:.2f}%)\n"
 
-            # Layer 1 Dimension 3: Passive Income & Financial Freedom (重点新增)
+            # Layer 1 Dimension 3: Passive Income & Financial Freedom (造血能力与被动现金流指标)
             ann_cf = macro_metrics.get('total_annual_passive_cashflow', 0.0)
             mo_cf = macro_metrics.get('monthly_passive_cashflow', 0.0)
             cf_yield = macro_metrics.get('cashflow_yield_pct', 0.0)
@@ -213,11 +210,19 @@ class ProactiveNotifier:
             text += f"• 杠杆与风控状态: {lev_status}\n"
 
         # ---------------------------------------------------------------------
-        # LAYER 2: v2.29 量化策略纯净追踪 (Pure Strategy Performance Engine)
+        # LAYER 2: v2.29 实盘量化主策略表现 (限定综合账户 638812)
         # ---------------------------------------------------------------------
+        text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        text += "📈 **【Layer 2: v2.29 实盘量化主策略表现 (限定综合账户)】**\n"
+        if hk_ipo_cum > 0:
+            pure_strat_eq = max(0.0, strategy_equity - hk_ipo_cum)
+            text += f"• 港股打新累计贡献 (HK IPO PnL): **+${hk_ipo_cum:,.2f}** *(资金在综合账户内运作，单独核算贡献)*\n"
+            if strategy_equity > 0:
+                text += f"• 综合账户策略拆分: 实盘总值 **${strategy_equity:,.2f}** (美股策略权益: **${pure_strat_eq:,.2f}** | 港股打新累积: **${hk_ipo_cum:,.2f}**)\n"
+        elif strategy_equity > 0:
+            text += f"• 综合账户实盘总值: **${strategy_equity:,.2f}**\n"
+
         if metrics:
-            text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            text += "📈 **【Layer 2: v2.29 实盘量化主策略表现 (限定综合账户)】**\n"
             text += f"• 策略实盘净值收益率 (TWR): **+{metrics['strat_ret_pct']:.2f}%** (年化 CAGR: **+{metrics['strat_cagr']:.2f}%**)\n"
             text += f"• 历史最大回撤 (MaxDD): **{metrics['max_dd_pct']:.2f}%** (当前动态回撤: **{metrics['curr_dd_pct']:.2f}%**)\n"
             text += f"• 策略夏普比率 (Sharpe): **{metrics['sharpe']:.2f}** (基准无风险利率: 4.5%)\n"

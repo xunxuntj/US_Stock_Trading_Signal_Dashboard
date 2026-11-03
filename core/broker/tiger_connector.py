@@ -89,7 +89,9 @@ class TigerBrokerConnector(BaseBrokerConnector):
                     if segs:
                         for seg_name, seg in segs.items():
                             s_eq = float(getattr(seg, 'net_liquidation', 0.0) or 0.0)
-                            s_cash = float(getattr(seg, 'cash_balance', 0.0) or getattr(seg, 'cash_available_for_trade', 0.0) or 0.0)
+                            # Strictly use pure cash_balance (never fallback to cash_available_for_trade which includes margin loan)
+                            cb_raw = getattr(seg, 'cash_balance', None)
+                            s_cash = float(cb_raw) if cb_raw is not None and str(cb_raw) != 'inf' else 0.0
                             s_mkt = float(getattr(seg, 'gross_position_value', 0.0) or 0.0)
                             s_lock = float(getattr(seg, 'locked_funds', 0.0) or 0.0)
                             s_bp = float(getattr(seg, 'buying_power', 0.0) or 0.0)
@@ -134,9 +136,9 @@ class TigerBrokerConnector(BaseBrokerConnector):
                             net_liq = float(getattr(summary, 'net_liquidation', 0.0) or 0.0)
                             if net_liq != float('inf') and net_liq > 0:
                                 total_eq = net_liq
-                            c_val = float(getattr(summary, 'cash', 0.0) or 0.0)
-                            if c_val != float('inf') and c_val > 0:
-                                cash_val = c_val
+                            c_raw = getattr(summary, 'cash', None)
+                            c_val = float(c_raw) if c_raw is not None and str(c_raw) != 'inf' else 0.0
+                            cash_val = c_val
                             gp_val = float(getattr(summary, 'gross_position_value', 0.0) or 0.0)
                             if gp_val != float('inf') and gp_val > 0:
                                 mkt_val = gp_val
@@ -158,9 +160,9 @@ class TigerBrokerConnector(BaseBrokerConnector):
                             net_liq = float(getattr(summary, 'net_liquidation', 0.0) or 0.0)
                             if net_liq != float('inf') and net_liq > 0:
                                 total_eq = net_liq
-                            c_val = float(getattr(summary, 'cash', 0.0) or 0.0)
-                            if c_val != float('inf') and c_val > 0:
-                                cash_val = c_val
+                            c_raw = getattr(summary, 'cash', None)
+                            c_val = float(c_raw) if c_raw is not None and str(c_raw) != 'inf' else 0.0
+                            cash_val = c_val
                             gp_val = float(getattr(summary, 'gross_position_value', 0.0) or 0.0)
                             if gp_val != float('inf') and gp_val > 0:
                                 mkt_val = gp_val
