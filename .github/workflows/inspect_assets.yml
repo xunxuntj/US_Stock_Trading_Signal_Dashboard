@@ -1,0 +1,28 @@
+name: Inspect Tiger Asset Fields
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Tiger Asset Inspection
+        env:
+          TIGER_ID: ${{ secrets.TIGER_ID }}
+          TIGER_ACCOUNT: ${{ secrets.TIGER_ACCOUNT }}
+          TIGER_PRIVATE_KEY_PATH: ${{ secrets.TIGER_PRIVATE_KEY_PATH }}
+        run: |
+          python scripts/inspect_tiger_assets.py
