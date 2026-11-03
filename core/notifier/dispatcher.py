@@ -214,13 +214,13 @@ class ProactiveNotifier:
         # ---------------------------------------------------------------------
         text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         text += "📈 **【Layer 2: v2.29 实盘量化主策略表现 (限定综合账户)】**\n"
-        if hk_ipo_cum > 0:
+        if hk_ipo_cum > 0 and strategy_equity > 0:
             pure_strat_eq = max(0.0, strategy_equity - hk_ipo_cum)
-            text += f"• 港股打新累计贡献 (HK IPO PnL): **+${hk_ipo_cum:,.2f}** *(资金在综合账户内运作，单独核算贡献)*\n"
-            if strategy_equity > 0:
-                text += f"• 综合账户策略拆分: 实盘总值 **${strategy_equity:,.2f}** (美股策略权益: **${pure_strat_eq:,.2f}** | 港股打新累积: **${hk_ipo_cum:,.2f}**)\n"
+            text += f"• 综合账户策略拆分: 实盘总值 **${strategy_equity:,.2f}** (美股策略权益: **${pure_strat_eq:,.2f}** | 港股打新累计贡献: **+${hk_ipo_cum:,.2f}**)\n"
         elif strategy_equity > 0:
             text += f"• 综合账户实盘总值: **${strategy_equity:,.2f}**\n"
+        elif hk_ipo_cum > 0:
+            text += f"• 港股打新累计贡献 (HK IPO PnL): **+${hk_ipo_cum:,.2f}**\n"
 
         if metrics:
             text += f"• 策略实盘净值收益率 (TWR): **+{metrics['strat_ret_pct']:.2f}%** (年化 CAGR: **+{metrics['strat_cagr']:.2f}%**)\n"
