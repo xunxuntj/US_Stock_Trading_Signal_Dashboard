@@ -48,6 +48,12 @@ def main():
                 print(f"  ⚠️ Patch warning for {ticker}: {patch_err}")
                 df_comb = df_hist
 
+            if df_comb is not None and not df_comb.empty:
+                # Strip incomplete bars where Close is NaN or non-positive
+                if 'Close' in df_comb.columns:
+                    df_comb = df_comb.dropna(subset=['Close'])
+                    df_comb = df_comb[df_comb['Close'] > 0]
+
             if df_comb.empty:
                 print(f"Warning: No data available for {ticker}")
                 continue

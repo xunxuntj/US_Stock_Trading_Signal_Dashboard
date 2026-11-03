@@ -91,6 +91,10 @@ def prepare_data(data_dir="data"):
                 print(f"Warning: Missing data for {ticker}, skipping.")
                 continue
         
+        if df is not None and not df.empty and 'Close' in df.columns:
+            df = df.dropna(subset=['Close'])
+            df = df[df['Close'] > 0]
+
         rename_dict = {}
         for col in df.columns:
             if col != 'Date':
