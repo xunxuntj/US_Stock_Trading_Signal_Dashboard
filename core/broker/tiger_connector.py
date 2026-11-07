@@ -8,7 +8,7 @@ Gracefully handles missing credentials or offline execution with clear diagnosti
 import os
 import datetime
 from typing import List, Optional, Dict, Any
-from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder
+from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder, CashTransactionItem
 from core.sanity.signal_guard import get_canonical_layer
 
 
@@ -273,3 +273,38 @@ class TigerBrokerConnector(BaseBrokerConnector):
                 print(f"Warning: Tiger API get_filled_orders failed ({e})")
 
         return orders
+
+    def get_cash_transactions(self, start_date: Optional[str] = None) -> List[CashTransactionItem]:
+        """Fetch cash deposits/withdrawals from TigerOpen API if available."""
+        results: List[CashTransactionItem] = []
+        if not self._client:
+            return results
+
+        try:
+            # Query funding history
+            fund_history = self._client.get_funding_history()
+            if fund_history:
+                for item in fund_history:
+                    # Parse item properties
+                    d_str = str(getattr(item, 'date', getattr(item, 'updated_at', '')))[:10]
+                    t_type = str(getattr(item, 'type', getattr(item, 'funding_type', 'DEPOSIT'))).upper()
+                    amt = float(getattr(item, 'amount', 0.0) or 0.0)
+                    desc = str(getattr(item, 'remark', getattr(item, 'comment', 'Tiger Funding')))
+                    tx_id = str(getattr(item, 'id', f"{d_str}_{t_type}_{abs(amt)}"))
+
+                    action = "DEPOSIT" if ("DEP" in t_type or "IN" in t_type or amt > 0) else "WITHDRAWAL"
+                    results.append(CashTransactionItem(
+                        transaction_id=tx_id,
+                        account_id=self.account_id,
+                        broker=self.broker,
+                        date=d_str or datetime.date.today().strftime('%Y-%m-%d'),
+                        type=action,
+                        amount=abs(amt),
+                        description=desc,
+                        raw_type=t_type
+                    ))
+        except Exception as e:
+            # Graceful fallback: Tiger funding API may not be permissioned on all retail keys
+            pass
+
+        return results

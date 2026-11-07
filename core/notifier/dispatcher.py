@@ -213,12 +213,12 @@ class ProactiveNotifier:
         # LAYER 2: v2.29 实盘量化主策略表现 (限定综合账户 638812)
         # ---------------------------------------------------------------------
         text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        text += "📈 **【Layer 2: v2.29 实盘量化主策略表现 (限定综合账户)】**\n"
+        text += "📈 **【Layer 2: v2.29 实盘量化主策略表现 (老虎综合 + 嘉信理财)】**\n"
         if hk_ipo_cum > 0 and strategy_equity > 0:
             pure_strat_eq = max(0.0, strategy_equity - hk_ipo_cum)
-            text += f"• 综合账户策略拆分: 实盘总值 **${strategy_equity:,.2f}** (美股策略权益: **${pure_strat_eq:,.2f}** | 港股打新累计贡献: **+${hk_ipo_cum:,.2f}**)\n"
+            text += f"• 实盘量化主策略总值: **${strategy_equity:,.2f}** (美股策略权益: **${pure_strat_eq:,.2f}** | 港股打新累计贡献: **+${hk_ipo_cum:,.2f}**)\n"
         elif strategy_equity > 0:
-            text += f"• 综合账户实盘总值: **${strategy_equity:,.2f}**\n"
+            text += f"• 量化策略总值 (老虎综合 + 嘉信理财): **${strategy_equity:,.2f}**\n"
         elif hk_ipo_cum > 0:
             text += f"• 港股打新累计贡献 (HK IPO PnL): **+${hk_ipo_cum:,.2f}**\n"
 

@@ -66,6 +66,19 @@ class FilledOrder:
     remark: Optional[str] = None
 
 
+
+@dataclass
+class CashTransactionItem:
+    transaction_id: str
+    account_id: str
+    broker: BrokerType
+    date: str          # YYYY-MM-DD
+    type: str          # DEPOSIT / WITHDRAWAL
+    amount: float      # Positive float
+    description: str = ""
+    raw_type: str = ""
+
+
 class BaseBrokerConnector(ABC):
     """Abstract interface that every broker connector must implement."""
 
@@ -83,3 +96,7 @@ class BaseBrokerConnector(ABC):
     def get_filled_orders(self, start_date: Optional[str] = None) -> List[FilledOrder]:
         """Fetch executed filled orders since start_date (YYYY-MM-DD)."""
         pass
+
+    def get_cash_transactions(self, start_date: Optional[str] = None) -> List[CashTransactionItem]:
+        """Fetch cash deposits and withdrawals since start_date (YYYY-MM-DD). Default empty."""
+        return []

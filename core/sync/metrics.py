@@ -3,6 +3,9 @@ Strategy Performance Metrics Engine (core/sync/metrics.py)
 Computes cumulative return, annualized CAGR, Sharpe ratio, Max Drawdown,
 current drawdown from high-water mark, and SPY alpha benchmark comparison.
 Also exposes Layer 1 Macro Wealth Metrics integration.
+Accurately accounts for multi-broker deposits/withdrawals across Tiger Consolidated
+and Charles Schwab using Time-Weighted Return (TWR / 单位净值法) to insulate strategy
+performance from external cash flows.
 """
 
 import os
@@ -17,8 +20,10 @@ from .macro_metrics import compute_macro_wealth_metrics, calculate_xirr
 
 def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[str, Any]:
     """
-    Computes Layer 2 core strategy metrics based on nav_history in portfolio.db.
+    Computes Layer 2 core strategy metrics based on nav_history & cash_transactions in portfolio.db.
     Focuses purely on the v2.29 Quant Strategy execution on Consolidated/Schwab accounts.
+    Accurately accounts for deposits/withdrawals across Tiger Consolidated and Schwab using
+    Time-Weighted Return (TWR / 单位净值法) to insulate performance from cash flows.
     Returns return percentages, annualized CAGR, Max Drawdown, Sharpe, and SPY Alpha.
     """
     close_at_end = False
@@ -31,6 +36,13 @@ def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[
             "SELECT date, nav, total_equity, strategy_equity, hk_pnl_cum, drawdown_pct FROM nav_history ORDER BY date ASC",
             conn
         )
+        try:
+            df_cash = pd.read_sql(
+                "SELECT date, type, amount FROM cash_transactions ORDER BY date ASC",
+                conn
+            )
+        except Exception:
+            df_cash = pd.DataFrame()
     finally:
         if close_at_end:
             conn.close()
@@ -48,24 +60,57 @@ def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[
     live_days = max(1, (end_dt - start_dt).days)
     live_years = live_days / 365.0
 
-    # 1. Pure Strategy Return (TWR) & CAGR
-    strat_ret = ((latest_nav - start_nav) / start_nav) * 100.0
-    strat_cagr = ((1.0 + strat_ret / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
+    # 1. Cash flow mapping for TWR unitization (Tiger Consolidated + Schwab)
+    cash_by_date = {}
+    if not df_cash.empty:
+        for _, r in df_cash.iterrows():
+            d = str(r['date'])[:10]
+            amt = float(r['amount'])
+            action = str(r['type']).upper().strip()
+            flow = amt if "DEP" in action else -amt
+            cash_by_date[d] = cash_by_date.get(d, 0.0) + flow
+
+    # Compute Unitized Time-Weighted Return (TWR)
+    units = start_nav
+    unit_nav = 1.0
+    daily_unit_navs = [1.0]
+
+    for i in range(1, len(df)):
+        d_str = df['date'].iloc[i].strftime("%Y-%m-%d")
+        eq = float(df['nav'].iloc[i])
+        cf = cash_by_date.get(d_str, 0.0)
+
+        pre_cf_eq = eq - cf
+        if units > 0 and pre_cf_eq > 0:
+            u_nav = pre_cf_eq / units
+        else:
+            u_nav = unit_nav
+
+        if cf != 0 and u_nav > 0:
+            units += cf / u_nav
+
+        unit_nav = eq / units if units > 0 else 1.0
+        daily_unit_navs.append(unit_nav)
+
+    strat_ret = round((unit_nav - 1.0) * 100.0, 2)
+    strat_cagr = round(((1.0 + strat_ret / 100.0) ** (1.0 / live_years) - 1.0) * 100.0, 2) if strat_ret > -95.0 else 0.0
+    unadjusted_ret = round(((latest_nav - start_nav) / start_nav) * 100.0, 2)
 
     # 2. Total Combined Portfolio Return (maintained for backward compatibility)
     total_nav = latest_nav + hk_cum
-    total_ret = ((total_nav - start_nav) / start_nav) * 100.0
-    total_cagr = ((1.0 + total_ret / 100.0) ** (1.0 / live_years) - 1.0) * 100.0
+    total_ret = round(((total_nav - start_nav) / start_nav) * 100.0, 2)
+    total_cagr = round(((1.0 + total_ret / 100.0) ** (1.0 / live_years) - 1.0) * 100.0, 2) if total_ret > -95.0 else 0.0
 
     # 3. Drawdown Metrics
     max_dd = float(df['drawdown_pct'].min()) if 'drawdown_pct' in df.columns else 0.0
     curr_dd = float(df['drawdown_pct'].iloc[-1]) if 'drawdown_pct' in df.columns else 0.0
 
-    # 4. Sharpe Ratio (annualized, Rf = 4.5%)
-    daily_ret = df['nav'].pct_change().dropna()
+    # 4. Sharpe Ratio (annualized, Rf = 4.5% on unit NAV returns)
+    unit_s = pd.Series(daily_unit_navs)
+    daily_ret = unit_s.pct_change().dropna()
     rf_daily = 0.045 / 252.0
     if len(daily_ret) > 5 and daily_ret.std() > 0:
-        sharpe = float(((daily_ret.mean() - rf_daily) / daily_ret.std()) * np.sqrt(252.0))
+        sharpe = round(float(((daily_ret.mean() - rf_daily) / daily_ret.std()) * np.sqrt(252.0)), 2)
     else:
         sharpe = 2.15
 
@@ -80,10 +125,10 @@ def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[
             if not spy_sub.empty and len(spy_sub) >= 2:
                 spy_start = float(spy_sub['Close'].iloc[0])
                 spy_end = float(spy_sub['Close'].iloc[-1])
-                spy_ret = ((spy_end - spy_start) / spy_start) * 100.0
+                spy_ret = round(((spy_end - spy_start) / spy_start) * 100.0, 2)
         except Exception:
             pass
-    alpha = strat_ret - spy_ret
+    alpha = round(strat_ret - spy_ret, 2)
 
     return {
         "start_date": start_dt.strftime("%Y-%m-%d"),
@@ -91,8 +136,11 @@ def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[
         "live_days": live_days,
         "start_nav": start_nav,
         "latest_nav": latest_nav,
+        "unit_nav": round(unit_nav, 4),
+        "total_units": round(units, 2),
         "strat_ret_pct": strat_ret,
         "strat_cagr": strat_cagr,
+        "unadjusted_ret_pct": unadjusted_ret,
         "total_nav": total_nav,
         "total_ret_pct": total_ret,
         "total_cagr": total_cagr,

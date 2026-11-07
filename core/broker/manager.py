@@ -8,7 +8,7 @@ across migrating accounts, and fetches cross-broker order fills.
 import os
 from typing import Dict, List, Optional, Any
 import pandas as pd
-from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder
+from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder, CashTransactionItem
 from .tiger_connector import TigerBrokerConnector
 from .schwab_connector import SchwabBrokerConnector
 from .mock_connector import MockBrokerConnector
@@ -180,3 +180,14 @@ class MultiBrokerManager:
         # Sort chronologically
         all_orders.sort(key=lambda o: o.filled_at, reverse=True)
         return all_orders
+
+    def get_all_cash_transactions(self, start_date: Optional[str] = None) -> List[CashTransactionItem]:
+        """Fetch and combine cash deposits/withdrawals across all registered brokers."""
+        all_txs: List[CashTransactionItem] = []
+        for name, conn in self.connectors.items():
+            try:
+                txs = conn.get_cash_transactions(start_date=start_date)
+                all_txs.extend(txs)
+            except Exception as e:
+                print(f"Warning: Failed to fetch cash transactions from connector {name}: {e}")
+        return all_txs

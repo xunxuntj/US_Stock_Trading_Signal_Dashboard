@@ -25,7 +25,9 @@ from core.sanity.signal_guard import (
 from core.broker.base import BrokerType, PositionItem, FilledOrder
 from core.broker.mock_connector import MockBrokerConnector
 from core.broker.manager import MultiBrokerManager
-from core.sync.reconcile_engine import check_position_drift, ingest_broker_orders
+from core.sync.reconcile_engine import check_position_drift, ingest_broker_orders, ingest_broker_cash_transactions
+from core.broker.base import CashTransactionItem
+from core.sync.metrics import compute_strategy_metrics
 from core.notifier.dispatcher import ProactiveNotifier
 
 
@@ -354,5 +356,78 @@ class TestV3SystemSuite(unittest.TestCase):
         self.assertIn("feishu", res)
 
 
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 6: Multi-Broker Cash Flow Ingestion & Strategy Ledger Tests
+    # -------------------------------------------------------------------------
+    def test_13_multi_broker_cash_flow_ingestion_and_twr_unitization(self):
+        import sqlite3
+        conn = sqlite3.connect(":memory:")
+        cursor = conn.cursor()
+        cursor.execute('''
+        CREATE TABLE cash_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            notes TEXT
+        )
+        ''')
+        cursor.execute('''
+        CREATE TABLE nav_history (
+            date TEXT PRIMARY KEY,
+            nav REAL NOT NULL,
+            cash REAL NOT NULL,
+            jepq_val REAL NOT NULL,
+            sgov_val REAL NOT NULL,
+            trend_val REAL NOT NULL,
+            total_equity REAL,
+            strategy_equity REAL,
+            hk_pnl_cum REAL,
+            high_water_mark REAL,
+            drawdown_pct REAL,
+            source TEXT
+        )
+        ''')
+
+        # Ingest cash transactions from Tiger and Schwab
+        tx1 = CashTransactionItem(
+            transaction_id="tx_tiger_1",
+            account_id="638812",
+            broker=BrokerType.TIGER,
+            date="2026-02-01",
+            type="DEPOSIT",
+            amount=5000.0,
+            description="Tiger Wire Deposit"
+        )
+        tx2 = CashTransactionItem(
+            transaction_id="tx_schwab_1",
+            account_id="56169533",
+            broker=BrokerType.SCHWAB,
+            date="2026-11-04",
+            type="DEPOSIT",
+            amount=1500.0,
+            description="Schwab Wire In"
+        )
+
+        num_ingested, details = ingest_broker_cash_transactions([tx1, tx2], conn=conn)
+        self.assertEqual(num_ingested, 2)
+
+        # Idempotency check: re-running should ingest 0
+        num_ingested_again, _ = ingest_broker_cash_transactions([tx1, tx2], conn=conn)
+        self.assertEqual(num_ingested_again, 0)
+
+        # Seed NAV points
+        cursor.execute("INSERT INTO nav_history VALUES ('2026-01-15', 100000.0, 0, 0, 0, 0, 100000.0, 100000.0, 0, 100000.0, 0, 'MOCK')")
+        cursor.execute("INSERT INTO nav_history VALUES ('2026-02-01', 110000.0, 0, 0, 0, 0, 110000.0, 110000.0, 0, 110000.0, 0, 'MOCK')")
+        cursor.execute("INSERT INTO nav_history VALUES ('2026-11-04', 125000.0, 0, 0, 0, 0, 125000.0, 125000.0, 0, 125000.0, 0, 'MOCK')")
+        conn.commit()
+
+        strat_m = compute_strategy_metrics(conn=conn)
+        self.assertTrue(strat_m['strat_ret_pct'] > 0)
+        self.assertTrue('unit_nav' in strat_m)
+
+        conn.close()
+
 if __name__ == "__main__":
     unittest.main()

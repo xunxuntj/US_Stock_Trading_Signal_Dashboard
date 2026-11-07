@@ -10,7 +10,7 @@ import datetime
 from typing import Dict, List, Optional, Any, Tuple
 import pandas as pd
 from config import DB_PATH
-from core.broker.base import FilledOrder
+from core.broker.base import FilledOrder, CashTransactionItem
 from core.broker.manager import MultiBrokerManager
 from core.sanity.signal_guard import get_canonical_layer
 
@@ -160,3 +160,51 @@ def ingest_broker_orders(
         conn.close()
 
     return len(new_orders), new_orders
+
+def ingest_broker_cash_transactions(
+    cash_txs: List[CashTransactionItem],
+    conn: Optional[sqlite3.Connection] = None
+) -> Tuple[int, List[Dict[str, Any]]]:
+    """
+    Ingest cash deposits and withdrawals from broker APIs into cash_transactions table.
+    Ensures strict idempotency: skips records where (date, type, abs(amount)) already exists.
+    """
+    close_at_end = False
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH)
+        close_at_end = True
+
+    cursor = conn.cursor()
+    new_ingested = []
+
+    for ctx in cash_txs:
+        # Check idempotency: match date, type, and amount within $0.01 tolerance
+        cursor.execute(
+            "SELECT id FROM cash_transactions WHERE date = ? AND type = ? AND abs(amount - ?) < 0.01",
+            (ctx.date, ctx.type, ctx.amount)
+        )
+        if cursor.fetchone() is not None:
+            continue
+
+        notes = f"[{ctx.broker.value}] {ctx.account_id}: {ctx.description}"
+        if ctx.raw_type:
+            notes += f" ({ctx.raw_type})"
+
+        cursor.execute(
+            "INSERT INTO cash_transactions (date, type, amount, notes) VALUES (?, ?, ?, ?)",
+            (ctx.date, ctx.type, ctx.amount, notes)
+        )
+        new_ingested.append({
+            "date": ctx.date,
+            "type": ctx.type,
+            "amount": ctx.amount,
+            "broker": ctx.broker.value,
+            "account_id": ctx.account_id,
+            "notes": notes
+        })
+
+    conn.commit()
+    if close_at_end:
+        conn.close()
+
+    return len(new_ingested), new_ingested

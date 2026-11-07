@@ -9,7 +9,7 @@ import os
 import datetime
 from typing import List, Optional, Dict, Any
 import httpx
-from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder
+from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder, CashTransactionItem
 from core.sanity.signal_guard import get_canonical_layer
 
 
@@ -238,3 +238,69 @@ class SchwabBrokerConnector(BaseBrokerConnector):
                 print(f"Warning: Schwab get_filled_orders error: {e}")
 
         return orders
+
+    def get_cash_transactions(self, start_date: Optional[str] = None) -> List[CashTransactionItem]:
+        """Fetch cash deposits and withdrawals from Schwab API transactions endpoint."""
+        results: List[CashTransactionItem] = []
+        token = self._ensure_access_token()
+        if not token:
+            return results
+
+        try:
+            acc_hash = self._get_account_hash(token)
+            if not start_date:
+                start_date = (datetime.datetime.now() - datetime.timedelta(days=85)).strftime('%Y-%m-%d')
+            start_iso = f"{start_date}T00:00:00.000Z"
+            end_iso = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
+            headers = {"Authorization": f"Bearer {token}"}
+            url = f"{self.SCHWAB_BASE_URL}/accounts/{acc_hash}/transactions?startDate={start_iso}&endDate={end_iso}"
+            with httpx.Client(timeout=15.0, proxy=self._get_proxy()) as client:
+                resp = client.get(url, headers=headers)
+                if resp.status_code == 200:
+                    tx_list = resp.json()
+                    for tx in tx_list:
+                        tx_type = str(tx.get("type", "")).upper()
+                        raw_amt = float(tx.get("netAmount", 0.0) or 0.0)
+                        tx_time = str(tx.get("time", ""))
+                        tx_date = tx_time[:10] if len(tx_time) >= 10 else datetime.date.today().strftime('%Y-%m-%d')
+                        desc = str(tx.get("description", ""))
+                        tx_id = str(tx.get("activityId", "")) or f"{tx_date}_{tx_type}_{abs(raw_amt)}"
+
+                        # Detect deposits: WIRE_IN, ACH_IN, TRANSFER_IN, ELECTRONIC_FUND_TRANSFER
+                        if (
+                            "WIRE_IN" in tx_type or "ACH_IN" in tx_type or
+                            "TRANSFER_IN" in tx_type or "DEPOSIT" in tx_type or
+                            "RECEIVE" in desc.upper() or
+                            (raw_amt > 0 and "TRADE" not in tx_type and "DIVIDEND" not in tx_type)
+                        ):
+                            results.append(CashTransactionItem(
+                                transaction_id=tx_id,
+                                account_id=self.account_id or "SCHWAB_MAIN",
+                                broker=self.broker,
+                                date=tx_date,
+                                type="DEPOSIT",
+                                amount=abs(raw_amt),
+                                description=desc or "Schwab Wire / Deposit In",
+                                raw_type=tx_type
+                            ))
+                        # Detect withdrawals: WIRE_OUT, ACH_OUT, TRANSFER_OUT, WITHDRAWAL
+                        elif (
+                            "WIRE_OUT" in tx_type or "ACH_OUT" in tx_type or
+                            "TRANSFER_OUT" in tx_type or "WITHDRAWAL" in tx_type or
+                            (raw_amt < 0 and "TRADE" not in tx_type and "FEE" not in tx_type)
+                        ):
+                            results.append(CashTransactionItem(
+                                transaction_id=tx_id,
+                                account_id=self.account_id or "SCHWAB_MAIN",
+                                broker=self.broker,
+                                date=tx_date,
+                                type="WITHDRAWAL",
+                                amount=abs(raw_amt),
+                                description=desc or "Schwab Wire / Withdrawal Out",
+                                raw_type=tx_type
+                            ))
+        except Exception as e:
+            print(f"Warning: Schwab get_cash_transactions error: {e}")
+
+        return results

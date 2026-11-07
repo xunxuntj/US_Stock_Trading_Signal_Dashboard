@@ -70,7 +70,7 @@ from core.sanity.signal_guard import exhaustive_scan_trend_exits, get_canonical_
 
 from core.broker.manager import MultiBrokerManager
 
-from core.sync.reconcile_engine import check_position_drift, ingest_broker_orders
+from core.sync.reconcile_engine import check_position_drift, ingest_broker_orders, ingest_broker_cash_transactions
 
 from core.sync.metrics import compute_strategy_metrics
 
@@ -468,13 +468,19 @@ def run_pipeline() -> Dict[str, Any]:
 
 
 
-    # Ingest executed orders from API
-
+        # Ingest executed orders from API
     filled_orders = broker_mgr.get_all_filled_orders(start_date=date_str)
-
     num_synced, synced_list = ingest_broker_orders(filled_orders, shadow_mode=SHADOW_MODE)
-
     print(f"Broker Order Ingestion: {num_synced} new order(s) processed (Shadow Mode: {SHADOW_MODE}).")
+
+    # Ingest cash deposits and withdrawals across all brokers (Tiger Consolidated + Charles Schwab)
+    broker_cash_txs = broker_mgr.get_all_cash_transactions()
+    num_cash_synced, cash_synced_list = ingest_broker_cash_transactions(broker_cash_txs)
+    if num_cash_synced > 0:
+        print(f"💰 Broker Cash Flow Ingestion: {num_cash_synced} new cash transaction(s) recorded: {cash_synced_list}")
+    else:
+        print("✅ Broker Cash Flow Ingestion: No new cash flow detected.")
+
 
 
 
@@ -557,7 +563,16 @@ def run_pipeline() -> Dict[str, Any]:
 
 
 
-    strat_equity = total_eq if total_eq > 0 else nav
+        # Strategy Pool = Tiger Consolidated (638812) + Charles Schwab (excluding Universal legacy NVDA)
+    strat_equity = 0.0
+    for acc in aggregated_balances.get("accounts", []):
+        acc_name_upper = acc.get("account_name", "").upper()
+        if "UNIVERSAL" in acc_name_upper or "U9959007" in acc_name_upper:
+            continue
+        strat_equity += acc.get("equity", 0.0)
+
+    if strat_equity <= 0:
+        strat_equity = total_wealth
 
     cash_val = aggregated_balances["total_cash"]
 
