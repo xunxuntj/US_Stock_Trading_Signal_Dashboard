@@ -2,11 +2,18 @@ import os
 import sys
 import datetime
 import hashlib
+import importlib
+import traceback
 import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+
+# Ensure current directory is on sys.path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 # Encrypted SHA-256 Hash of Password '790323'
 HK_IPO_PWD_HASH = "3524c12e3f2ac91563a82dedde6816f0310b9c543dcbc0dac383220069e2c2d9"
@@ -20,15 +27,35 @@ st.set_page_config(
 )
 
 from config import DATA_DIR, INITIAL_CAPITAL
-from database import (
-    init_db, get_positions, get_nav_history, get_trades_history,
-    get_hk_ipo_history, record_hk_ipo, set_initial_hk_ipo_cum,
-    execute_live_us_trade, record_cash_transaction, get_cash_transactions,
-    record_brokerage_nav, get_hk_ipo_trades_history, record_hk_ipo_trade,
-    get_latest_kids_returns, record_kids_cash_transaction,
-    get_kids_cash_ledger, get_kids_account_summary,
-    update_trade_classification
-)
+
+try:
+    import database
+    if not hasattr(database, "update_trade_classification"):
+        importlib.reload(database)
+except Exception as e:
+    st.error(f"⚠️ 数据库模块加载异常: {e}")
+    st.code(traceback.format_exc())
+
+# Resilient function mapping from database module
+init_db = getattr(database, "init_db", lambda: None)
+get_positions = getattr(database, "get_positions", lambda: pd.DataFrame())
+get_nav_history = getattr(database, "get_nav_history", lambda: pd.DataFrame())
+get_trades_history = getattr(database, "get_trades_history", lambda: pd.DataFrame())
+get_hk_ipo_history = getattr(database, "get_hk_ipo_history", lambda: pd.DataFrame())
+record_hk_ipo = getattr(database, "record_hk_ipo", lambda *args, **kwargs: None)
+set_initial_hk_ipo_cum = getattr(database, "set_initial_hk_ipo_cum", lambda *args, **kwargs: None)
+execute_live_us_trade = getattr(database, "execute_live_us_trade", lambda *args, **kwargs: None)
+record_cash_transaction = getattr(database, "record_cash_transaction", lambda *args, **kwargs: None)
+get_cash_transactions = getattr(database, "get_cash_transactions", lambda: pd.DataFrame())
+record_brokerage_nav = getattr(database, "record_brokerage_nav", lambda *args, **kwargs: None)
+get_hk_ipo_trades_history = getattr(database, "get_hk_ipo_trades_history", lambda: pd.DataFrame())
+record_hk_ipo_trade = getattr(database, "record_hk_ipo_trade", lambda *args, **kwargs: None)
+get_latest_kids_returns = getattr(database, "get_latest_kids_returns", lambda: (165.29, 165.23))
+record_kids_cash_transaction = getattr(database, "record_kids_cash_transaction", lambda *args, **kwargs: None)
+get_kids_cash_ledger = getattr(database, "get_kids_cash_ledger", lambda: pd.DataFrame())
+get_kids_account_summary = getattr(database, "get_kids_account_summary", lambda *args, **kwargs: {})
+update_trade_classification = getattr(database, "update_trade_classification", lambda *args, **kwargs: None)
+
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
 

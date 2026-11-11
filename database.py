@@ -5,6 +5,19 @@ import os
 from typing import Optional, List, Dict, Any
 from config import DB_PATH, INITIAL_CAPITAL, JEPQ_TARGET_PCT, SGOV_TARGET_PCT
 
+__all__ = [
+    "init_db", "get_connection", "get_positions", "update_position",
+    "get_nav_history", "record_nav", "record_brokerage_nav",
+    "get_trades_history", "record_trade", "update_trade_classification",
+    "execute_live_us_trade", "get_cash_transactions", "record_cash_transaction",
+    "get_hk_ipo_history", "record_hk_ipo", "set_initial_hk_ipo_cum",
+    "get_hk_ipo_trades_history", "record_hk_ipo_trade", "sync_hk_ipo_pnl_to_nav",
+    "get_latest_kids_returns", "init_kids_ledger_table",
+    "record_kids_cash_transaction", "get_kids_cash_ledger", "get_kids_account_summary",
+    "get_cloud_market_prices_latest_dates", "fetch_cloud_market_prices", "upsert_cloud_market_price_rows",
+    "get_supabase_credentials", "fetch_supabase_df"
+]
+
 def get_connection():
     return sqlite3.connect(DB_PATH)
 
