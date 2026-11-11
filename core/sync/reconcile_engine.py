@@ -189,7 +189,17 @@ def ingest_broker_orders(
         order_dict["is_strategy"] = is_strat
 
         if not shadow_mode:
-            trade_date = o.filled_at[:10] if len(o.filled_at) >= 10 else datetime.date.today().strftime("%Y-%m-%d")
+            fill_raw = str(o.filled_at or "")
+            if len(fill_raw) >= 10 and "-" in fill_raw[:10]:
+                trade_date = fill_raw[:10]
+            else:
+                try:
+                    val = float(fill_raw)
+                    if val > 1e11:
+                        val = val / 1000.0
+                    trade_date = datetime.datetime.fromtimestamp(val).strftime("%Y-%m-%d")
+                except Exception:
+                    trade_date = datetime.date.today().strftime("%Y-%m-%d")
             
             # Fetch current position for cost/pnl calculation
             c_pos = sqlite3.connect(DB_PATH, timeout=30.0)

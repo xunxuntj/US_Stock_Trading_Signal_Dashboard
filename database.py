@@ -317,11 +317,17 @@ def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pn
         try:
             import httpx
             headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-            httpx.post(f"{url}/rest/v1/trades", json=[{
+            base_payload = {
                 "date": str(date_str), "ticker": ticker, "action": action, "shares": float(shares),
                 "price": float(price), "total_val": float(total_val), "fee": float(fee), "pnl": float(pnl),
-                "layer": layer, "reason": str(reason), "category": category, "is_strategy": int(is_strategy)
-            }], headers=headers, timeout=5.0)
+                "layer": layer, "reason": str(reason)
+            }
+            full_payload = dict(base_payload)
+            full_payload["category"] = category
+            full_payload["is_strategy"] = int(is_strategy)
+            r = httpx.post(f"{url}/rest/v1/trades", json=[full_payload], headers=headers, timeout=5.0)
+            if r.status_code >= 400:
+                httpx.post(f"{url}/rest/v1/trades", json=[base_payload], headers=headers, timeout=5.0)
         except Exception as e:
             print(f"Supabase record_trade sync error: {e}")
 
@@ -456,10 +462,22 @@ def get_trades_history():
         if 'id' in df_cloud.columns:
             df_cloud['id'] = pd.to_numeric(df_cloud['id'], errors='coerce')
             df_cloud = df_cloud.sort_values(by="id", ascending=False).reset_index(drop=True)
+        if 'category' not in df_cloud.columns:
+            df_cloud['category'] = 'STRATEGY'
+        else:
+            df_cloud['category'] = df_cloud['category'].fillna('STRATEGY')
+        if 'is_strategy' not in df_cloud.columns:
+            df_cloud['is_strategy'] = 1
+        else:
+            df_cloud['is_strategy'] = pd.to_numeric(df_cloud['is_strategy'].fillna(1), errors='coerce').astype(int)
         return df_cloud
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM trades ORDER BY id DESC", conn)
     conn.close()
+    if 'category' not in df.columns:
+        df['category'] = 'STRATEGY'
+    if 'is_strategy' not in df.columns:
+        df['is_strategy'] = 1
     return df
 
 def get_pending_actions():

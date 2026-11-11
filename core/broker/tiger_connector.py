@@ -254,7 +254,16 @@ class TigerBrokerConnector(BaseBrokerConnector):
                     filled_qty = raw_filled / f_scale if f_scale > 1.0 else raw_filled
                     avg_fill_price = float(getattr(o, 'avg_fill_price', 0.0) or 0.0)
                     commission = float(getattr(o, 'commission', 0.0) or 0.0)
-                    fill_time = str(getattr(o, 'trade_time', getattr(o, 'order_time', '')))
+                    raw_time = getattr(o, 'trade_time', getattr(o, 'order_time', ''))
+                    fill_time = ""
+                    if raw_time:
+                        try:
+                            val = float(raw_time)
+                            if val > 1e11: # milliseconds
+                                val = val / 1000.0
+                            fill_time = datetime.datetime.fromtimestamp(val).strftime('%Y-%m-%d %H:%M:%S')
+                        except Exception:
+                            fill_time = str(raw_time)
 
                     orders.append(FilledOrder(
                         order_id=order_id,
