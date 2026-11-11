@@ -100,6 +100,42 @@ def check_position_drift(db_positions_df: pd.DataFrame, broker_positions_df: pd.
     return report
 
 
+def sync_broker_positions_to_db(
+    broker_positions_df: pd.DataFrame,
+    shadow_mode: bool = True
+) -> Dict[str, Any]:
+    """
+    Synchronizes broker API positions directly into the positions table (SQLite + Supabase Cloud).
+    In shadow mode, no changes are committed.
+    """
+    if shadow_mode or broker_positions_df is None:
+        return {"synced": False, "reason": "Shadow mode active or empty dataframe"}
+
+    from database import update_position, get_positions
+    db_pos = get_positions()
+    db_tickers = set(db_pos['ticker'].tolist()) if not db_pos.empty else set()
+    broker_tickers = set()
+
+    synced_items = []
+    if not broker_positions_df.empty:
+        for _, row in broker_positions_df.iterrows():
+            ticker = str(row['ticker']).upper().strip()
+            shares = float(row.get('shares', 0.0))
+            cost_basis = float(row.get('cost_basis', 0.0))
+            layer = str(row.get('layer', get_canonical_layer(ticker)))
+            if shares > 0.0001:
+                broker_tickers.add(ticker)
+                update_position(ticker, shares, cost_basis, layer)
+                synced_items.append({"ticker": ticker, "shares": shares, "cost_basis": cost_basis, "layer": layer})
+
+    # Remove positions no longer held at broker
+    closed_tickers = db_tickers - broker_tickers
+    for t in closed_tickers:
+        update_position(t, 0.0, 0.0, "CLOSED")
+
+    return {"synced": True, "updated": synced_items, "closed": list(closed_tickers)}
+
+
 def ingest_broker_orders(
     orders: List[FilledOrder],
     shadow_mode: bool = True,
@@ -154,41 +190,41 @@ def ingest_broker_orders(
         if not shadow_mode:
             trade_date = o.filled_at[:10] if len(o.filled_at) >= 10 else datetime.date.today().strftime("%Y-%m-%d")
             
-            # 1. Update positions table to keep local DB 100% in sync with broker execution
+            # 1. Update positions table (SQLite + Supabase Cloud)
             cursor.execute("SELECT shares, cost_basis FROM positions WHERE ticker = ?", (o.ticker,))
             pos_row = cursor.fetchone()
             curr_shares = float(pos_row[0]) if pos_row else 0.0
             curr_cost = float(pos_row[1]) if pos_row else o.price
 
             trade_pnl = 0.0
+            from database import update_position, record_trade
             if o.action.upper() == "BUY":
                 new_shares = curr_shares + o.shares
                 new_cost = (curr_shares * curr_cost + o.total_value + o.fee) / new_shares if new_shares > 0 else o.price
-                cursor.execute("""
-                INSERT INTO positions (ticker, shares, cost_basis, layer, updated_at)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(ticker) DO UPDATE SET
-                    shares = excluded.shares,
-                    cost_basis = excluded.cost_basis,
-                    layer = excluded.layer,
-                    updated_at = excluded.updated_at
-                """, (o.ticker, new_shares, new_cost, layer_norm, now_str))
+                update_position(o.ticker, new_shares, new_cost, layer_norm)
             else: # SELL
                 new_shares = max(0.0, curr_shares - o.shares)
                 trade_pnl = round((o.price - curr_cost) * o.shares - o.fee, 2)
-                if new_shares <= 0.0001:
-                    cursor.execute("DELETE FROM positions WHERE ticker = ?", (o.ticker,))
-                else:
-                    cursor.execute("""
-                    UPDATE positions SET shares = ?, updated_at = ? WHERE ticker = ?
-                    """, (new_shares, now_str, o.ticker))
+                update_position(o.ticker, new_shares, curr_cost if new_shares > 0 else 0.0, layer_norm)
 
-            # 2. Record trade into trades table with category and strategy flag
-            cursor.execute("""
-            INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, is_strategy)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (trade_date, o.ticker, o.action.upper(), o.shares, o.price, o.total_value, o.fee, trade_pnl, layer_norm, f"API Auto-Sync ({o.broker.value})", category, is_strat))
-            trade_id = cursor.lastrowid
+            # 2. Record trade into trades table (SQLite + Supabase Cloud)
+            record_trade(
+                date_str=trade_date,
+                ticker=o.ticker,
+                action=o.action.upper(),
+                shares=o.shares,
+                price=o.price,
+                total_val=o.total_value,
+                fee=o.fee,
+                pnl=trade_pnl,
+                layer=layer_norm,
+                reason=f"API Auto-Sync ({o.broker.value})",
+                category=category,
+                is_strategy=is_strat
+            )
+            cursor.execute("SELECT last_insert_rowid()")
+            last_id_row = cursor.fetchone()
+            trade_id = last_id_row[0] if last_id_row else None
 
             # 3. Mark in broker_synced_orders for idempotency
             cursor.execute("""

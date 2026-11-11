@@ -70,7 +70,10 @@ from core.sanity.signal_guard import exhaustive_scan_trend_exits, get_canonical_
 
 from core.broker.manager import MultiBrokerManager
 
-from core.sync.reconcile_engine import check_position_drift, ingest_broker_orders, ingest_broker_cash_transactions
+from core.sync.reconcile_engine import (
+    check_position_drift, sync_broker_positions_to_db,
+    ingest_broker_orders, ingest_broker_cash_transactions
+)
 
 from core.sync.metrics import compute_strategy_metrics
 
@@ -451,25 +454,24 @@ def run_pipeline() -> Dict[str, Any]:
 
 
     # Compare DB positions vs Broker API positions
-
     drift_report = check_position_drift(db_pos_df, aggregated_positions)
-
     if drift_report.has_drift:
-
         print(f"⚠️ Position Drift Detected ({len(drift_report.drifts)} items):")
-
         for line in drift_report.summary_lines:
-
             print(f"  {line}")
-
     else:
-
         print("✅ No Position Drift: Broker positions match local database 100%.")
 
+    # In Live Auto-Data Mode (SHADOW_MODE=False), synchronize positions directly
+    if not SHADOW_MODE and not aggregated_positions.empty:
+        print("🔄 Live Auto-Data Mode: Synchronizing real broker positions to portfolio database & Supabase Cloud...")
+        sync_res = sync_broker_positions_to_db(aggregated_positions, shadow_mode=False)
+        print(f"✅ Positions Synced: {len(sync_res.get('updated', []))} active positions updated, {len(sync_res.get('closed', []))} closed.")
+        # Re-fetch active positions for subsequent calculations
+        db_pos_df = get_positions()
 
-
-        # Ingest executed orders from API
-    filled_orders = broker_mgr.get_all_filled_orders(start_date=date_str)
+    # Ingest executed orders from API (85-day lookback window)
+    filled_orders = broker_mgr.get_all_filled_orders(start_date=None)
     num_synced, synced_list = ingest_broker_orders(filled_orders, shadow_mode=SHADOW_MODE)
     print(f"Broker Order Ingestion: {num_synced} new order(s) processed (Shadow Mode: {SHADOW_MODE}).")
 

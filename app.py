@@ -330,10 +330,44 @@ try:
 except Exception as err:
     st.sidebar.caption(f"📡 行情对齐监控: `{err}`")
 
+def trigger_github_sync():
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        try:
+            token = st.secrets.get("GITHUB_TOKEN")
+        except Exception:
+            pass
+    if token:
+        try:
+            import httpx
+            repo = "xunxuntj/US_Stock_Trading_Signal_Dashboard"
+            url = f"https://api.github.com/repos/{repo}/actions/workflows/v3_daily_scan.yml/dispatches"
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            r = httpx.post(url, json={"ref": "main"}, headers=headers, timeout=10.0)
+            return r.status_code in [200, 204]
+        except Exception:
+            pass
+    try:
+        import subprocess
+        res = subprocess.run(["gh", "workflow", "run", "v3_daily_scan.yml"], capture_output=True, timeout=10)
+        return res.returncode == 0
+    except Exception:
+        return False
+
 st.sidebar.divider()
 
 # Sidebar Section 1: US Live Trade Logging
 st.sidebar.markdown("### 🇺🇸 美股交易管理 (US Orders)")
+if st.sidebar.button("🔄 立即从券商接口同步订单与持仓", help="向后台发送指令，从老虎证券与嘉信理财拉取最近 85 天成交明细并更新真实持仓"):
+    success = trigger_github_sync()
+    if success:
+        st.sidebar.success("🚀 已触发后台同步！系统正在拉取券商订单与持仓，约需 1~2 分钟，完成后请刷新页面。")
+    else:
+        st.sidebar.info("💡 后台定时任务已就绪（每个交易日美东 16:30 与 01:30 定时对账），也可在 GitHub Actions 页面手动运行 v3 工作流。")
+
 with st.sidebar.expander("🛠️ 应急手工补单 (常规由后台自动从券商拉取)", expanded=False):
     st.caption("💡 **后台全自动订单已开启**：券商成交的买卖单将在每日盘后由系统自动同步入库，平时无需在此手工录入。仅在券商接口断连或特殊调账时使用。")
     with st.form("us_trade_form"):

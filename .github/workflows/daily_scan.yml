@@ -30,13 +30,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download Live Market Data & Run Scan
+      - name: Execute v3.0 Pipeline (Technical Guard + Multi-Broker + Proactive Push)
         env:
+          SHADOW_MODE: ${{ secrets.SHADOW_MODE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_PROXY_URL: ${{ secrets.TELEGRAM_PROXY_URL }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TIGER_ID: ${{ secrets.TIGER_ID }}
+          TIGER_ACCOUNT: ${{ secrets.TIGER_ACCOUNT }}
+          TIGER_PRIVATE_KEY_PATH: ${{ secrets.TIGER_PRIVATE_KEY_PATH }}
+          SCHWAB_APP_KEY: ${{ secrets.SCHWAB_APP_KEY }}
+          SCHWAB_APP_SECRET: ${{ secrets.SCHWAB_APP_SECRET }}
+          SCHWAB_REFRESH_TOKEN: ${{ secrets.SCHWAB_REFRESH_TOKEN }}
+          SCHWAB_ACCOUNT_NUMBER: ${{ secrets.SCHWAB_ACCOUNT_NUMBER }}
         run: |
           python download_data.py
-          python run_daily_scan.py
+          python run_v3_scan.py
 
       - name: Commit & Push Updated Database / Signals
         env:

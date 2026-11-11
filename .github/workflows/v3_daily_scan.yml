@@ -64,13 +64,6 @@ jobs:
         run: |
           python run_v3_scan.py
 
-      - name: Run Legacy Scan (Keep Streamlit & Legacy DB 100% In Sync)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          python run_daily_scan.py
-
       - name: Commit & Push Updated Database / Signals
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
