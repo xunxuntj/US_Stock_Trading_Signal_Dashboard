@@ -146,17 +146,18 @@ def ingest_broker_orders(
     In shadow mode, detects new orders and verifies them without mutating live trades.
     """
     init_reconcile_tables(conn)
-    close_at_end = False
-    if conn is None:
-        conn = sqlite3.connect(DB_PATH)
-        close_at_end = True
+    
+    # Query already-synced orders upfront to avoid long-lived lock
+    c_check = sqlite3.connect(DB_PATH, timeout=30.0)
+    cur_check = c_check.cursor()
+    cur_check.execute("SELECT order_id FROM broker_synced_orders")
+    synced_order_ids = set(str(row[0]) for row in cur_check.fetchall())
+    c_check.close()
 
-    cursor = conn.cursor()
     new_orders: List[Dict[str, Any]] = []
 
     for o in orders:
-        cursor.execute("SELECT 1 FROM broker_synced_orders WHERE order_id = ?", (o.order_id,))
-        if cursor.fetchone() is not None:
+        if str(o.order_id) in synced_order_ids:
             continue  # Already ingested
 
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -190,9 +191,13 @@ def ingest_broker_orders(
         if not shadow_mode:
             trade_date = o.filled_at[:10] if len(o.filled_at) >= 10 else datetime.date.today().strftime("%Y-%m-%d")
             
-            # 1. Update positions table (SQLite + Supabase Cloud)
-            cursor.execute("SELECT shares, cost_basis FROM positions WHERE ticker = ?", (o.ticker,))
-            pos_row = cursor.fetchone()
+            # Fetch current position for cost/pnl calculation
+            c_pos = sqlite3.connect(DB_PATH, timeout=30.0)
+            cur_pos = c_pos.cursor()
+            cur_pos.execute("SELECT shares, cost_basis FROM positions WHERE ticker = ?", (o.ticker,))
+            pos_row = cur_pos.fetchone()
+            c_pos.close()
+
             curr_shares = float(pos_row[0]) if pos_row else 0.0
             curr_cost = float(pos_row[1]) if pos_row else o.price
 
@@ -207,7 +212,7 @@ def ingest_broker_orders(
                 trade_pnl = round((o.price - curr_cost) * o.shares - o.fee, 2)
                 update_position(o.ticker, new_shares, curr_cost if new_shares > 0 else 0.0, layer_norm)
 
-            # 2. Record trade into trades table (SQLite + Supabase Cloud)
+            # Record trade into trades table (SQLite + Supabase Cloud)
             record_trade(
                 date_str=trade_date,
                 ticker=o.ticker,
@@ -222,21 +227,17 @@ def ingest_broker_orders(
                 category=category,
                 is_strategy=is_strat
             )
-            cursor.execute("SELECT last_insert_rowid()")
-            last_id_row = cursor.fetchone()
-            trade_id = last_id_row[0] if last_id_row else None
 
-            # 3. Mark in broker_synced_orders for idempotency
-            cursor.execute("""
-            INSERT INTO broker_synced_orders (order_id, broker, account_id, ticker, action, shares, price, total_value, fee, filled_at, synced_at, trade_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (o.order_id, o.broker.value, o.account_id, o.ticker, o.action, o.shares, o.price, o.total_value, o.fee, o.filled_at, now_str, trade_id))
-
-    if not shadow_mode:
-        conn.commit()
-
-    if close_at_end:
-        conn.close()
+            # Mark in broker_synced_orders for idempotency
+            c_mark = sqlite3.connect(DB_PATH, timeout=30.0)
+            cur_mark = c_mark.cursor()
+            cur_mark.execute("""
+            INSERT INTO broker_synced_orders (order_id, broker, account_id, ticker, action, shares, price, total_value, fee, filled_at, synced_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (o.order_id, o.broker.value, o.account_id, o.ticker, o.action, o.shares, o.price, o.total_value, o.fee, o.filled_at, now_str))
+            c_mark.commit()
+            c_mark.close()
+            synced_order_ids.add(str(o.order_id))
 
     return len(new_orders), new_orders
 
