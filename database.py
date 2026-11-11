@@ -35,6 +35,10 @@ def init_db():
         updated_at TEXT NOT NULL
     )
     """)
+    try:
+        cursor.execute("ALTER TABLE positions ADD COLUMN account TEXT DEFAULT ''")
+    except Exception:
+        pass
     
     # 2. Trades History Table
     cursor.execute("""
@@ -254,18 +258,37 @@ def fetch_supabase_df(table_name, select="*", order=None):
     return None
 
 def get_positions():
+    def _ensure_account(df):
+        if df is None or df.empty:
+            return df
+        if 'account' not in df.columns:
+            df['account'] = ''
+        def _assign_acc(row):
+            acc = str(row.get('account') or '').strip()
+            if acc:
+                return acc
+            t = str(row.get('ticker') or '').upper().strip()
+            if t == 'NVDA':
+                return '老虎证券 - 环球账户 (U9959007)'
+            return '老虎证券 - 综合账户 (638812)'
+        df['account'] = df.apply(_assign_acc, axis=1)
+        return df
+
     df_cloud = fetch_supabase_df("positions", order="ticker.asc")
     if df_cloud is not None and not df_cloud.empty:
         if 'shares' in df_cloud.columns:
             df_cloud['shares'] = pd.to_numeric(df_cloud['shares'], errors='coerce')
             df_cloud = df_cloud[df_cloud['shares'] > 0.00001].copy()
-        return df_cloud
+        return _ensure_account(df_cloud)
     conn = get_connection()
-    df = pd.read_sql_query("SELECT * FROM positions WHERE shares > 0.00001", conn)
+    try:
+        df = pd.read_sql_query("SELECT * FROM positions WHERE shares > 0.00001", conn)
+    except Exception:
+        df = pd.DataFrame()
     conn.close()
-    return df
+    return _ensure_account(df)
 
-def update_position(ticker, shares, cost_basis, layer):
+def update_position(ticker, shares, cost_basis, layer, account=""):
     conn = get_connection()
     cursor = conn.cursor()
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -273,14 +296,15 @@ def update_position(ticker, shares, cost_basis, layer):
         cursor.execute("DELETE FROM positions WHERE ticker = ?", (ticker,))
     else:
         cursor.execute("""
-        INSERT INTO positions (ticker, shares, cost_basis, layer, updated_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO positions (ticker, shares, cost_basis, layer, updated_at, account)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(ticker) DO UPDATE SET
             shares = excluded.shares,
             cost_basis = excluded.cost_basis,
             layer = excluded.layer,
-            updated_at = excluded.updated_at
-        """, (ticker, shares, cost_basis, layer, now_str))
+            updated_at = excluded.updated_at,
+            account = excluded.account
+        """, (ticker, shares, cost_basis, layer, now_str, account))
     conn.commit()
     conn.close()
 
@@ -295,9 +319,14 @@ def update_position(ticker, shares, cost_basis, layer):
                 httpx.delete(f"{url}/rest/v1/positions?ticker=eq.{ticker}", headers=headers, timeout=5.0)
             else:
                 headers["Prefer"] = "resolution=merge-duplicates"
-                httpx.post(f"{url}/rest/v1/positions", json=[{
+                base_p = {
                     "ticker": ticker, "shares": float(shares), "cost_basis": float(cost_basis), "layer": layer, "updated_at": now_str
-                }], headers=headers, timeout=5.0)
+                }
+                full_p = dict(base_p)
+                full_p["account"] = str(account)
+                r = httpx.post(f"{url}/rest/v1/positions", json=[full_p], headers=headers, timeout=5.0)
+                if r.status_code >= 400:
+                    httpx.post(f"{url}/rest/v1/positions", json=[base_p], headers=headers, timeout=5.0)
         except Exception as e:
             print(f"Supabase update_position sync error: {e}")
 
@@ -415,6 +444,35 @@ def record_nav(date_str, nav, cash, jepq_val, sgov_val, trend_val,
            total_equity, strategy_equity, hk_pnl_cum, high_water_mark, drawdown_pct, source))
     conn.commit()
     conn.close()
+
+    # Cloud Sync to Supabase
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            import httpx
+            headers = {
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            }
+            payload = [{
+                "date": str(date_str),
+                "nav": float(nav),
+                "cash": float(cash),
+                "jepq_val": float(jepq_val),
+                "sgov_val": float(sgov_val),
+                "trend_val": float(trend_val),
+                "total_equity": float(total_equity),
+                "strategy_equity": float(strategy_equity),
+                "hk_pnl_cum": float(hk_pnl_cum),
+                "high_water_mark": float(high_water_mark),
+                "drawdown_pct": float(drawdown_pct),
+                "source": str(source)
+            }]
+            httpx.post(f"{url}/rest/v1/nav_history?on_conflict=date", json=payload, headers=headers, timeout=5.0)
+        except Exception as e:
+            print(f"Supabase record_nav sync error: {e}")
 
 
 def record_brokerage_nav(date_str, total_equity, hk_pnl_cum=0.0):

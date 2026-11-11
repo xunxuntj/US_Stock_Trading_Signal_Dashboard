@@ -604,6 +604,26 @@ def run_pipeline() -> Dict[str, Any]:
 
     print(f"Daily Reconcile Report Push Result: {report_res}")
 
+    # Record daily NAV to nav_history (SQLite + Supabase Cloud)
+    hwm = max(total_wealth, macro_metrics.get("high_water_mark", total_wealth))
+    dd = (total_wealth - hwm) / hwm * 100.0 if hwm > 0 else 0.0
+
+    record_nav(
+        date_str=date_str,
+        nav=strat_equity,
+        cash=cash_val,
+        jepq_val=0.0,
+        sgov_val=0.0,
+        trend_val=0.0,
+        total_equity=total_wealth,
+        strategy_equity=strat_equity,
+        hk_pnl_cum=hk_cum,
+        high_water_mark=hwm,
+        drawdown_pct=dd,
+        source="BROKER_SYNC"
+    )
+    print(f"📊 Auto-Recorded Daily NAV: total_equity=${total_wealth:,.2f}, strategy_equity=${strat_equity:,.2f}, hk_cum=${hk_cum:,.2f}")
+
 
 
     print("\n" + "=" * 70)

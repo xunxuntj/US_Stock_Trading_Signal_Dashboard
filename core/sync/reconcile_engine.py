@@ -123,10 +123,15 @@ def sync_broker_positions_to_db(
             shares = float(row.get('shares', 0.0))
             cost_basis = float(row.get('cost_basis', 0.0))
             layer = str(row.get('layer', get_canonical_layer(ticker)))
+            accounts = str(row.get('accounts', ''))
+            if not accounts and 'account' in row:
+                accounts = str(row.get('account', ''))
+            if not accounts:
+                accounts = "老虎证券 - 综合账户 (638812)"
             if shares > 0.0001:
                 broker_tickers.add(ticker)
-                update_position(ticker, shares, cost_basis, layer)
-                synced_items.append({"ticker": ticker, "shares": shares, "cost_basis": cost_basis, "layer": layer})
+                update_position(ticker, shares, cost_basis, layer, account=accounts)
+                synced_items.append({"ticker": ticker, "shares": shares, "cost_basis": cost_basis, "layer": layer, "account": accounts})
 
     # Remove positions no longer held at broker
     closed_tickers = db_tickers - broker_tickers
