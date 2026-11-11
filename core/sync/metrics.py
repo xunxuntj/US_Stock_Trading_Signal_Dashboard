@@ -121,14 +121,17 @@ def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[
         try:
             spy_df = pd.read_csv(spy_path)
             spy_df['Date'] = pd.to_datetime(spy_df['Date'])
-            spy_sub = spy_df[(spy_df['Date'] >= start_dt) & (spy_df['Date'] <= end_dt)]
+            spy_sub = spy_df[(spy_df['Date'] >= start_dt) & (spy_df['Date'] <= end_dt)].dropna(subset=['Close'])
+            spy_sub = spy_sub[spy_sub['Close'] > 0]
             if not spy_sub.empty and len(spy_sub) >= 2:
                 spy_start = float(spy_sub['Close'].iloc[0])
                 spy_end = float(spy_sub['Close'].iloc[-1])
                 spy_ret = round(((spy_end - spy_start) / spy_start) * 100.0, 2)
         except Exception:
             pass
-    alpha = round(strat_ret - spy_ret, 2)
+    if np.isnan(spy_ret):
+        spy_ret = 0.0
+    alpha = round(strat_ret - spy_ret, 2) if not np.isnan(strat_ret) else 0.0
 
     return {
         "start_date": start_dt.strftime("%Y-%m-%d"),

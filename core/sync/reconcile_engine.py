@@ -139,15 +139,58 @@ def ingest_broker_orders(
         }
         new_orders.append(order_dict)
 
+        # Auto determine classification and strategy relevance
+        layer_norm = order_dict["layer"]
+        if layer_norm in ["L1", "L2", "L0", "SGOV", "Non-Equity"]:
+            category = f"STRATEGY_{layer_norm.upper()}"
+            is_strat = 1
+        else:
+            category = "MANUAL_OVERRIDE"
+            is_strat = 0
+
+        order_dict["category"] = category
+        order_dict["is_strategy"] = is_strat
+
         if not shadow_mode:
-            # Live ingestion into trades table and sync table
             trade_date = o.filled_at[:10] if len(o.filled_at) >= 10 else datetime.date.today().strftime("%Y-%m-%d")
+            
+            # 1. Update positions table to keep local DB 100% in sync with broker execution
+            cursor.execute("SELECT shares, cost_basis FROM positions WHERE ticker = ?", (o.ticker,))
+            pos_row = cursor.fetchone()
+            curr_shares = float(pos_row[0]) if pos_row else 0.0
+            curr_cost = float(pos_row[1]) if pos_row else o.price
+
+            trade_pnl = 0.0
+            if o.action.upper() == "BUY":
+                new_shares = curr_shares + o.shares
+                new_cost = (curr_shares * curr_cost + o.total_value + o.fee) / new_shares if new_shares > 0 else o.price
+                cursor.execute("""
+                INSERT INTO positions (ticker, shares, cost_basis, layer, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(ticker) DO UPDATE SET
+                    shares = excluded.shares,
+                    cost_basis = excluded.cost_basis,
+                    layer = excluded.layer,
+                    updated_at = excluded.updated_at
+                """, (o.ticker, new_shares, new_cost, layer_norm, now_str))
+            else: # SELL
+                new_shares = max(0.0, curr_shares - o.shares)
+                trade_pnl = round((o.price - curr_cost) * o.shares - o.fee, 2)
+                if new_shares <= 0.0001:
+                    cursor.execute("DELETE FROM positions WHERE ticker = ?", (o.ticker,))
+                else:
+                    cursor.execute("""
+                    UPDATE positions SET shares = ?, updated_at = ? WHERE ticker = ?
+                    """, (new_shares, now_str, o.ticker))
+
+            # 2. Record trade into trades table with category and strategy flag
             cursor.execute("""
-            INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?)
-            """, (trade_date, o.ticker, o.action, o.shares, o.price, o.total_value, o.fee, order_dict["layer"], f"API Auto-Sync ({o.broker.value})"))
+            INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, is_strategy)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (trade_date, o.ticker, o.action.upper(), o.shares, o.price, o.total_value, o.fee, trade_pnl, layer_norm, f"API Auto-Sync ({o.broker.value})", category, is_strat))
             trade_id = cursor.lastrowid
 
+            # 3. Mark in broker_synced_orders for idempotency
             cursor.execute("""
             INSERT INTO broker_synced_orders (order_id, broker, account_id, ticker, action, shares, price, total_value, fee, filled_at, synced_at, trade_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

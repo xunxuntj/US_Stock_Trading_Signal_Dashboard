@@ -26,7 +26,8 @@ from database import (
     execute_live_us_trade, record_cash_transaction, get_cash_transactions,
     record_brokerage_nav, get_hk_ipo_trades_history, record_hk_ipo_trade,
     get_latest_kids_returns, record_kids_cash_transaction,
-    get_kids_cash_ledger, get_kids_account_summary
+    get_kids_cash_ledger, get_kids_account_summary,
+    update_trade_classification
 )
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
@@ -305,35 +306,37 @@ except Exception as err:
 st.sidebar.divider()
 
 # Sidebar Section 1: US Live Trade Logging
-st.sidebar.markdown("### 🇺🇸 美股实盘交易登记 (US Trade Log)")
-with st.sidebar.form("us_trade_form"):
-    t_date = st.date_input("交易日期", datetime.date.today())
-    t_ticker = st.selectbox("交易标的", ["BITO", "SOXX", "SPY", "QQQ", "QLD", "GLD", "TLT", "DBC", "JEPQ", "SGOV", "QUAL", "NVDA"])
-    t_action = st.selectbox("买卖方向", ["BUY (买入)", "SELL (卖出)"])
-    t_price = st.number_input("成交单价 ($/股)", value=100.0, step=0.01, format="%.4f")
-    t_shares = st.number_input("成交数量 (股数 / 支持红利复投碎股)", value=10.0, step=0.0001, format="%.6f")
-    t_fee = st.number_input("总手续费 ($ USD)", value=0.0, step=0.01, format="%.2f")
-    t_reason = st.text_input("交易备注 / 原因", value="实盘手工登记 / 红利复投", help="可填写红利复投、调仓策略或交易原因")
-    t_pwd = st.text_input("授权校验密码 (可选)", type="password", value="790323", help="默认授权密码 790323 已自动填入")
+st.sidebar.markdown("### 🇺🇸 美股交易管理 (US Orders)")
+with st.sidebar.expander("🛠️ 应急手工补单 (常规由后台自动从券商拉取)", expanded=False):
+    st.caption("💡 **后台全自动订单已开启**：券商成交的买卖单将在每日盘后由系统自动同步入库，平时无需在此手工录入。仅在券商接口断连或特殊调账时使用。")
+    with st.form("us_trade_form"):
+        t_date = st.date_input("交易日期", datetime.date.today())
+        t_ticker = st.selectbox("交易标的", ["BITO", "SOXX", "SPY", "QQQ", "QLD", "GLD", "TLT", "DBC", "JEPQ", "SGOV", "QUAL", "NVDA"])
+        t_action = st.selectbox("买卖方向", ["BUY (买入)", "SELL (卖出)"])
+        t_price = st.number_input("成交单价 ($/股)", value=100.0, step=0.01, format="%.4f")
+        t_shares = st.number_input("成交数量 (股数 / 支持红利复投碎股)", value=10.0, step=0.0001, format="%.6f")
+        t_fee = st.number_input("总手续费 ($ USD)", value=0.0, step=0.01, format="%.2f")
+        t_reason = st.text_input("交易备注 / 原因", value="实盘手工登记 / 红利复投", help="可填写红利复投、调仓策略或交易原因")
+        t_pwd = st.text_input("授权校验密码 (可选)", type="password", value="790323", help="默认授权密码 790323 已自动填入")
+        
+        us_submitted = st.form_submit_button("🔒 确认提交美股交易")
+        
+        if us_submitted:
+            pwd_hash = hashlib.sha256(t_pwd.encode('utf-8')).hexdigest() if t_pwd else HK_IPO_PWD_HASH
+            if pwd_hash != HK_IPO_PWD_HASH:
+                st.sidebar.error("❌ 密码错误！默认密码为 790323。")
+            elif t_price <= 0 or t_shares <= 0:
+                st.sidebar.warning("⚠️ 价格与数量必须大于 0。")
+            else:
+                action_code = "BUY" if "BUY" in t_action else "SELL"
+                t_date_str = t_date.strftime("%Y-%m-%d")
+                layer_tag = "L0" if t_ticker == "JEPQ" else ("SGOV" if t_ticker == "SGOV" else ("L2" if t_ticker == "QLD" else ("Non-Equity" if t_ticker in ["GLD", "TLT", "DBC", "BITO"] else ("L1" if t_ticker in ["SPY", "QQQ", "SOXX"] else "TREND"))))
+                
+                execute_live_us_trade(t_date_str, t_ticker, action_code, t_price, t_shares, t_fee, layer_tag, t_reason)
+                st.cache_data.clear()
+                st.sidebar.success(f"✅ 已成功登记 {t_date_str} {action_code} {t_shares:.6f} 股 {t_ticker} (${t_price:.4f}/股)！页面数据已实时更新！")
+                st.rerun()
     
-    us_submitted = st.form_submit_button("🔒 确认提交美股交易")
-    
-    if us_submitted:
-        pwd_hash = hashlib.sha256(t_pwd.encode('utf-8')).hexdigest() if t_pwd else HK_IPO_PWD_HASH
-        if pwd_hash != HK_IPO_PWD_HASH:
-            st.sidebar.error("❌ 密码错误！默认密码为 790323。")
-        elif t_price <= 0 or t_shares <= 0:
-            st.sidebar.warning("⚠️ 价格与数量必须大于 0。")
-        else:
-            action_code = "BUY" if "BUY" in t_action else "SELL"
-            t_date_str = t_date.strftime("%Y-%m-%d")
-            layer_tag = "L0" if t_ticker == "JEPQ" else ("SGOV" if t_ticker == "SGOV" else ("L2" if t_ticker == "QLD" else ("Non-Equity" if t_ticker in ["GLD", "TLT", "DBC", "BITO"] else ("L1" if t_ticker in ["SPY", "QQQ", "SOXX"] else "TREND"))))
-            
-            execute_live_us_trade(t_date_str, t_ticker, action_code, t_price, t_shares, t_fee, layer_tag, t_reason)
-            st.cache_data.clear()
-            st.sidebar.success(f"✅ 已成功登记 {t_date_str} {action_code} {t_shares:.6f} 股 {t_ticker} (${t_price:.4f}/股)！页面数据已实时更新！")
-            st.rerun()
-
 st.sidebar.divider()
 
 # Sidebar Section 2: Single IPO Trade Entry Form
@@ -1022,42 +1025,103 @@ tab_trades, tab_nav, tab_cash, tab_stats = st.tabs([
 
 # ── Tab 1: Trades ──────────────────────────────────────────────────────────────
 with tab_trades:
-    st.markdown("#### 📋 全量交易明细 (57 笔 | 含手续费)")
+    st.markdown("#### 📋 全量交易与订单明细 (自动同步 + 策略分类管理)")
     df_trades_full = get_trades_history()
     if not df_trades_full.empty:
         df_trades_full = df_trades_full.sort_values("id", ascending=False).reset_index(drop=True)
+
+        # Ensure category & is_strategy columns
+        if "category" not in df_trades_full.columns:
+            df_trades_full["category"] = "STRATEGY"
+        if "is_strategy" not in df_trades_full.columns:
+            df_trades_full["is_strategy"] = 1
+
+        df_display_trades = df_trades_full.copy()
+        df_display_trades["策略归属"] = df_display_trades["is_strategy"].apply(lambda x: "✅ 计入策略" if int(x or 1) == 1 else "🚫 排除在外")
+
         # Rename columns for display
-        df_display_trades = df_trades_full.rename(columns={
+        df_display_trades = df_display_trades.rename(columns={
             "id": "ID", "date": "交易日期", "ticker": "标的",
             "action": "买卖", "shares": "股数", "price": "单价($)",
             "total_val": "交易金额($)", "fee": "手续费($)",
-            "pnl": "已实现盈亏($)", "layer": "层级", "reason": "备注"
+            "pnl": "已实现盈亏($)", "layer": "层级", "category": "订单分类",
+            "reason": "备注"
         })
+
         # Format numeric cols
         for col in ["单价($)", "交易金额($)", "手续费($)", "已实现盈亏($)"]:
             if col in df_display_trades.columns:
                 df_display_trades[col] = df_display_trades[col].apply(lambda x: f"{x:,.2f}" if pd.notnull(x) else "-")
         df_display_trades["股数"] = df_display_trades["股数"].apply(lambda x: f"{x:,.6f}" if pd.notnull(x) else "-")
 
-        # Color-code buy/sell
-        def color_action(val):
-            if val == "BUY":
-                return "background-color: rgba(16,185,129,0.15); color: #10B981"
-            elif val == "SELL":
-                return "background-color: rgba(239,68,68,0.15); color: #EF4444"
-            return ""
-
-        st.dataframe(df_display_trades, use_container_width=True, height=500)
+        col_order = ["ID", "交易日期", "标的", "买卖", "股数", "单价($)", "交易金额($)", "已实现盈亏($)", "层级", "订单分类", "策略归属", "备注"]
+        disp_cols = [c for c in col_order if c in df_display_trades.columns]
+        st.dataframe(df_display_trades[disp_cols], use_container_width=True, height=450)
 
         total_fee = df_trades_full["fee"].sum() if "fee" in df_trades_full.columns else 0
         total_pnl = df_trades_full["pnl"].sum()
         buy_count = len(df_trades_full[df_trades_full["action"] == "BUY"])
         sell_count = len(df_trades_full[df_trades_full["action"] == "SELL"])
+        strat_trades_count = len(df_trades_full[df_trades_full["is_strategy"] == 1])
+        non_strat_count = len(df_trades_full[df_trades_full["is_strategy"] == 0])
+
         t1c1, t1c2, t1c3, t1c4 = st.columns(4)
-        t1c1.metric("总交易笔数", f"{len(df_trades_full)} 笔")
+        t1c1.metric("总交易笔数", f"{len(df_trades_full)} 笔 (主策略 {strat_trades_count} | 独立/手工 {non_strat_count})")
         t1c2.metric("买入 / 卖出", f"{buy_count} / {sell_count}")
         t1c3.metric("累计手续费支出", f"${total_fee:,.2f}")
         t1c4.metric("累计已实现盈亏", f"${total_pnl:,.2f}", delta=f"{'↑' if total_pnl >= 0 else '↓'} 净{'' if total_pnl >= 0 else '亏'}")
+
+        # ── Order Classification & Override Management ────────────────────────
+        st.divider()
+        st.markdown("#### 🛠️ 异常订单分类与策略标记调整 (Order Classification & Override)")
+        st.caption("为准确评估策略表现，支持将特定订单（如红利复投、手工操作、特殊调账等）调整分类，或选择是否将其计入主策略绩效考核：")
+
+        trade_options = {
+            f"ID #{row['id']} | {row['date']} | {row['action']} {row['shares']}股 {row['ticker']} (${row['price']}) - [{row.get('category', 'STRATEGY')}]": row['id']
+            for _, row in df_trades_full.iterrows()
+        }
+
+        with st.expander("📝 点击展开订单属性调整面板", expanded=False):
+            selected_label = st.selectbox("选择待调整的交易订单:", list(trade_options.keys()))
+            selected_id = trade_options[selected_label]
+            target_trade = df_trades_full[df_trades_full['id'] == selected_id].iloc[0]
+
+            oc1, oc2, oc3 = st.columns(3)
+            current_cat = str(target_trade.get('category', 'STRATEGY'))
+            cat_list = [
+                "STRATEGY_L1",
+                "STRATEGY_L2",
+                "STRATEGY_L0",
+                "STRATEGY_NON_EQUITY",
+                "MANUAL_OVERRIDE",
+                "DIVIDEND_REINVEST",
+                "FEE_ADJUSTMENT"
+            ]
+            cat_default_idx = cat_list.index(current_cat) if current_cat in cat_list else 0
+            new_cat = oc1.selectbox("订单分类 (Category):", cat_list, index=cat_default_idx, help="MANUAL_OVERRIDE 用于非量化策略的手工买卖或特殊调仓")
+
+            layer_list = ["L1", "L2", "L0", "SGOV", "Non-Equity", "LEGACY", "TREND"]
+            curr_layer = str(target_trade.get('layer', 'TREND'))
+            layer_default_idx = layer_list.index(curr_layer) if curr_layer in layer_list else 0
+            new_layer = oc2.selectbox("资产层级 (Layer):", layer_list, index=layer_default_idx)
+
+            curr_is_strat = int(target_trade.get('is_strategy', 1))
+            new_is_strat_bool = oc3.radio("是否计入量化策略绩效考核:", ["✅ 计入主策略", "🚫 排除在策略外 (仅作资产归属)"], index=0 if curr_is_strat == 1 else 1)
+            new_is_strat_val = 1 if "计入" in new_is_strat_bool else 0
+
+            new_reason = st.text_input("交易备注 / 原因说明 (Reason/Notes):", value=str(target_trade.get('reason', '')))
+
+            if st.button("💾 保存订单分类修改", type="primary"):
+                update_trade_classification(
+                    trade_id=selected_id,
+                    category=new_cat,
+                    is_strategy=new_is_strat_val,
+                    layer=new_layer,
+                    reason=new_reason
+                )
+                st.cache_data.clear()
+                st.success(f"✅ 成功更新订单 ID #{selected_id}！分类为 `{new_cat}` (层级: `{new_layer}`, 计入策略: `{new_is_strat_val}`)。")
+                st.rerun()
 
 # ── Tab 2: NAV History ────────────────────────────────────────────────────────
 with tab_nav:

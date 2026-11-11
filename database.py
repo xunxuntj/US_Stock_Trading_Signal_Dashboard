@@ -1,9 +1,9 @@
 import sqlite3
 import pandas as pd
 import datetime
-from config import DB_PATH, INITIAL_CAPITAL, JEPQ_TARGET_PCT, SGOV_TARGET_PCT
-
 import os
+from typing import Optional, List, Dict, Any
+from config import DB_PATH, INITIAL_CAPITAL, JEPQ_TARGET_PCT, SGOV_TARGET_PCT
 
 def get_connection():
     return sqlite3.connect(DB_PATH)
@@ -41,6 +41,14 @@ def init_db():
     """)
     try:
         cursor.execute("ALTER TABLE trades ADD COLUMN fee REAL DEFAULT 0.0")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE trades ADD COLUMN category TEXT DEFAULT 'STRATEGY'")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE trades ADD COLUMN is_strategy INTEGER DEFAULT 1")
     except Exception:
         pass
     
@@ -280,13 +288,13 @@ def update_position(ticker, shares, cost_basis, layer):
         except Exception as e:
             print(f"Supabase update_position sync error: {e}")
 
-def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason=""):
+def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason="", category="STRATEGY", is_strategy=1):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (date_str, ticker, action, shares, price, total_val, fee, pnl, layer, reason))
+    INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, is_strategy)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (date_str, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, int(is_strategy)))
     conn.commit()
     conn.close()
 
@@ -299,12 +307,43 @@ def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pn
             httpx.post(f"{url}/rest/v1/trades", json=[{
                 "date": str(date_str), "ticker": ticker, "action": action, "shares": float(shares),
                 "price": float(price), "total_val": float(total_val), "fee": float(fee), "pnl": float(pnl),
-                "layer": layer, "reason": str(reason)
+                "layer": layer, "reason": str(reason), "category": category, "is_strategy": int(is_strategy)
             }], headers=headers, timeout=5.0)
         except Exception as e:
             print(f"Supabase record_trade sync error: {e}")
 
-def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, layer="TREND", reason="实盘手工登记"):
+def update_trade_classification(trade_id: int, category: str, is_strategy: int, layer: Optional[str] = None, reason: Optional[str] = None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = ["category = ?", "is_strategy = ?"]
+    params = [category, int(is_strategy)]
+    if layer:
+        fields.append("layer = ?")
+        params.append(layer)
+    if reason is not None:
+        fields.append("reason = ?")
+        params.append(reason)
+    params.append(trade_id)
+    sql = f"UPDATE trades SET {', '.join(fields)} WHERE id = ?"
+    cursor.execute(sql, params)
+    conn.commit()
+    conn.close()
+
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            import httpx
+            headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            payload = {"category": category, "is_strategy": int(is_strategy)}
+            if layer:
+                payload["layer"] = layer
+            if reason is not None:
+                payload["reason"] = reason
+            httpx.patch(f"{url}/rest/v1/trades?id=eq.{trade_id}", json=payload, headers=headers, timeout=5.0)
+        except Exception as e:
+            print(f"Supabase update_trade_classification error: {e}")
+
+def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, layer="TREND", reason="实盘手工登记", category="STRATEGY", is_strategy=1):
     total_val = price * shares
     conn = get_connection()
     cursor = conn.cursor()
@@ -333,7 +372,7 @@ def execute_live_us_trade(date_str, ticker, action, price, shares, fee=0.0, laye
         pnl = (price - current_cost) * shares - fee
         update_position(ticker, new_shares, current_cost if new_shares > 0 else 0.0, layer)
 
-    record_trade(date_str, ticker, action.upper(), shares, price, total_val, fee, pnl, layer, reason)
+    record_trade(date_str, ticker, action.upper(), shares, price, total_val, fee, pnl, layer, reason, category=category, is_strategy=is_strategy)
 
 
 def record_nav(date_str, nav, cash, jepq_val, sgov_val, trend_val,
