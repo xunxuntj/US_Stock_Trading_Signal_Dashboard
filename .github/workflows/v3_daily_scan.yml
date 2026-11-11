@@ -47,7 +47,7 @@ jobs:
 
       - name: Execute v3.0 Pipeline (Technical Guard + Multi-Broker + Proactive Push)
         env:
-          SHADOW_MODE: ${{ secrets.SHADOW_MODE || 'true' }}
+          SHADOW_MODE: ${{ secrets.SHADOW_MODE }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_PROXY_URL: ${{ secrets.TELEGRAM_PROXY_URL }}

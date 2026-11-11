@@ -82,7 +82,7 @@ from core.notifier.dispatcher import ProactiveNotifier
 
 
 
-SHADOW_MODE = os.getenv("SHADOW_MODE", "true").lower() in ["true", "1", "yes"]
+SHADOW_MODE = os.getenv("SHADOW_MODE", "false").lower() in ["true", "1", "yes"]
 
 
 
