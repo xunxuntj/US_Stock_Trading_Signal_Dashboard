@@ -500,13 +500,16 @@ def run_pipeline() -> Dict[str, Any]:
 
 
 
-    push_res = notifier.dispatch_signal_card(
-
-        date_str, nav, s5fi_val, actions, dedup_check=True, metrics=strategy_metrics
-
-    )
-
-    print(f"Signal Card Push Result: {push_res}")
+    if actions:
+        push_res = notifier.dispatch_signal_card(
+            date_str, nav, s5fi_val, actions, dedup_check=True, metrics=strategy_metrics
+        )
+        print(f"Signal Card Push Result: {push_res}")
+        sig_summary = f"🚨 今日触发 **{len(actions)}** 笔调仓指令 (S5FI 宽度: {s5fi_val:.1f}%)"
+    else:
+        push_res = {"skipped_empty_combined_with_brief": True}
+        print("ℹ️ No new trading signals today; merging scan status into Daily Asset Brief.")
+        sig_summary = f"🟢 今日全盘无新增买卖信号 (S5FI 宽度: {s5fi_val:.1f}%)，持仓按原策略稳定运行"
 
 
 
@@ -581,48 +584,64 @@ def run_pipeline() -> Dict[str, Any]:
 
 
     report_res = notifier.dispatch_daily_report(
-
         date_str=date_str,
-
         total_equity=total_wealth,
-
         strategy_equity=strat_equity,
-
         hk_ipo_cum=hk_cum,
-
         cash=cash_val,
-
         accounts_detail=aggregated_balances["accounts"],
-
         drift_summary=drift_report.summary_lines,
-
         metrics=strategy_metrics,
-
-        macro_metrics=macro_metrics
-
+        macro_metrics=macro_metrics,
+        dedup_check=True,
+        signal_summary=sig_summary
     )
 
     print(f"Daily Reconcile Report Push Result: {report_res}")
 
-    # Record daily NAV to nav_history (SQLite + Supabase Cloud)
-    hwm = max(total_wealth, macro_metrics.get("high_water_mark", total_wealth))
-    dd = (total_wealth - hwm) / hwm * 100.0 if hwm > 0 else 0.0
+    # Data QA Circuit Breaker before writing daily NAV
+    qa_passed = True
+    try:
+        c_qa = sqlite3.connect(DB_PATH)
+        cur_qa = c_qa.cursor()
+        cur_qa.execute("SELECT total_equity FROM nav_history WHERE date < ? AND total_equity > 0 ORDER BY date DESC LIMIT 1", (date_str,))
+        prev_row = cur_qa.fetchone()
+        c_qa.close()
+        prev_eq = float(prev_row[0]) if prev_row else 0.0
+        if total_wealth <= 0:
+            qa_passed = False
+            qa_msg = f"今日净值核算异常 (<= 0): total_wealth=${total_wealth:,.2f}，已触发 QA 熔断阻止写入数据库。"
+            print(f"🛑 [Data QA Blocked] {qa_msg}")
+            notifier.dispatch_technical_alert("数据 QA 熔断拦截：总净值异常归零", [qa_msg])
+        elif prev_eq > 0 and abs(total_wealth - prev_eq) / prev_eq > 0.30 and num_cash_synced == 0:
+            qa_passed = False
+            pct_chg = (total_wealth - prev_eq) / prev_eq * 100.0
+            qa_msg = f"今日净值较昨日 (${prev_eq:,.2f}) 异常跳变 {pct_chg:+.1f}% (${total_wealth:,.2f})，且无大额出入金记录，已触发 QA 熔断阻止脏数据入库。"
+            print(f"🛑 [Data QA Blocked] {qa_msg}")
+            notifier.dispatch_technical_alert("数据 QA 熔断拦截：单日净值波动异常", [qa_msg])
+    except Exception as qa_err:
+        print(f"⚠️ Data QA check exception (proceeding safely): {qa_err}")
 
-    record_nav(
-        date_str=date_str,
-        nav=strat_equity,
-        cash=cash_val,
-        jepq_val=0.0,
-        sgov_val=0.0,
-        trend_val=0.0,
-        total_equity=total_wealth,
-        strategy_equity=strat_equity,
-        hk_pnl_cum=hk_cum,
-        high_water_mark=hwm,
-        drawdown_pct=dd,
-        source="BROKER_SYNC"
-    )
-    print(f"📊 Auto-Recorded Daily NAV: total_equity=${total_wealth:,.2f}, strategy_equity=${strat_equity:,.2f}, hk_cum=${hk_cum:,.2f}")
+    # Record daily NAV to nav_history (SQLite + Supabase Cloud)
+    if qa_passed:
+        hwm = max(total_wealth, macro_metrics.get("high_water_mark", total_wealth))
+        dd = (total_wealth - hwm) / hwm * 100.0 if hwm > 0 else 0.0
+
+        record_nav(
+            date_str=date_str,
+            nav=strat_equity,
+            cash=cash_val,
+            jepq_val=0.0,
+            sgov_val=0.0,
+            trend_val=0.0,
+            total_equity=total_wealth,
+            strategy_equity=strat_equity,
+            hk_pnl_cum=hk_cum,
+            high_water_mark=hwm,
+            drawdown_pct=dd,
+            source="BROKER_SYNC"
+        )
+        print(f"📊 Auto-Recorded Daily NAV: total_equity=${total_wealth:,.2f}, strategy_equity=${strat_equity:,.2f}, hk_cum=${hk_cum:,.2f}")
 
 
 

@@ -101,7 +101,6 @@ class ProactiveNotifier:
                 a = act.get('action', '')
                 if not is_signal_already_sent(date_str, t, a):
                     filtered_actions.append(act)
-                    mark_signal_sent(date_str, t, a, act.get('target_val', 0.0))
         else:
             filtered_actions = actions
 
@@ -115,6 +114,12 @@ class ProactiveNotifier:
 
         tg_ok = self.telegram.send_message(text)
         fs_ok = self.feishu.send_markdown(title=title, md_content=text, color=color)
+
+        # Fallback protection: only mark sent if delivery succeeded (or neither channel configured in test/mock)
+        is_mock = (not self.telegram.is_configured()) and (not self.feishu.is_configured())
+        if dedup_check and (tg_ok or fs_ok or is_mock):
+            for act in filtered_actions:
+                mark_signal_sent(date_str, act.get('ticker', ''), act.get('action', ''), act.get('target_val', 0.0))
 
         return {"telegram": tg_ok, "feishu": fs_ok}
 
@@ -131,11 +136,20 @@ class ProactiveNotifier:
         accounts_detail: List[Dict[str, Any]],
         drift_summary: List[str],
         metrics: Optional[Dict[str, Any]] = None,
-        macro_metrics: Optional[Dict[str, Any]] = None
+        macro_metrics: Optional[Dict[str, Any]] = None,
+        dedup_check: bool = False,
+        signal_summary: Optional[str] = None
     ) -> Dict[str, bool]:
+        if dedup_check and not drift_summary:
+            if is_signal_already_sent(date_str, "SYSTEM_BRIEF", "DAILY_REPORT"):
+                print(f"[Notifier] Daily Asset Brief already dispatched for {date_str} and zero position drift, staying silent.")
+                return {"telegram": False, "feishu": False, "skipped_duplicate": True}
+
         report_total = macro_metrics.get("total_consolidated_equity", total_equity) if macro_metrics else total_equity
 
         text = f"🏦 **【多券商统一对账与家庭资产总研报 - {date_str}】**\n\n"
+        if signal_summary:
+            text += f"📡 **今日信号巡检**: {signal_summary}\n\n"
 
         # ---------------------------------------------------------------------
         # LAYER 1: 家庭全账户宏观大账本 (Family Wealth Macro Ledger)
@@ -244,6 +258,8 @@ class ProactiveNotifier:
         title = f"🏦 每日资产对账报告: ${report_total:,.2f}"
         tg_ok = self.telegram.send_message(text)
         fs_ok = self.feishu.send_markdown(title=title, md_content=text, color="blue")
+        if dedup_check and (tg_ok or fs_ok) and not drift_summary:
+            mark_signal_sent(date_str, "SYSTEM_BRIEF", "DAILY_REPORT", report_total)
         return {"telegram": tg_ok, "feishu": fs_ok}
 
     # -------------------------------------------------------------------------

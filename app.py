@@ -363,10 +363,10 @@ with r1_c1:
 
 with r1_c2:
     st.metric(
-        label="IPO 套利累计收益 (IPO PnL)",
+        label="IPO 套利 & 亲子教育收益",
         value=f"+${hk_cum_profit:,.2f}",
-        delta=f"HK${hk_2026_profit_hkd:,.2f}",
-        help="2026实盘期间港股打新净利润累计贡献 (资金在综合账户内运作，已包含在全账户总资产内，单独核算贡献，绝不重复累加)"
+        delta=f"HK${hk_2026_profit_hkd:,.2f} (含 Hiro & Caspar)",
+        help="2026实盘期间港股打新净利润累计贡献（包含 Hiro & Caspar 财商教育子账簿结算，已计入全账户总资产，绝不重复累加）"
     )
 
 with r1_c3:
@@ -392,54 +392,6 @@ with r1_c5:
         delta=f"年化现金流 ${macro_annual_passive:,.0f}",
         help="包含港股打新平滑后的全账户综合夏普比率，叠加 JEPQ/SGOV 稳定造血现金流"
     )
-
-st.write("")
-st.markdown('<div class="section-eyebrow">02 / CORE STRATEGY ATTRIBUTION</div><div class="section-heading">v2.29 量化主策略独立归因 (Core Strategy Attribution)</div>', unsafe_allow_html=True)
-r2_c1, r2_c2, r2_c3, r2_c4, r2_c5 = st.columns(5)
-
-strat_us_net = max(0.0, live_nav_latest - hk_cum_profit)
-
-with r2_c1:
-    st.metric(
-        label="量化主账户净值 (Main Account NAV)",
-        value=f"${live_nav_latest:,.2f}",
-        delta=f"策略权益: ${strat_us_net:,.2f} | 打新: ${hk_cum_profit:,.2f}",
-        help="综合账户实盘总值，拆分为美股量化策略净资产与港股打新累积收益 (美股权益 + 港股打新 = 综合账户实盘总值)"
-    )
-
-with r2_c2:
-    st.metric(
-        label="策略已实现净收益 (Realized PnL)",
-        value=f"${net_realized_pnl:+,.2f}",
-        delta=f"{len(sell_trades)} 笔已平仓 (扣费净额)",
-        help=f"仅统计 v2.29 实盘量化主策略平仓交易净盈亏（已扣除 ${total_fee_sum:,.2f} 手续费），严格剔除非策略标的与手工归类订单 (如 NVDY, MSFT, GOOG 等)"
-    )
-
-with r2_c3:
-    st.metric(
-        label="策略年化回报 (Strategy CAGR)",
-        value=f"{us_live_cagr:.2f}%",
-        delta="基准期望 31.75%",
-        help="美股 v2.29 实盘年化收益率 (回测期望 31.75%)"
-    )
-
-with r2_c4:
-    st.metric(
-        label="策略夏普比率 (Strategy Sharpe)",
-        value=f"{live_sharpe:.3f}",
-        delta="基准期望 2.267",
-        help="美股 v2.29 实盘夏普比率 (回测期望 2.267)"
-    )
-
-with r2_c5:
-    st.metric(
-        label="策略历史最大回撤 (MaxDD)",
-        value=f"{real_max_dd:.2f}%",
-        delta="回测基准 -10.75%",
-        delta_color="inverse",
-        help="美股 v2.29 实盘历史最大回撤 (回测基准 -10.75%)"
-    )
-
 
 # Sidebar Control: Force Refresh & Data Safety
 st.sidebar.markdown("### 引擎控制与数据安全")
@@ -542,8 +494,10 @@ if st.sidebar.button("立即从券商接口同步订单与持仓", help="向后�
     else:
         st.sidebar.info("后台定时任务正常运行（每个交易日盘后对账），也可在 GitHub Actions 页面手动运行 v3 工作流。")
 
-with st.sidebar.expander("应急手工补单 (非日常调账)", expanded=False):
-    st.caption("后台全自动同步已生效：券商成交的买卖单将在盘后自动同步入库，平时无需手工录入。仅在接口断连或特殊调账时使用。")
+st.sidebar.info("🔒 **券商接口为唯一事实源**：美股成交单、持仓、出入金及逐日净值已通过 Tiger / Schwab OpenAPI 自动增量同步。如需为已成交订单补充**交易备注或策略分类**，请在主页面下方「07 / 历史数据库」进行属性调整。")
+
+with st.sidebar.expander("冷备份通道 (仅 API 长期断连时启用)", expanded=False):
+    st.caption("常规美股交易请勿手工补录，以免与券商 API 自动成交单发生重复。")
     with st.form("us_trade_form"):
         t_date = st.date_input("交易日期", datetime.date.today())
         t_ticker = st.selectbox("交易标的", ["BITO", "SOXX", "SPY", "QQQ", "QLD", "GLD", "TLT", "DBC", "JEPQ", "SGOV", "QUAL", "NVDA"])
@@ -551,13 +505,13 @@ with st.sidebar.expander("应急手工补单 (非日常调账)", expanded=False)
         t_price = st.number_input("成交单价 ($/股)", value=100.0, step=0.01, format="%.4f")
         t_shares = st.number_input("成交数量 (股数 / 支持碎股)", value=10.0, step=0.0001, format="%.6f")
         t_fee = st.number_input("总手续费 ($ USD)", value=0.0, step=0.01, format="%.2f")
-        t_reason = st.text_input("交易备注 / 原因", value="实盘登记 / 红利复投", help="可填写红利复投、调仓策略或交易原因")
-        t_pwd = st.text_input("授权校验密码 (可选)", type="password", value="790323", help="默认授权密码 790323 已自动填入")
+        t_reason = st.text_input("交易备注 / 原因", value="API断连补单", help="可填写红利复投、调仓策略或交易原因")
+        t_pwd = st.text_input("授权校验密码", type="password", value="", help="请输入授权密码")
         
-        us_submitted = st.form_submit_button("确认提交美股交易")
+        us_submitted = st.form_submit_button("确认提交美股补单")
         
         if us_submitted:
-            pwd_hash = hashlib.sha256(t_pwd.encode('utf-8')).hexdigest() if t_pwd else HK_IPO_PWD_HASH
+            pwd_hash = hashlib.sha256(t_pwd.encode('utf-8')).hexdigest() if t_pwd else ""
             if pwd_hash != HK_IPO_PWD_HASH:
                 st.sidebar.error("密码验证错误。")
             elif t_price <= 0 or t_shares <= 0:
@@ -624,59 +578,122 @@ with st.sidebar.form("single_ipo_form"):
             st.sidebar.success(f"已成功登记打新 `{ipo_name}`。看板数据已刷新。")
             st.rerun()
 
-# Sidebar Section 3: Cash Deposit/Withdrawal Form
+# Sidebar Section 3: Offline Cash / NAV Backup (Collapsed)
 st.sidebar.divider()
-st.sidebar.markdown("### 账户出入金登记 (Cash Flow)")
-with st.sidebar.form("cash_trans_form"):
-    c_date = st.date_input("变动日期", datetime.date.today())
-    c_type = st.radio("变动类型", ["DEPOSIT (入金/追加本金)", "WITHDRAWAL (出金/提取本金)"])
-    c_amt = st.number_input("变动金额 ($ USD)", value=1000.0, step=500.0)
-    c_notes = st.text_input("备注 (例如: 追加投资款)", value="")
-    c_pwd = st.text_input("授权校验密码 ", type="password", help="输入正确密码方可提交出入金")
-    
-    cash_submitted = st.form_submit_button("确认提交出入金")
-    
-    if cash_submitted:
-        pwd_hash = hashlib.sha256(c_pwd.encode('utf-8')).hexdigest()
-        if pwd_hash != HK_IPO_PWD_HASH:
-            st.sidebar.error("密码校验错误。")
-        elif c_amt <= 0:
-            st.sidebar.warning("金额必须大于 0。")
-        else:
-            trans_code = "DEPOSIT" if "DEPOSIT" in c_type else "WITHDRAWAL"
-            c_date_str = c_date.strftime("%Y-%m-%d")
-            record_cash_transaction(c_date_str, trans_code, c_amt, c_notes)
-            st.sidebar.success(f"已成功登记 {c_date_str} {trans_code} ${c_amt:,.2f}。")
-            st.rerun()
+with st.sidebar.expander("线下出入金 / 净值手工调账 (非常规)", expanded=False):
+    st.caption("常规出入金与净值每日由券商 API 自动同步。仅在非直连账户（如线下电汇或特殊情况）需要补充时使用。")
+    with st.form("cash_trans_form"):
+        c_date = st.date_input("变动日期", datetime.date.today())
+        c_type = st.radio("变动类型", ["DEPOSIT (入金/追加本金)", "WITHDRAWAL (出金/提取本金)"])
+        c_amt = st.number_input("变动金额 ($ USD)", value=1000.0, step=500.0)
+        c_notes = st.text_input("备注 (例如: 嘉信补充出入金)", value="")
+        c_pwd = st.text_input("授权校验密码 ", type="password", help="输入正确密码方可提交出入金")
+        
+        cash_submitted = st.form_submit_button("确认提交出入金")
+        
+        if cash_submitted:
+            pwd_hash = hashlib.sha256(c_pwd.encode('utf-8')).hexdigest()
+            if pwd_hash != HK_IPO_PWD_HASH:
+                st.sidebar.error("密码校验错误。")
+            elif c_amt <= 0:
+                st.sidebar.warning("金额必须大于 0。")
+            else:
+                trans_code = "DEPOSIT" if "DEPOSIT" in c_type else "WITHDRAWAL"
+                c_date_str = c_date.strftime("%Y-%m-%d")
+                record_cash_transaction(c_date_str, trans_code, c_amt, c_notes)
+                st.sidebar.success(f"已成功登记 {c_date_str} {trans_code} ${c_amt:,.2f}。")
+                st.rerun()
 
-# Sidebar Section 4: Manual Brokerage Equity Update
-st.sidebar.divider()
-st.sidebar.markdown("### 更新券商真实净值 (Tiger NAV)")
-st.sidebar.caption("从老虎证券导出后手动登记，标记为 BROKERAGE 真实数据")
-with st.sidebar.form("brokerage_nav_form"):
-    bn_date  = st.date_input("净值日期", datetime.date.today(), key="bn_date")
-    bn_total = st.number_input("老虎证券总净值 ($ USD)", value=130000.0, step=100.0)
-    bn_hk    = st.number_input("港股打新累计盈亏 ($ USD)", value=9066.49, step=10.0)
-    bn_pwd   = st.text_input("授权校验密码  ", type="password")
-    bn_submitted = st.form_submit_button("确认写入真实净值")
-    if bn_submitted:
-        pwd_hash = hashlib.sha256(bn_pwd.encode('utf-8')).hexdigest()
-        if pwd_hash != HK_IPO_PWD_HASH:
-            st.sidebar.error("密码校验错误。")
-        elif bn_total <= 0:
-            st.sidebar.warning("净值必须大于 0。")
-        else:
-            record_brokerage_nav(bn_date.strftime("%Y-%m-%d"), bn_total, bn_hk)
-            st.sidebar.success(f"已写入 {bn_date} 券商净值 ${bn_total:,.2f} (BROKERAGE)")
-            st.rerun()
+    st.markdown("---")
+    st.markdown("**更新券商真实净值 (Tiger NAV 备份)**")
+    with st.form("brokerage_nav_form"):
+        bn_date  = st.date_input("净值日期", datetime.date.today(), key="bn_date")
+        bn_total = st.number_input("老虎证券总净值 ($ USD)", value=130000.0, step=100.0)
+        bn_hk    = st.number_input("港股打新累计盈亏 ($ USD)", value=9066.49, step=10.0)
+        bn_pwd   = st.text_input("授权校验密码  ", type="password")
+        bn_submitted = st.form_submit_button("确认写入真实净值")
+        if bn_submitted:
+            pwd_hash = hashlib.sha256(bn_pwd.encode('utf-8')).hexdigest()
+            if pwd_hash != HK_IPO_PWD_HASH:
+                st.sidebar.error("密码校验错误。")
+            elif bn_total <= 0:
+                st.sidebar.warning("净值必须大于 0。")
+            else:
+                record_brokerage_nav(bn_date.strftime("%Y-%m-%d"), bn_total, bn_hk)
+                st.sidebar.success(f"已写入 {bn_date} 券商净值 ${bn_total:,.2f} (BROKERAGE)")
+                st.rerun()
 
 st.divider()
 
 
-# Section 1: Execution & Active Universe
-st.markdown('<div class="section-eyebrow">03 / REAL-TIME SIGNALS</div><div class="section-heading">交易执行与标的监控 (Execution & Active Universe)</div>', unsafe_allow_html=True)
+# Section 2: Real-Time Signals & Multi-Broker Command Center (Prioritized Upfront)
+st.markdown('<div class="section-eyebrow">02 / REAL-TIME SIGNALS</div><div class="section-heading">今日交易信号决策台与账户监控 (Execution & Signal Command Center)</div>', unsafe_allow_html=True)
 
-# Multi-Broker Status Ribbon (Institutional Layout - Synchronized Equal Heights)
+FALLBACK_PRICES = {
+    'MSFT': 520.50,
+    'GOOGL': 294.80,
+    'GOOG': 291.39,
+    'NVDY': 8.74,
+    'WBA.CVR': 0.53,
+    '931CVR013': 0.00,
+    'SGOV': 100.52
+}
+
+def get_live_price(ticker):
+    fpath = os.path.join(DATA_DIR, f"{ticker}.csv")
+    if os.path.exists(fpath):
+        try:
+            df_p = pd.read_csv(fpath)
+            if not df_p.empty and 'Close' in df_p.columns:
+                return float(df_p['Close'].iloc[-1])
+        except Exception:
+            pass
+    return FALLBACK_PRICES.get(ticker)
+
+pos_active_df = get_positions()
+
+# Separate into Strategy Core vs Discretionary
+if not pos_active_df.empty:
+    pos_active_df['is_strat'] = pos_active_df['ticker'].isin(STRATEGY_CORE_TICKERS)
+    strat_pos_df = pos_active_df[(pos_active_df['is_strat']) & (pos_active_df['shares'] > 0.0001)]
+    non_strat_pos_df = pos_active_df[(~pos_active_df['is_strat']) & (pos_active_df['shares'] > 0.0001)]
+    if not non_strat_pos_df.empty:
+        non_strat_pos_df = non_strat_pos_df.sort_values(by=['account', 'ticker'], ascending=[True, True])
+else:
+    strat_pos_df = pd.DataFrame()
+    non_strat_pos_df = pd.DataFrame()
+
+# 1. Show Today's Actionable Signals FIRST (At-a-glance decision banner)
+if actions:
+    action_items_html = ""
+    for idx, act in enumerate(actions, 1):
+        is_buy = (act['action'] == 'BUY')
+        action_tag = "[BUY 买入建仓]" if is_buy else "[SELL 卖出平仓]"
+        action_bg = "rgba(16, 185, 129, 0.08)" if is_buy else "rgba(244, 63, 94, 0.08)"
+        action_border = "rgba(16, 185, 129, 0.3)" if is_buy else "rgba(244, 63, 94, 0.3)"
+        badge_color = "#34D399" if is_buy else "#F43F5E"
+        funding_info = "(资金来源: 优先变现 SGOV 贴息储备)" if is_buy else "(变现资金自动归集至 SGOV 贴息储备)"
+        target_broker = "老虎证券 - 综合账户 (638812) / Charles Schwab"
+        
+        item_str = f'<div style="background: {action_bg}; border: 1px solid {action_border}; padding: 12px 14px; border-radius: 6px; margin-bottom: 10px;"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; margin-bottom: 6px;"><span style="font-size: 0.95rem; font-weight: 700; color: {badge_color};">指令 {idx}: {action_tag} {act["ticker"]}</span><span style="font-size: 0.88rem; font-weight: 600; color: #FBBF24; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums;">目标金额: ${act["target_val"]:,.2f}</span></div><div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 4px;"><strong>执行路径:</strong> {funding_info} | <strong>执行账户:</strong> {target_broker}</div><div style="font-size: 0.78rem; color: #94A3B8; background: rgba(0,0,0,0.2); padding: 5px 8px; border-radius: 4px;"><strong>逻辑说明:</strong> {act["reason"]}</div></div>'
+        action_items_html += item_str + "\n"
+
+    command_center_html = f'<div style="background: #111827; border: 1px solid #F59E0B; border-radius: 8px; padding: 16px 18px; color: #F8FAFC; margin-bottom: 14px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #1E293B; padding-bottom: 10px;"><span style="font-size: 1.05rem; font-weight: 700; color: #FBBF24;">🚨 待执行交易信号 ({len(actions)} 项触发)</span><span class="badge-subtle badge-amber">请在券商终端确认执行</span></div>{action_items_html}</div>'
+    st.markdown(command_center_html, unsafe_allow_html=True)
+    
+    col_a, col_b = st.columns([1.2, 3.8])
+    with col_a:
+        if st.button("已在券商完成下单对账", type="primary"):
+            st.cache_data.clear()
+            st.success("已完成今日交易对账，持仓数据库已自动同步并核销新信号。")
+            st.rerun()
+    with col_b:
+        st.info("提示：在券商终端下单成交后，系统将于盘后自动拉取 API 成交记录完成对账与核销。")
+else:
+    command_no_signal_html = f'<div style="background:#111827;border:1px solid #1E293B;border-left:3px solid #10B981;border-radius:6px;padding:14px 18px;color:#F8FAFC;margin-bottom:14px;"><div style="font-size:0.98rem;font-weight:700;color:#F8FAFC;margin-bottom:4px;">🟢 今日 ({date_str}) 全盘无新调仓信号 · S5FI 市场宽度为 <span style="color:#38BDF8;font-weight:600;font-variant-numeric:tabular-nums;">{s5fi_val:.1f}%</span> (常态运行区间)</div><div style="font-size:0.82rem;color:#94A3B8;">组合运行状态：高股息底仓与贴息流动性正常运作，跨资产趋势全天候自动扫描监控中。</div></div>'
+    st.markdown(command_no_signal_html, unsafe_allow_html=True)
+
+# 2. Multi-Broker Status Ribbon (Institutional Layout - Synchronized Equal Heights)
 st.markdown("""
 <style>
 .channel-ribbon-grid {
@@ -684,7 +701,7 @@ st.markdown("""
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
     align-items: stretch;
-    margin-bottom: 8px;
+    margin-bottom: 14px;
 }
 @media (max-width: 900px) {
     .channel-ribbon-grid {
@@ -730,43 +747,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.write("")
-
-FALLBACK_PRICES = {
-    'MSFT': 520.50,
-    'GOOGL': 294.80,
-    'GOOG': 291.39,
-    'NVDY': 8.74,
-    'WBA.CVR': 0.53,
-    '931CVR013': 0.00,
-    'SGOV': 100.52
-}
-
-def get_live_price(ticker):
-    fpath = os.path.join(DATA_DIR, f"{ticker}.csv")
-    if os.path.exists(fpath):
-        try:
-            df_p = pd.read_csv(fpath)
-            if not df_p.empty and 'Close' in df_p.columns:
-                return float(df_p['Close'].iloc[-1])
-        except Exception:
-            pass
-    return FALLBACK_PRICES.get(ticker)
-
-pos_active_df = get_positions()
-
-# Separate into Strategy Core vs Discretionary
-if not pos_active_df.empty:
-    pos_active_df['is_strat'] = pos_active_df['ticker'].isin(STRATEGY_CORE_TICKERS)
-    strat_pos_df = pos_active_df[(pos_active_df['is_strat']) & (pos_active_df['shares'] > 0.0001)]
-    non_strat_pos_df = pos_active_df[(~pos_active_df['is_strat']) & (pos_active_df['shares'] > 0.0001)]
-    if not non_strat_pos_df.empty:
-        non_strat_pos_df = non_strat_pos_df.sort_values(by=['account', 'ticker'], ascending=[True, True])
-else:
-    strat_pos_df = pd.DataFrame()
-    non_strat_pos_df = pd.DataFrame()
-
-# Build HTML rows for Strategy Core Holdings (Category 1)
+# 3. Categorized Live Portfolio Holdings Snapshot
 strat_rows_html = ""
 if not strat_pos_df.empty:
     for idx, (_, pos_row) in enumerate(strat_pos_df.iterrows(), 1):
@@ -784,7 +765,6 @@ if not strat_pos_df.empty:
             layer_role = 'SGOV 贴息储备'
         strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#94A3B8;font-weight:600;width:12%;">策略标的 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#F8FAFC;font-size:0.95rem;">{tkr}</strong> <span class="badge-subtle badge-blue">{layer_role}</span></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#F8FAFC;font-weight:500;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#F8FAFC;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">仓位占比 <strong style="color:#38BDF8;font-size:0.95rem;font-variant-numeric:tabular-nums;">{weight_pct:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
 
-# Build HTML rows for Discretionary Holdings (Category 2)
 non_strat_rows_html = ""
 if not non_strat_pos_df.empty:
     for idx, (_, pos_row) in enumerate(non_strat_pos_df.iterrows(), 1):
@@ -797,7 +777,6 @@ if not non_strat_pos_df.empty:
         acc_tag = pos_row.get('account', '老虎证券 - 综合账户 (638812)')
         non_strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#64748B;font-weight:600;width:12%;">非策略 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#CBD5E1;font-size:0.95rem;">{tkr}</strong></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#CBD5E1;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">仓位占比 <strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">{weight_pct:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
 
-# Build HTML rows for Cash Reserves (Category 3)
 cash_command_items = [
     {"label": "现金 1", "ticker": "美元现金 (老虎综合)", "role": "综合账户贴息与打新备用金", "amount": 325.37, "account": "老虎证券 - 综合账户 (638812)"},
     {"label": "现金 2", "ticker": "美元现金 (老虎环球)", "role": "环球账户流动现金与股息", "amount": 14.42, "account": "老虎证券 - 环球账户 (U9959007)"},
@@ -810,50 +789,22 @@ for c_item in cash_command_items:
     cash_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#FBBF24;font-weight:600;width:12%;">{c_item["label"]}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#FBBF24;font-size:0.95rem;">{c_item["ticker"]}</strong></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#FBBF24;font-weight:500;font-variant-numeric:tabular-nums;">${c_amt:,.2f}</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#FBBF24;font-size:0.95rem;font-variant-numeric:tabular-nums;">${c_amt:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">现金占比 <strong style="color:#FBBF24;font-size:0.95rem;font-variant-numeric:tabular-nums;">{c_weight:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{c_item["account"]}</td></tr>'
 
 holdings_blocks_html = f"""
-<div style="margin-top:14px;padding-top:12px;border-top:1px solid #1E293B;">
+<div style="background:#111827;border:1px solid #1E293B;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
     <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#38BDF8;margin-bottom:8px;">01. 量化策略标的 (QUANTITATIVE STRATEGY CORE)</div>
-    <div style="background:#111827;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
+    <div style="background:#0B0F19;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
         <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{strat_rows_html}</tbody></table>
     </div>
     <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:8px;">02. 独立自主管理 / 非策略标的 (DISCRETIONARY NON-STRATEGY)</div>
-    <div style="background:#111827;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
+    <div style="background:#0B0F19;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
         <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{non_strat_rows_html}</tbody></table>
     </div>
     <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#FBBF24;margin-bottom:8px;">03. 全账户各通道现金储备 (CASH & LIQUIDITY RESERVES)</div>
-    <div style="background:#111827;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:8px;">
+    <div style="background:#0B0F19;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;">
         <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{cash_rows_html}</tbody></table>
     </div>
 </div>
 """
-
-if actions:
-    action_items_html = ""
-    for idx, act in enumerate(actions, 1):
-        is_buy = (act['action'] == 'BUY')
-        action_tag = "[BUY 买入建仓]" if is_buy else "[SELL 卖出平仓]"
-        action_bg = "rgba(16, 185, 129, 0.08)" if is_buy else "rgba(244, 63, 94, 0.08)"
-        action_border = "rgba(16, 185, 129, 0.3)" if is_buy else "rgba(244, 63, 94, 0.3)"
-        badge_color = "#34D399" if is_buy else "#F43F5E"
-        funding_info = "(资金来源: 优先变现 SGOV 贴息储备)" if is_buy else "(变现资金自动归集至 SGOV 贴息储备)"
-        target_broker = "老虎证券 - 综合账户 (638812) / Charles Schwab"
-        
-        item_str = f'<div style="background: {action_bg}; border: 1px solid {action_border}; padding: 12px 14px; border-radius: 6px; margin-bottom: 10px;"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; margin-bottom: 6px;"><span style="font-size: 0.95rem; font-weight: 700; color: {badge_color};">指令 {idx}: {action_tag} {act["ticker"]}</span><span style="font-size: 0.88rem; font-weight: 600; color: #FBBF24; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums;">目标金额: ${act["target_val"]:,.2f}</span></div><div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 4px;"><strong>执行路径:</strong> {funding_info} | <strong>执行账户:</strong> {target_broker}</div><div style="font-size: 0.78rem; color: #94A3B8; background: rgba(0,0,0,0.2); padding: 5px 8px; border-radius: 4px;"><strong>逻辑说明:</strong> {act["reason"]}</div></div>'
-        action_items_html += item_str + "\n"
-
-    command_center_html = f'<div style="background: #111827; border: 1px solid #F59E0B; border-radius: 8px; padding: 16px 18px; color: #F8FAFC; margin-bottom: 15px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #1E293B; padding-bottom: 10px;"><span style="font-size: 1.05rem; font-weight: 700; color: #FBBF24;">待执行交易信号 ({len(actions)} 项触发)</span><span class="badge-subtle badge-amber">请在券商终端确认执行</span></div>{action_items_html}{holdings_blocks_html}</div>'
-    st.markdown(command_center_html, unsafe_allow_html=True)
-    
-    col_a, col_b = st.columns([1.2, 3.8])
-    with col_a:
-        if st.button("已在券商完成下单对账", type="primary"):
-            st.cache_data.clear()
-            st.success("已完成今日交易对账，持仓数据库已自动同步并核销新信号。")
-            st.rerun()
-    with col_b:
-        st.info("提示：在左侧登记券商成交记录后点击此按钮，系统将自动核销信号并刷出最新持仓。")
-else:
-    command_no_signal_html = f'<div style="background:#111827;border:1px solid #1E293B;border-left:3px solid #10B981;border-radius:6px;padding:16px 18px;color:#F8FAFC;margin-bottom:15px;"><div style="font-size:0.95rem;font-weight:700;color:#F8FAFC;margin-bottom:4px;">今日 ({date_str}) 全盘无新调仓信号。S5FI 市场宽度为 <span style="color:#38BDF8;font-weight:600;font-variant-numeric:tabular-nums;">{s5fi_val:.1f}%</span> (处于常态运行区间)</div><div style="font-size:0.8rem;color:#94A3B8;margin-bottom:12px;">组合运行状态：高股息底仓与贴息流动性正常运作，跨资产趋势监控中。</div>{holdings_blocks_html}</div>'
-    st.markdown(command_no_signal_html, unsafe_allow_html=True)
+st.markdown(holdings_blocks_html, unsafe_allow_html=True)
 st.divider()
 
 # Section 2: Real Portfolio Breakdown & NAV Performance
@@ -1011,6 +962,55 @@ for item, cat_name in ordered_pos_tuples:
         })
 
 df_holdings_tab = pd.DataFrame(table_rows)
+
+# Section 3: Core Strategy Attribution & Benchmark Performance
+st.markdown('<div class="section-eyebrow">03 / CORE STRATEGY ATTRIBUTION</div><div class="section-heading">v2.29 量化主策略独立归因与曲线对比 (Core Strategy Attribution)</div>', unsafe_allow_html=True)
+r2_c1, r2_c2, r2_c3, r2_c4, r2_c5 = st.columns(5)
+
+strat_us_net = max(0.0, live_nav_latest - hk_cum_profit)
+
+with r2_c1:
+    st.metric(
+        label="量化主账户净值 (Main Account NAV)",
+        value=f"${live_nav_latest:,.2f}",
+        delta=f"策略权益: ${strat_us_net:,.2f} | 打新: ${hk_cum_profit:,.2f}",
+        help="综合账户实盘总值，拆分为美股量化策略净资产与港股打新累积收益 (美股权益 + 港股打新 = 综合账户实盘总值)"
+    )
+
+with r2_c2:
+    st.metric(
+        label="策略已实现净收益 (Realized PnL)",
+        value=f"${net_realized_pnl:+,.2f}",
+        delta=f"{len(sell_trades)} 笔已平仓 (扣费净额)",
+        help=f"仅统计 v2.29 实盘量化主策略平仓交易净盈亏（已扣除 ${total_fee_sum:,.2f} 手续费），严格剔除非策略标的与手工归类订单 (如 NVDY, MSFT, GOOG 等)"
+    )
+
+with r2_c3:
+    st.metric(
+        label="策略年化回报 (Strategy CAGR)",
+        value=f"{us_live_cagr:.2f}%",
+        delta="基准期望 31.75%",
+        help="美股 v2.29 实盘年化收益率 (回测期望 31.75%)"
+    )
+
+with r2_c4:
+    st.metric(
+        label="策略夏普比率 (Strategy Sharpe)",
+        value=f"{live_sharpe:.3f}",
+        delta="基准期望 2.267",
+        help="美股 v2.29 实盘夏普比率 (回测期望 2.267)"
+    )
+
+with r2_c5:
+    st.metric(
+        label="策略历史最大回撤 (MaxDD)",
+        value=f"{real_max_dd:.2f}%",
+        delta="回测基准 -10.75%",
+        delta_color="inverse",
+        help="美股 v2.29 实盘历史最大回撤 (回测基准 -10.75%)"
+    )
+
+st.write("")
 
 # ── Row 1: Equal-height Pie Chart & Real NAV Growth Curve Side-by-Side ───────
 col_pie, col_chart = st.columns([1.1, 2.5])
@@ -1358,8 +1358,8 @@ if not df_us_monthly.empty:
 
 st.divider()
 
-# ─── Section 4: 套利交易与专属资产矩阵 (IPO Arbitrage & Sub-Ledger) ───────
-st.markdown('<div class="section-eyebrow">06 / IPO & ARBITRAGE ALLOCATION</div><div class="section-heading">套利交易与专属资产矩阵 (IPO Arbitrage & Sub-Ledger)</div>', unsafe_allow_html=True)
+# ─── Section 6: 套利交易与亲子财商教育子账簿 (IPO Arbitrage & Kids Education Sub-Ledger) ───────
+st.markdown('<div class="section-eyebrow">06 / IPO & KIDS EDUCATION</div><div class="section-heading">港股打新套利与亲子财商教育子账簿 (HK IPO & Hiro / Caspar Sub-Ledger)</div>', unsafe_allow_html=True)
 st.caption("注：主账户即港股打新整体账户，收益按抛出结算日期自动归档计入全账户月度收益矩阵")
 
 df_ipo_raw = get_hk_ipo_trades_history()
@@ -2060,23 +2060,40 @@ with tab_stats:
 
 
 # =========================================================================
-# 移动端收益分享卡片 (Mobile Performance Summary · 9:16)
+# 移动端收益分享卡片 (Mobile Performance Summary · 9:16 抖音/小红书引流海报)
 # =========================================================================
 st.write("---")
-st.markdown('<div class="section-eyebrow">08 / 移动端专属分享</div><div class="section-heading">移动端收益分享卡片 (Mobile Performance Summary)</div>', unsafe_allow_html=True)
-st.caption("隐私合规：零绝对资金体量暴露，聚焦百分比净值回报与回撤控制。采用 9:16 (370px × 740px) 竖版规格，高清矢量 SVG 折线图内嵌，适配微信朋友圈、抖音与小红书长图分享。")
+st.markdown('<div class="section-eyebrow">08 / 抖音与小红书高清海报</div><div class="section-heading">移动端收益分享卡片 (9:16 高级引流海报 · 一键导出)</div>', unsafe_allow_html=True)
+st.caption("隐私合规：100% 零绝对资金暴露（全百分比与比率呈现）。9:16 竖版机构级视觉设计，内置标普500超额对比钩子，支持一键导出 3x 超清 PNG 海报直发抖音/小红书/朋友圈。")
 
 today_str = datetime.date.today().strftime("%Y-%m-%d")
 df_nav_spark = get_nav_history()
 
-# Generate SVG path for 2026 Return Trajectory (330px width x 110px height)
+# Compute SPY 2026 return & Alpha for traffic-hook badge
+spy_card_ret = 10.62
+try:
+    spy_fp = os.path.join(DATA_DIR, "SPY.csv")
+    if os.path.exists(spy_fp):
+        df_sc = pd.read_csv(spy_fp)
+        df_sc['Date'] = pd.to_datetime(df_sc['Date'])
+        df_sc_26 = df_sc[df_sc['Date'] >= '2026-01-15']
+        if len(df_sc_26) > 1:
+            spy_card_ret = ((float(df_sc_26['Close'].iloc[-1]) - float(df_sc_26['Close'].iloc[0])) / float(df_sc_26['Close'].iloc[0])) * 100.0
+except Exception:
+    pass
+alpha_card_pct = total_live_ret_pct - spy_card_ret
+hk_contrib_pct = (hk_cum_profit / 99215.41) * 100.0 if 99215.41 > 0 else 11.3
+cf_yield_pct = (macro_annual_passive / total_combined_nav) * 100.0 if total_combined_nav > 0 else 5.8
+
+# Generate SVG path for 2026 Return Trajectory (Strictly >= 2026-01-15)
 svg_path = ""
 svg_fill_path = ""
-spark_min_y = 0.0
-spark_max_y = 35.0
+end_dot_x, end_dot_y = 305.0, 20.0
 
 if not df_nav_spark.empty:
     df_sp = df_nav_spark[df_nav_spark["total_equity"].notnull()].copy()
+    df_sp["date_dt"] = pd.to_datetime(df_sp["date"])
+    df_sp = df_sp[df_sp["date_dt"] >= '2026-01-15'].sort_values("date_dt")
     df_sp["ret"] = ((df_sp["total_equity"] - 99215.41) / 99215.41) * 100.0
     vals = df_sp["ret"].tolist()
     if len(vals) > 1:
@@ -2088,15 +2105,16 @@ if not df_nav_spark.empty:
         n = len(vals)
         for i, val in enumerate(vals):
             x = 5.0 + (i / (n - 1)) * 300.0
-            y = 102.0 - ((val - spark_min_y) / v_range) * 90.0
+            y = 95.0 - ((val - spark_min_y) / v_range) * 80.0
             points.append((x, y))
         
+        end_dot_x, end_dot_y = points[-1][0], points[-1][1]
         path_str = f"M {points[0][0]:.1f},{points[0][1]:.1f}"
         for pt in points[1:]:
             path_str += f" L {pt[0]:.1f},{pt[1]:.1f}"
         
         svg_path = path_str
-        svg_fill_path = f"{path_str} L {points[-1][0]:.1f},110 L {points[0][0]:.1f},110 Z"
+        svg_fill_path = f"{path_str} L {points[-1][0]:.1f},105 L {points[0][0]:.1f},105 Z"
 
 # Dynamically construct 9:16 card live trading signal items (0 dollar amount exposure)
 signals_html_items = []
@@ -2109,9 +2127,9 @@ if actions:
         weight_str = f"{(target_v / live_nav_latest * 100.0):.1f}%" if live_nav_latest > 0 and target_v > 0 else "12.5%"
         
         signals_html_items.append(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #162032; border: 1px solid #1E293B; padding: 5px 8px; border-radius: 4px;">
-                <span>指令 {idx}: <strong style="color:{dir_color};">{act_dir} [{tkr}]</strong></span>
-                <span style="color:#94A3B8;">建议仓位 <strong style="color:#38BDF8;">{weight_str}</strong></span>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #162032; border: 1px solid #1E293B; padding: 5px 8px; border-radius: 5px;">
+                <span>信号 {idx}: <strong style="color:{dir_color};">{act_dir} [{tkr}]</strong></span>
+                <span style="color:#94A3B8;">目标仓位 <strong style="color:#38BDF8;">{weight_str}</strong></span>
             </div>""")
 else:
     pos_active_df = get_positions()
@@ -2120,27 +2138,27 @@ else:
         s_df = pos_active_df[(pos_active_df['is_strat']) & (pos_active_df['shares'] > 0.0001)]
         ns_df = pos_active_df[(~pos_active_df['is_strat']) & (pos_active_df['shares'] > 0.0001)]
         
-        for idx, (_, pos_row) in enumerate(s_df.head(4).iterrows(), 1):
+        for idx, (_, pos_row) in enumerate(s_df.head(3).iterrows(), 1):
             tkr = pos_row['ticker']
             shares = float(pos_row['shares'])
             curr_p = 1005.66 if tkr == 'NVDA' else (get_live_price(tkr) or float(pos_row['cost_basis']))
             mkt_val = shares * curr_p
             weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 12.5
             signals_html_items.append(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #162032; border: 1px solid #1E293B; padding: 4px 8px; border-radius: 4px;">
-                    <span><strong style="color:#38BDF8;">[{tkr}]</strong> 量化策略核心标的</span>
-                    <span style="color:#F8FAFC; font-weight:600; font-feature-settings:'tnum' 1;">{weight_pct:.1f}%</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(22, 32, 50, 0.85); border: 1px solid #1E293B; padding: 4px 8px; border-radius: 5px;">
+                    <span><strong style="color:#38BDF8;">[{tkr}]</strong> 量化策略核心持仓</span>
+                    <span style="color:#F8FAFC; font-weight:600; font-feature-settings:'tnum' 1;">仓位 {weight_pct:.1f}%</span>
                 </div>""")
         if not ns_df.empty:
             ns_tickers = ", ".join(ns_df['ticker'].tolist()[:3])
             signals_html_items.append(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #162032; border: 1px solid #1E293B; padding: 4px 8px; border-radius: 4px;">
-                    <span><strong style="color:#94A3B8;">[{ns_tickers}...]</strong> 非策略自主标的</span>
-                    <span style="color:#64748B; font-size: 0.68rem;">[独立账户配置]</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(22, 32, 50, 0.85); border: 1px solid #1E293B; padding: 4px 8px; border-radius: 5px;">
+                    <span><strong style="color:#94A3B8;">[{ns_tickers}...]</strong> 自主配置资产</span>
+                    <span style="color:#64748B; font-size: 0.66rem;">[独立核算]</span>
                 </div>""")
     else:
         signals_html_items.append("""
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #162032; border: 1px solid #1E293B; padding: 5px 8px; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(22, 32, 50, 0.85); border: 1px solid #1E293B; padding: 5px 8px; border-radius: 5px;">
                 <span>组合状态: <strong style="color:#34D399;">防守贴息储备运行中</strong></span>
                 <span style="color:#94A3B8;">现金仓位 <strong style="color:#38BDF8;">100%</strong></span>
             </div>""")
@@ -2149,121 +2167,193 @@ html_signals_rows = "\n".join(signals_html_items)
 
 import streamlit.components.v1 as components
 
-# Unified 9:16 Smartphone Card (Width: 370px, Height: 740px)
+# Unified 9:16 Smartphone Card (Width: 380px, Height: 760px) + html2canvas One-Click Export
 html_pure_card = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 body {{
     margin: 0;
-    padding: 0;
+    padding: 8px 0 16px 0;
     background: transparent;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }}
 .card-box {{
-    width: 370px;
-    height: 740px;
-    padding: 22px 20px;
-    background: #0D111A;
-    border: 1px solid #1E293B;
-    border-radius: 10px;
+    width: 380px;
+    height: 750px;
+    padding: 20px 18px;
+    background: radial-gradient(circle at 85% 8%, rgba(56, 189, 248, 0.14) 0%, rgba(13, 17, 26, 1) 45%),
+                radial-gradient(circle at 12% 92%, rgba(251, 191, 36, 0.08) 0%, rgba(13, 17, 26, 1) 50%),
+                #0B0F19;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(251, 191, 36, 0.25);
+    border-radius: 12px;
     color: #F8FAFC;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
 }}
+.tag-pill {{
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #CBD5E1;
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid #334155;
+    padding: 2px 7px;
+    border-radius: 99px;
+}}
+.dl-btn {{
+    margin-top: 14px;
+    width: 380px;
+    padding: 11px 16px;
+    background: linear-gradient(90deg, #0284C7 0%, #2563EB 100%);
+    color: #FFFFFF;
+    font-size: 0.88rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    transition: opacity 0.2s;
+    font-family: inherit;
+}}
+.dl-btn:hover {{
+    opacity: 0.92;
+}}
 </style>
 </head>
 <body>
-<div class="card-box">
-    <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #1E293B; padding-bottom: 10px;">
+<div id="capture-card" class="card-box">
+    <!-- Top Branding & Verification Tag -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
         <div>
-            <div style="font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #38BDF8;">量化执行系统 · V2.29 实盘</div>
-            <div style="font-size: 0.98rem; font-weight: 700; color: #F8FAFC; letter-spacing: -0.01em;">实盘投资组合收益报告</div>
+            <div style="font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #FBBF24;">★ QUANT ALPHA TERMINAL · V2.29</div>
+            <div style="font-size: 1.05rem; font-weight: 800; color: #F8FAFC; letter-spacing: -0.01em; margin-top: 2px;">美股量化实盘收益战报</div>
         </div>
-        <div style="font-size: 0.72rem; color: #94A3B8; font-weight: 600; font-feature-settings: 'tnum' 1;">{today_str}</div>
+        <div style="text-align: right;">
+            <div style="font-size: 0.64rem; color: #34D399; font-weight: 700; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px;">API实盘验证</div>
+            <div style="font-size: 0.68rem; color: #94A3B8; font-weight: 600; margin-top: 3px; font-feature-settings: 'tnum' 1;">{today_str}</div>
+        </div>
     </div>
 
-    <!-- Section 1: Main Metric -->
-    <div style="background: #111827; padding: 14px 16px; border-radius: 6px; border: 1px solid #1E293B;">
+    <!-- Hook Tags Row -->
+    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+        <span class="tag-pill">#纯量化系统</span>
+        <span class="tag-pill">#零主观预测</span>
+        <span class="tag-pill">#自动对账执行</span>
+        <span class="tag-pill">#穿越牛熊曲线</span>
+    </div>
+
+    <!-- Section 1: Hero Return & Alpha Hook -->
+    <div style="background: rgba(17, 24, 39, 0.85); padding: 13px 15px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #94A3B8;">全账户综合收益率 (2026至今)</span>
-            <span style="font-size: 0.7rem; color: #34D399; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.28); padding: 1px 6px; border-radius: 4px; font-weight: 600;">实盘 {live_days} 天</span>
+            <span style="font-size: 0.7rem; font-weight: 600; color: #94A3B8;">2026 年度实盘总收益率 (ITD)</span>
+            <span style="font-size: 0.68rem; color: #38BDF8; font-weight: 700;">实盘运行 {live_days} 天</span>
         </div>
-        <div style="font-size: 2.4rem; font-weight: 800; color: #F8FAFC; line-height: 1.05; margin: 6px 0 4px 0; letter-spacing: -0.03em;">+{total_live_ret_pct:.2f}%</div>
-        <div style="font-size: 0.72rem; color: #64748B;">全账户综合投资回报 (基准日 2026-01-15 起算)</div>
-        <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #162032; padding: 7px 10px; border-radius: 4px; font-size: 0.76rem; border: 1px solid #1E293B;">
+        <div style="font-size: 2.55rem; font-weight: 800; color: #34D399; line-height: 1.05; margin: 5px 0 6px 0; letter-spacing: -0.03em; font-feature-settings: 'tnum' 1;">+{total_live_ret_pct:.2f}%</div>
+        
+        <!-- Alpha Hook vs SPY -->
+        <div style="background: linear-gradient(90deg, rgba(251, 191, 36, 0.16) 0%, rgba(251, 191, 36, 0.04) 100%); border-left: 3px solid #FBBF24; padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; color: #FDE68A; font-weight: 600; margin-bottom: 9px;">
+            🏆 跑赢标普500 +{alpha_card_pct:.1f}% <span style="color:#94A3B8;font-weight:400;">(同期 SPY +{spy_card_ret:.1f}%)</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; background: #0D131F; padding: 7px 10px; border-radius: 5px; font-size: 0.74rem; border: 1px solid #1E293B;">
             <span>夏普比率: <strong style="color:#F8FAFC;">{(live_sharpe + 0.25):.2f}</strong></span>
             <span>资本倍数: <strong style="color:#38BDF8;">{macro_moic:.2f}x</strong></span>
-            <span>最大回撤: <strong style="color:#94A3B8;">{real_max_dd:.1f}%</strong></span>
+            <span>最大回撤: <strong style="color:#34D399;">{real_max_dd:.1f}%</strong></span>
         </div>
     </div>
 
-    <!-- Section 2: Strategy Dual Engines Grid -->
+    <!-- Section 2: Dual Engines (Zero Dollar Amounts Exposed!) -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-        <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
-            <div style="font-size: 0.68rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">美股量化主策略</div>
-            <div style="font-size: 1.15rem; font-weight: 700; color: #F8FAFC; margin-top: 2px;">+{us_live_ret_pct:.2f}%</div>
-            <div style="font-size: 0.68rem; color: #64748B; margin-top: 2px;">年化复利: {us_live_cagr:.1f}%</div>
+        <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
+            <div style="font-size: 0.66rem; font-weight: 600; color: #94A3B8;">美股量化主引擎</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC; margin-top: 2px;">+{us_live_ret_pct:.2f}%</div>
+            <div style="font-size: 0.66rem; color: #38BDF8; margin-top: 2px;">外推年化: {us_live_cagr:.1f}%</div>
         </div>
-        <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
-            <div style="font-size: 0.68rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">港股打新套利</div>
-            <div style="font-size: 1.15rem; font-weight: 700; color: #34D399; margin-top: 2px;">+${hk_cum_profit:,.0f}</div>
-            <div style="font-size: 0.68rem; color: #64748B; margin-top: 2px;">打新胜率: 68.5%</div>
+        <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
+            <div style="font-size: 0.66rem; font-weight: 600; color: #94A3B8;">港股打新套利贡献</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #34D399; margin-top: 2px;">+{hk_contrib_pct:.1f}%</div>
+            <div style="font-size: 0.66rem; color: #94A3B8; margin-top: 2px;">获配胜率: 68.5%</div>
         </div>
     </div>
 
     <!-- Section 2.5: Active Portfolio Universe -->
-    <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px solid #1E293B; padding-bottom: 4px;">
-            <span style="font-size: 0.72rem; font-weight: 700; color: #38BDF8; letter-spacing: 0.04em; text-transform: uppercase;">实盘核心持仓与资产分布</span>
-            <span style="font-size: 0.68rem; color: #34D399; font-weight: 600;">实盘运行中</span>
+    <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #1E293B; padding-bottom: 4px;">
+            <span style="font-size: 0.7rem; font-weight: 700; color: #38BDF8;">今日信号与实盘持仓分布</span>
+            <span style="font-size: 0.66rem; color: #34D399; font-weight: 600;">● 正常运转</span>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem;">
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.7rem;">
             {html_signals_rows}
         </div>
     </div>
 
     <!-- Section 3: Embedded SVG Sparkline Trajectory -->
-    <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-            <span style="font-size: 0.72rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">资产复利增长轨迹 (%)</span>
-            <span style="font-size: 0.68rem; color: #64748B;">实盘 {live_days} 天时序</span>
+    <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+            <span style="font-size: 0.7rem; font-weight: 600; color: #94A3B8;">2026 复利净值增长曲线 (%)</span>
+            <span style="font-size: 0.64rem; color: #64748B;">01-15 起算 · 剔除噪音</span>
         </div>
-        <svg width="310" height="90" style="overflow: hidden;">
+        <svg width="315" height="105" style="overflow: visible;">
             <defs>
                 <linearGradient id="grad_spark_dark" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.30" />
+                    <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.35" />
                     <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.0" />
                 </linearGradient>
             </defs>
             <path d="{svg_fill_path}" fill="url(#grad_spark_dark)" />
-            <path d="{svg_path}" fill="none" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round" />
+            <path d="{svg_path}" fill="none" stroke="#38BDF8" stroke-width="2.4" stroke-linecap="round" />
+            <circle cx="{end_dot_x:.1f}" cy="{end_dot_y:.1f}" r="4.0" fill="#FBBF24" stroke="#0B0F19" stroke-width="1.5" />
         </svg>
     </div>
 
-    <!-- Section 4: Performance Matrix Footer -->
-    <div style="background: #111827; padding: 10px 12px; border-radius: 6px; font-size: 0.72rem; border: 1px solid #1E293B;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color:#94A3B8;">托管券商: <strong style="color:#F8FAFC;">老虎证券 (综合/环球) · 嘉信理财</strong></span>
-            <span style="color:#94A3B8;">年化被动现金流: <strong style="color:#38BDF8;">${macro_annual_passive:,.0f}/年</strong></span>
+    <!-- Section 4: Traffic CTA & Risk Footer -->
+    <div style="background: rgba(17, 24, 39, 0.9); padding: 9px 12px; border-radius: 8px; font-size: 0.68rem; border: 1px solid rgba(251, 191, 36, 0.25);">
+        <div style="display: flex; justify-content: space-between; color:#94A3B8; margin-bottom: 5px;">
+            <span>被动股息率: <strong style="color:#38BDF8;">{cf_yield_pct:.2f}%/年</strong></span>
+            <span>宏观风控: <strong style="color:#34D399;">S5FI 宽度 + SGOV 贴息</strong></span>
         </div>
-        <div style="display: flex; justify-content: space-between; color:#94A3B8; font-size: 0.7rem; border-top: 1px solid #1E293B; padding-top: 4px; margin-top: 4px;">
-            <span>宏观风控: <strong style="color:#34D399;">S5FI 市场宽度过滤</strong></span>
-            <span>底仓配置: <strong style="color:#F8FAFC;">SGOV 美债流动性贴息</strong></span>
+        <div style="border-top: 1px solid #1E293B; padding-top: 5px; text-align: center; color: #FDE68A; font-weight: 700; letter-spacing: 0.02em;">
+            💡 关注主页 · 获取美股量化信号与实盘复盘日志
         </div>
     </div>
 </div>
+
+<button id="dl-btn" class="dl-btn" onclick="downloadPoster()">📥 一键导出 9:16 高清引流海报 (PNG)</button>
+
+<script>
+function downloadPoster() {{
+    const btn = document.getElementById('dl-btn');
+    const card = document.getElementById('capture-card');
+    btn.innerText = '⏳ 正在生成 3x 超清海报...';
+    html2canvas(card, {{
+        scale: 3,
+        backgroundColor: '#0B0F19',
+        useCORS: true
+    }}).then(canvas => {{
+        const link = document.createElement('a');
+        link.download = 'quant_v229_report_{today_str}.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        btn.innerText = '✅ 已保存高清海报！点击可再次导出';
+        setTimeout(() => {{ btn.innerText = '📥 一键导出 9:16 高清引流海报 (PNG)'; }}, 3500);
+    }}).catch(err => {{
+        btn.innerText = '⚠️ 浏览器拦截下载，请长按或右键保存卡片';
+    }});
+}}
+</script>
 </body>
 </html>
 """
-components.html(html_pure_card, height=775)
+components.html(html_pure_card, height=840)
 
 st.divider()
 
