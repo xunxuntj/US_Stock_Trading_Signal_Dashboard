@@ -31,3 +31,4 @@ scratch/
 # Local Environment & Database Backups
 .env
 *.backup*
+*.bak*

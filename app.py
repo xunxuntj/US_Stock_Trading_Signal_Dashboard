@@ -1539,6 +1539,7 @@ with tab_trades:
             "action": "买卖", "shares": "股数", "price": "单价($)",
             "total_val": "交易金额($)", "fee": "手续费($)",
             "pnl": "已实现盈亏($)", "layer": "层级", "category": "订单分类",
+            "account": "所属账户",
             "reason": "备注"
         })
 
@@ -1546,9 +1547,9 @@ with tab_trades:
         for col in ["单价($)", "交易金额($)", "手续费($)", "已实现盈亏($)"]:
             if col in df_display_trades.columns:
                 df_display_trades[col] = df_display_trades[col].apply(lambda x: f"{x:,.2f}" if pd.notnull(x) else "-")
-        df_display_trades["股数"] = df_display_trades["股数"].apply(lambda x: f"{x:,.6f}" if pd.notnull(x) else "-")
+        df_display_trades["股数"] = df_display_trades["股数"].apply(lambda x: f"{x:,.4f}" if pd.notnull(x) else "-")
 
-        col_order = ["ID", "交易日期", "标的", "买卖", "股数", "单价($)", "交易金额($)", "已实现盈亏($)", "层级", "订单分类", "策略归属", "备注"]
+        col_order = ["ID", "交易日期", "标的", "买卖", "股数", "单价($)", "交易金额($)", "已实现盈亏($)", "手续费($)", "层级", "订单分类", "策略归属", "备注", "所属账户"]
         disp_cols = [c for c in col_order if c in df_display_trades.columns]
         st.dataframe(df_display_trades[disp_cols], use_container_width=True, height=450)
 
@@ -1626,7 +1627,8 @@ with tab_nav:
         df_nav_full = df_nav_full.sort_values("date", ascending=False).reset_index(drop=True)
 
         def source_label(s):
-            if s == 'BROKERAGE': return '[BROKERAGE] 券商真实数据'
+            if s in ['BROKER_CALIBRATED', 'BROKERAGE']: return '[BROKER] 券商官方真实数据'
+            if s == 'BROKER_SYNC': return '[LIVE_SYNC] 实时对账同步'
             if s == 'INITIAL':   return '[ANCHOR] 初始锚点'
             return '[ESTIMATED] 持仓估算'
 
@@ -1650,18 +1652,18 @@ with tab_nav:
         show_cols = [c for c in ["日期","数据来源","券商总净值($)","策略净值($)","港股累计盈亏($)","历史最高点($)","当日回撤(%)"] if c in df_nav_disp.columns]
         st.dataframe(df_nav_disp[show_cols], use_container_width=True, height=500)
 
-        brokerage_count = (df_nav_full["source"] == 'BROKERAGE').sum()
-        calc_count = (df_nav_full["source"] == 'CALCULATED').sum()
+        brokerage_count = df_nav_full["source"].isin(['BROKERAGE', 'BROKER_CALIBRATED', 'BROKER_SYNC']).sum()
+        calc_count = (~df_nav_full["source"].isin(['BROKERAGE', 'BROKER_CALIBRATED', 'BROKER_SYNC'])).sum()
         n1, n2, n3 = st.columns(3)
-        n1.metric("券商导出真实数据", f"{brokerage_count} 天")
+        n1.metric("券商官方全量真实数据", f"{brokerage_count} 天")
         n2.metric("持仓估算数据", f"{calc_count} 天")
-        n3.metric("数据起始基准日", "2026-01-15")
-        st.caption("注：BROKERAGE=老虎证券导出真实净值 | ESTIMATED=持仓×收盘价估算 | ANCHOR=初始本金锚点")
+        n3.metric("数据起始基准日", "2026-01-01 (全历史覆盖)")
+        st.caption("注：BROKER=券商官方 OpenAPI 真实净值 | LIVE_SYNC=实时对账同步 | ESTIMATED=持仓×收盘价估算")
 
         df_nav_chart = df_nav_full[df_nav_full["total_equity"].notnull()].sort_values("date")
         fig_nav_real = go.Figure()
-        df_brok = df_nav_chart[df_nav_chart["source"] == 'BROKERAGE']
-        df_calc = df_nav_chart[df_nav_chart["source"].isin(['CALCULATED', 'INITIAL'])]
+        df_brok = df_nav_chart[df_nav_chart["source"].isin(['BROKERAGE', 'BROKER_CALIBRATED', 'BROKER_SYNC'])]
+        df_calc = df_nav_chart[~df_nav_chart["source"].isin(['BROKERAGE', 'BROKER_CALIBRATED', 'BROKER_SYNC'])]
         if not df_brok.empty:
             fig_nav_real.add_trace(go.Scatter(
                 x=df_brok["date"], y=df_brok["total_equity"],
@@ -1706,10 +1708,12 @@ with tab_cash:
         df_cash_full = df_cash_full.sort_values("date", ascending=False).reset_index(drop=True)
         df_cash_disp = df_cash_full.rename(columns={
             "id": "ID", "date": "日期", "type": "类型",
-            "amount": "金额($USD)", "notes": "备注"
+            "amount": "金额($USD)", "notes": "备注", "account": "所属账户"
         })
         df_cash_disp["金额($USD)"] = df_cash_disp["金额($USD)"].apply(lambda x: f"${x:,.2f}")
-        st.dataframe(df_cash_disp, use_container_width=True)
+        col_c_order = ["ID", "日期", "类型", "金额($USD)", "备注", "所属账户"]
+        disp_c_cols = [c for c in col_c_order if c in df_cash_disp.columns]
+        st.dataframe(df_cash_disp[disp_c_cols], use_container_width=True)
 
         total_deposit = df_cash_full[df_cash_full["type"] == "DEPOSIT"]["amount"].sum()
         total_withdraw = df_cash_full[df_cash_full["type"] == "WITHDRAW"]["amount"].sum() if "WITHDRAW" in df_cash_full["type"].values else 0

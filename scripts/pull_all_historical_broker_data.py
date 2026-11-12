@@ -246,11 +246,19 @@ def fetch_tiger_asset_analytics(conn: TigerBrokerConnector, account_id: str) -> 
     client = conn._client
     records = []
     try:
-        analytics = client.get_analytics_asset(
-            account=account_id,
-            start_date="2026-01-01",
-            end_date=datetime.date.today().strftime("%Y-%m-%d")
-        )
+        # Query earliest inception date (e.g. 2018-01-01) to obtain the longest historical record
+        try:
+            analytics = client.get_analytics_asset(
+                account=account_id,
+                start_date="2018-01-01",
+                end_date=datetime.date.today().strftime("%Y-%m-%d")
+            )
+        except Exception:
+            analytics = client.get_analytics_asset(
+                account=account_id,
+                start_date="2026-01-01",
+                end_date=datetime.date.today().strftime("%Y-%m-%d")
+            )
         if analytics:
             history_list = []
             if isinstance(analytics, dict) and 'history' in analytics:

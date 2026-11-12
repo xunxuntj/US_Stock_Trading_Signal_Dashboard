@@ -68,6 +68,14 @@ def init_db():
         cursor.execute("ALTER TABLE trades ADD COLUMN is_strategy INTEGER DEFAULT 1")
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE trades ADD COLUMN account TEXT DEFAULT '老虎证券 - 综合账户 (638812)'")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cash_transactions ADD COLUMN account TEXT DEFAULT '老虎证券 - 综合账户 (638812)'")
+    except Exception:
+        pass
     
     # 3. NAV History Table
     cursor.execute("""
@@ -164,13 +172,23 @@ def init_db():
     conn.commit()
     conn.close()
 
-def record_cash_transaction(date_str, trans_type, amount, notes=""):
+def record_cash_transaction(date_str, trans_type, amount, notes="", account=None):
+    if not account:
+        account = "Charles Schwab (嘉信理财)" if ("Schwab" in str(notes) or "嘉信" in str(notes)) else "老虎证券 - 综合账户 (638812)"
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO cash_transactions (date, type, amount, notes)
-    VALUES (?, ?, ?, ?)
-    """, (date_str, trans_type.upper(), amount, notes))
+    cursor.execute("PRAGMA table_info(cash_transactions)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if 'account' in cols:
+        cursor.execute("""
+        INSERT INTO cash_transactions (date, type, amount, notes, account)
+        VALUES (?, ?, ?, ?, ?)
+        """, (date_str, trans_type.upper(), amount, notes, account))
+    else:
+        cursor.execute("""
+        INSERT INTO cash_transactions (date, type, amount, notes)
+        VALUES (?, ?, ?, ?)
+        """, (date_str, trans_type.upper(), amount, notes))
     conn.commit()
     conn.close()
 
@@ -336,13 +354,23 @@ def update_position(ticker, shares, cost_basis, layer, account=""):
         except Exception as e:
             print(f"Supabase update_position sync error: {e}")
 
-def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason="", category="STRATEGY", is_strategy=1):
+def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason="", category="STRATEGY", is_strategy=1, account=None):
+    if not account:
+        account = _assign_acc(ticker)
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, is_strategy)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (date_str, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, int(is_strategy)))
+    cursor.execute("PRAGMA table_info(trades)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if 'account' in cols:
+        cursor.execute("""
+        INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, is_strategy, account)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (date_str, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, int(is_strategy), account))
+    else:
+        cursor.execute("""
+        INSERT INTO trades (date, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, is_strategy)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (date_str, ticker, action, shares, price, total_val, fee, pnl, layer, reason, category, int(is_strategy)))
     conn.commit()
     conn.close()
 

@@ -233,6 +233,7 @@ def ingest_broker_orders(
                 update_position(o.ticker, new_shares, curr_cost if new_shares > 0 else 0.0, layer_norm)
 
             # Record trade into trades table (SQLite + Supabase Cloud)
+            acc_lbl = "老虎证券 - 环球账户 (U9959007)" if o.ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR'] else "老虎证券 - 综合账户 (638812)"
             record_trade(
                 date_str=trade_date,
                 ticker=o.ticker,
@@ -245,7 +246,8 @@ def ingest_broker_orders(
                 layer=layer_norm,
                 reason=f"API Auto-Sync ({o.broker.value})",
                 category=category,
-                is_strategy=is_strat
+                is_strategy=is_strat,
+                account=acc_lbl
             )
 
             # Mark in broker_synced_orders for idempotency
@@ -290,10 +292,22 @@ def ingest_broker_cash_transactions(
         if ctx.raw_type:
             notes += f" ({ctx.raw_type})"
 
-        cursor.execute(
-            "INSERT INTO cash_transactions (date, type, amount, notes) VALUES (?, ?, ?, ?)",
-            (ctx.date, ctx.type, ctx.amount, notes)
+        acc_label = "Charles Schwab (嘉信理财)" if ("Schwab" in str(ctx.broker.value) or "56169533" in str(ctx.account_id)) else (
+            "老虎证券 - 环球账户 (U9959007)" if "U9959007" in str(ctx.account_id) else "老虎证券 - 综合账户 (638812)"
         )
+
+        cursor.execute("PRAGMA table_info(cash_transactions)")
+        c_cols = [r[1] for r in cursor.fetchall()]
+        if 'account' in c_cols:
+            cursor.execute(
+                "INSERT INTO cash_transactions (date, type, amount, notes, account) VALUES (?, ?, ?, ?, ?)",
+                (ctx.date, ctx.type, ctx.amount, notes, acc_label)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO cash_transactions (date, type, amount, notes) VALUES (?, ?, ?, ?)",
+                (ctx.date, ctx.type, ctx.amount, notes)
+            )
         new_ingested.append({
             "date": ctx.date,
             "type": ctx.type,

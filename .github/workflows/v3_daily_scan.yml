@@ -63,6 +63,8 @@ jobs:
           SCHWAB_ACCOUNT_NUMBER: ${{ secrets.SCHWAB_ACCOUNT_NUMBER }}
         run: |
           python run_v3_scan.py
+          python scripts/pull_all_historical_broker_data.py
+          python scripts/reconcile_database_production.py
 
       - name: Commit & Push Updated Database / Signals
         env:
