@@ -739,7 +739,7 @@ else:
     strat_pos_df = pd.DataFrame()
     non_strat_pos_df = pd.DataFrame()
 
-# Build HTML rows for Strategy Core Holdings
+# Build HTML rows for Strategy Core Holdings (Category 1)
 strat_rows_html = ""
 if not strat_pos_df.empty:
     for idx, (_, pos_row) in enumerate(strat_pos_df.iterrows(), 1):
@@ -755,9 +755,9 @@ if not strat_pos_df.empty:
             layer_role = 'L0 高股息底仓'
         elif tkr == 'SGOV':
             layer_role = 'SGOV 贴息储备'
-        strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#94A3B8;font-weight:600;width:12%;">核心 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#F8FAFC;font-size:0.95rem;">{tkr}</strong> <span class="badge-subtle badge-blue">{layer_role}</span></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#F8FAFC;font-weight:500;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#F8FAFC;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:18%;">仓位占比 <strong style="color:#38BDF8;font-size:0.95rem;font-variant-numeric:tabular-nums;">{weight_pct:.1f}%</strong></td><td style="padding:9px 12px;width:20%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
+        strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#94A3B8;font-weight:600;width:12%;">策略标的 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#F8FAFC;font-size:0.95rem;">{tkr}</strong> <span class="badge-subtle badge-blue">{layer_role}</span></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#F8FAFC;font-weight:500;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#F8FAFC;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">仓位占比 <strong style="color:#38BDF8;font-size:0.95rem;font-variant-numeric:tabular-nums;">{weight_pct:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
 
-# Build HTML rows for Discretionary Holdings
+# Build HTML rows for Discretionary Holdings (Category 2)
 non_strat_rows_html = ""
 if not non_strat_pos_df.empty:
     for idx, (_, pos_row) in enumerate(non_strat_pos_df.iterrows(), 1):
@@ -766,12 +766,25 @@ if not non_strat_pos_df.empty:
         shares_str = f"{shares:,.0f}" if shares == int(shares) else f"{shares:,.2f}"
         curr_p = 1005.66 if tkr == 'NVDA' else (get_live_price(tkr) or float(pos_row['cost_basis']))
         mkt_val = shares * curr_p
+        weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
         acc_tag = pos_row.get('account', '老虎证券 - 综合账户 (638812)')
-        non_strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#64748B;font-weight:600;width:12%;">自主 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#CBD5E1;font-size:0.95rem;">{tkr}</strong></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#CBD5E1;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:18%;"><span class="badge-subtle badge-slate">独立自主管理</span></td><td style="padding:9px 12px;width:20%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
+        non_strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#64748B;font-weight:600;width:12%;">非策略 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#CBD5E1;font-size:0.95rem;">{tkr}</strong></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#CBD5E1;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">仓位占比 <strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">{weight_pct:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
+
+# Build HTML rows for Cash Reserves (Category 3)
+cash_command_items = [
+    {"label": "现金 1", "ticker": "美元现金 (老虎综合)", "role": "综合账户贴息与打新备用金", "amount": 325.37, "account": "老虎证券 - 综合账户 (638812)"},
+    {"label": "现金 2", "ticker": "美元现金 (老虎环球)", "role": "环球账户流动现金与股息", "amount": 14.42, "account": "老虎证券 - 环球账户 (U9959007)"},
+    {"label": "现金 3", "ticker": "美元现金 (嘉信理财)", "role": "独立海外宏观防守现金储备", "amount": 1500.00, "account": "Charles Schwab (嘉信理财)"}
+]
+cash_rows_html = ""
+for c_item in cash_command_items:
+    c_amt = c_item["amount"]
+    c_weight = (c_amt / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
+    cash_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#FBBF24;font-weight:600;width:12%;">{c_item["label"]}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#FBBF24;font-size:0.95rem;">{c_item["ticker"]}</strong></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#FBBF24;font-weight:500;font-variant-numeric:tabular-nums;">${c_amt:,.2f}</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#FBBF24;font-size:0.95rem;font-variant-numeric:tabular-nums;">${c_amt:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">现金占比 <strong style="color:#FBBF24;font-size:0.95rem;font-variant-numeric:tabular-nums;">{c_weight:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{c_item["account"]}</td></tr>'
 
 holdings_blocks_html = f"""
 <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1E293B;">
-    <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#38BDF8;margin-bottom:8px;">01. 量化主策略在持标的 (STRATEGY CORE UNIVERSE)</div>
+    <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#38BDF8;margin-bottom:8px;">01. 量化策略标的 (QUANTITATIVE STRATEGY CORE)</div>
     <div style="background:#111827;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
         <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{strat_rows_html}</tbody></table>
     </div>
@@ -779,8 +792,9 @@ holdings_blocks_html = f"""
     <div style="background:#111827;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
         <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{non_strat_rows_html}</tbody></table>
     </div>
-    <div style="background:#162032;border-radius:6px;padding:10px 14px;border:1px solid #1E293B;font-size:0.82rem;color:#94A3B8;">
-        <strong style="color:#F8FAFC;">Charles Schwab (嘉信理财 · 56169533):</strong> 当前证券持仓 0 股 · 美元现金储备: <span style="color:#38BDF8;font-weight:600;font-variant-numeric:tabular-nums;">$1,500.00 USD</span> (充裕流动性防守，待策略发出建仓信号时执行)
+    <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#FBBF24;margin-bottom:8px;">03. 全账户各通道现金储备 (CASH & LIQUIDITY RESERVES)</div>
+    <div style="background:#111827;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:8px;">
+        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{cash_rows_html}</tbody></table>
     </div>
 </div>
 """
@@ -903,7 +917,26 @@ pos_details.append({
     "is_cash": True
 })
 
-for item in pos_details:
+# Group pos_details into 3 distinct categories:
+# 1. 量化策略标的 (Quantitative Strategy Universe)
+# 2. 非策略标的 (Discretionary Non-strategy Holdings)
+# 3. 现金储备 (Cash Reserves across accounts)
+strat_items = [p for p in pos_details if (not p["is_cash"] and p["is_strategy"])]
+non_strat_items = [p for p in pos_details if (not p["is_cash"] and not p["is_strategy"])]
+cash_items_list = [p for p in pos_details if p["is_cash"]]
+
+# Sort non-strategy items predictably by account and ticker
+non_strat_items.sort(key=lambda x: (x["account"], x["ticker"]))
+
+ordered_pos_tuples = []
+for it in strat_items:
+    ordered_pos_tuples.append((it, "量化策略标的"))
+for it in non_strat_items:
+    ordered_pos_tuples.append((it, "非策略标的"))
+for it in cash_items_list:
+    ordered_pos_tuples.append((it, "现金"))
+
+for item, cat_name in ordered_pos_tuples:
     t = item["ticker"]
     mkt_val = item["mkt_val"]
     weight_pct = (mkt_val / total_portfolio_val * 100.0) if total_portfolio_val > 0 else 0.0
@@ -912,16 +945,16 @@ for item in pos_details:
 
     if item["is_cash"]:
         table_rows.append({
-            "券商账户": item["account"],
+            "类别": cat_name,
             "标的": t,
-            "策略层级": item["layer"],
-            "策略归属": "[CORE] 策略底仓/贴息" if item["is_strategy"] else "[DISCRETIONARY] 独立管理",
-            "持仓占比": f"{weight_pct:.1f}%",
+            "策略角色": item["layer"],
             "持仓股数": "-",
             "成本单价": "-",
             "最新现价": "-",
             "持仓市值": f"${mkt_val:,.2f}",
-            "未实现盈亏": "-"
+            "资产占比": f"{weight_pct:.1f}%",
+            "未实现盈亏": "-",
+            "所属账户": item["account"]
         })
     else:
         s = item["shares"]
@@ -930,18 +963,24 @@ for item in pos_details:
         pnl_usd = (p_now - c) * s
         pnl_pct = ((p_now - c) / c * 100.0) if c > 0 else 0.0
         pnl_str = f"${pnl_usd:+,.2f} ({pnl_pct:+.2f}%)"
+        shares_str = f"{s:,.0f}" if s == int(s) else f"{s:,.4f}"
+        role_label = item.get("layer", "TREND")
+        if t == "SGOV":
+            role_label = "SGOV 贴息储备"
+        elif not item["is_strategy"]:
+            role_label = "自主配置标的"
 
         table_rows.append({
-            "券商账户": item["account"],
+            "类别": cat_name,
             "标的": t,
-            "策略层级": item["layer"],
-            "策略归属": "[CORE] 策略核心" if item["is_strategy"] else "[DISCRETIONARY] 自主管理",
-            "持仓占比": f"{weight_pct:.1f}%",
-            "持仓股数": f"{s:,.6f}",
-            "成本单价": f"${c:,.4f}",
-            "最新现价": f"${p_now:,.2f}",
+            "策略角色": role_label,
+            "持仓股数": shares_str,
+            "成本单价": f"${c:,.4f}" if c > 0 else "-",
+            "最新现价": f"${p_now:,.2f}" if p_now > 0 else "-",
             "持仓市值": f"${mkt_val:,.2f}",
-            "未实现盈亏": pnl_str
+            "资产占比": f"{weight_pct:.1f}%",
+            "未实现盈亏": pnl_str if c > 0 else "-",
+            "所属账户": item["account"]
         })
 
 df_holdings_tab = pd.DataFrame(table_rows)
@@ -1039,11 +1078,11 @@ tab_tiger_main, tab_tiger_univ, tab_schwab, tab_all = st.tabs([
 
 with tab_tiger_main:
     st.markdown("##### 综合账户 (638812) · 量化主策略与贴息储备")
-    df_t1 = df_holdings_tab[df_holdings_tab["券商账户"].str.contains("综合|638812", na=False)]
+    df_t1 = df_holdings_tab[df_holdings_tab["所属账户"].str.contains("综合|638812", na=False)]
     val_t1 = df_t1['持仓市值'].apply(lambda x: float(str(x).replace('$', '').replace(',', '')) if '$' in str(x) else 0.0).sum() if not df_t1.empty else 127784.73
     st.caption(f"实盘总值 ${val_t1:,.2f} | 美股量化主策略权益: ${(val_t1 - hk_cum_profit):,.2f} | 港股打新累积: ${hk_cum_profit:,.2f}")
     if not df_t1.empty:
-        disp_t1 = df_t1.drop(columns=["券商账户"]).reset_index(drop=True)
+        disp_t1 = df_t1.reset_index(drop=True)
         disp_t1.index = range(1, len(disp_t1) + 1)
         st.dataframe(disp_t1, use_container_width=True)
     else:
@@ -1051,11 +1090,11 @@ with tab_tiger_main:
 
 with tab_tiger_univ:
     st.markdown("##### 环球账户 (U9959007) · 长期自主配置")
-    df_t2 = df_holdings_tab[df_holdings_tab["券商账户"].str.contains("环球|U9959007", na=False)]
+    df_t2 = df_holdings_tab[df_holdings_tab["所属账户"].str.contains("环球|U9959007", na=False)]
     val_t2 = df_t2['持仓市值'].apply(lambda x: float(str(x).replace('$', '').replace(',', '')) if '$' in str(x) else 0.0).sum() if not df_t2.empty else 20146.69
     st.caption(f"资产总值 ${val_t2:,.2f} (证券市值: ${(val_t2 - cash_tiger_univ):,.2f} | 现金: ${cash_tiger_univ:,.2f}) — 独立自主运作，不计入量化主策略绩效考核")
     if not df_t2.empty:
-        disp_t2 = df_t2.drop(columns=["券商账户"]).reset_index(drop=True)
+        disp_t2 = df_t2.reset_index(drop=True)
         disp_t2.index = range(1, len(disp_t2) + 1)
         st.dataframe(disp_t2, use_container_width=True)
     else:
@@ -1074,29 +1113,34 @@ with tab_schwab:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    df_t3 = df_holdings_tab[df_holdings_tab["券商账户"].str.contains("Schwab|嘉信", na=False)]
+    df_t3 = df_holdings_tab[df_holdings_tab["所属账户"].str.contains("Schwab|嘉信", na=False)]
     if not df_t3.empty:
-        disp_t3 = df_t3.drop(columns=["券商账户"]).reset_index(drop=True)
+        disp_t3 = df_t3.reset_index(drop=True)
         disp_t3.index = range(1, len(disp_t3) + 1)
         st.dataframe(disp_t3, use_container_width=True)
     else:
         schwab_table = pd.DataFrame([{
+            "类别": "现金",
             "标的": "USD Cash (嘉信待命现金)",
-            "策略层级": "CASH",
-            "策略归属": "[STANDBY] 策略备用现金",
-            "持仓占比": f"{(cash_schwab / total_portfolio_val * 100.0):.1f}%",
+            "策略角色": "独立海外宏观防守现金储备",
             "持仓股数": "-",
             "成本单价": "-",
             "最新现价": "-",
             "持仓市值": f"${cash_schwab:,.2f}",
-            "未实现盈亏": "-"
+            "资产占比": f"{(cash_schwab / total_portfolio_val * 100.0):.1f}%",
+            "未实现盈亏": "-",
+            "所属账户": "Charles Schwab (嘉信理财)"
         }])
-        st.dataframe(schwab_table, use_container_width=True)
+        disp_schwab = schwab_table.reset_index(drop=True)
+        disp_schwab.index = range(1, len(disp_schwab) + 1)
+        st.dataframe(disp_schwab, use_container_width=True)
 
 with tab_all:
     st.markdown("##### 全账户合并总览 (Consolidated Portfolio)")
-    st.caption("合并显示所有券商账户持仓与现金分布")
-    st.dataframe(df_holdings_tab, use_container_width=True)
+    st.caption("合并显示所有券商账户持仓与现金分布，按量化策略标的、非策略标的、现金三类严格归属呈现")
+    disp_all = df_holdings_tab.reset_index(drop=True)
+    disp_all.index = range(1, len(disp_all) + 1)
+    st.dataframe(disp_all, use_container_width=True)
 
 st.divider()
 

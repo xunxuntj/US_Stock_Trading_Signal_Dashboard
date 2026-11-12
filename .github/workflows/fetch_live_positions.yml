@@ -34,3 +34,11 @@ jobs:
         run: |
           python scripts/fetch_live_exchange_data.py
           python scripts/pull_all_historical_broker_data.py
+
+      - name: Commit Audit Comparison Artifact
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/broker_audit_comparison.json data/missing_broker_orders.csv || true
+          git commit -m "auto: update broker audit comparison data" || echo "No changes to commit"
+          git push origin main || echo "Push failed or nothing to push"

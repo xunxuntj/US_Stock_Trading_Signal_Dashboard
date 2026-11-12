@@ -43,8 +43,48 @@ def format_ts(val: Any) -> str:
         return str(val)[:19]
 
 
+def _parse_and_append_order(o: Any, account_id: str, all_orders: List[Dict[str, Any]], seen_order_ids: set):
+    """Normalize and append an order or transaction record from Tiger API."""
+    o_id = str(getattr(o, 'order_id', getattr(o, 'id', '')))
+    if not o_id or o_id in seen_order_ids:
+        return
+    seen_order_ids.add(o_id)
+
+    raw_sym = getattr(o, 'symbol', None)
+    if not raw_sym and hasattr(o, 'contract'):
+        raw_sym = getattr(o.contract, 'symbol', '')
+    sym = str(raw_sym or '').upper().strip()
+    if not sym:
+        return
+
+    action = str(getattr(o, 'action', 'BUY')).upper()
+    raw_filled = float(getattr(o, 'filled', getattr(o, 'filled_quantity', getattr(o, 'quantity', 0.0))) or 0.0)
+    pos_scale = float(getattr(o, 'quantity_scale', getattr(o, 'filled_scale', 1.0)) or 1.0)
+    filled_qty = raw_filled / pos_scale if pos_scale > 1.0 else raw_filled
+
+    avg_p = float(getattr(o, 'avg_fill_price', getattr(o, 'filled_price', getattr(o, 'price', 0.0))) or 0.0)
+    comm = float(getattr(o, 'commission', 0.0) or 0.0)
+    pnl = float(getattr(o, 'realized_pnl', 0.0) or 0.0)
+    t_time = format_ts(getattr(o, 'trade_time', getattr(o, 'transacted_at', getattr(o, 'order_time', ''))))
+
+    all_orders.append({
+        "order_id": o_id,
+        "account": account_id,
+        "date": t_time[:10] if t_time else "",
+        "time": t_time,
+        "ticker": sym,
+        "action": action,
+        "shares": filled_qty,
+        "price": avg_p,
+        "total_value": round(filled_qty * avg_p, 2),
+        "commission": comm,
+        "realized_pnl": pnl,
+        "status": str(getattr(o, 'status', 'FILLED'))
+    })
+
+
 def fetch_tiger_historical_orders(conn: TigerBrokerConnector, account_id: str) -> List[Dict[str, Any]]:
-    """Fetch all filled orders across 45-day time windows from 2026-01-01 to present."""
+    """Fetch all filled orders across 45-day time windows from 2026-01-01 to present using multiple Tiger endpoints."""
     if not conn._client:
         return []
 
@@ -56,73 +96,48 @@ def fetch_tiger_historical_orders(conn: TigerBrokerConnector, account_id: str) -
     intervals = []
     cur_d = datetime.date(2026, 1, 1)
     today = datetime.date.today()
-    while cur_d < today:
+    while cur_d <= today:
         next_d = min(cur_d + datetime.timedelta(days=45), today)
         intervals.append((cur_d.strftime("%Y-%m-%d"), next_d.strftime("%Y-%m-%d")))
         cur_d = next_d + datetime.timedelta(days=1)
 
     for s_date, e_date in intervals:
-        page_token = None
-        while True:
-            try:
-                kwargs = {
-                    "account": account_id,
-                    "start_date": s_date,
-                    "end_date": e_date,
-                    "start_time": s_date,
-                    "end_time": e_date,
-                    "limit": 100
-                }
-                if page_token:
-                    kwargs["page_token"] = page_token
+        s_dt = datetime.datetime.strptime(s_date, "%Y-%m-%d")
+        e_dt = datetime.datetime.strptime(e_date, "%Y-%m-%d") + datetime.timedelta(days=1, microseconds=-1)
+        s_ts = int(s_dt.timestamp() * 1000)
+        e_ts = int(e_dt.timestamp() * 1000)
 
-                orders = client.get_filled_orders(**kwargs)
-                if not orders:
-                    break
-
+        # 1. client.get_filled_orders with pure millisecond timestamps
+        try:
+            orders = client.get_filled_orders(account=account_id, start_time=s_ts, end_time=e_ts)
+            if orders:
                 for o in orders:
-                    o_id = str(getattr(o, 'order_id', getattr(o, 'id', '')))
-                    if not o_id or o_id in seen_order_ids:
-                        continue
-                    seen_order_ids.add(o_id)
+                    _parse_and_append_order(o, account_id, all_orders, seen_order_ids)
+        except Exception as e:
+            print(f"ℹ️ Note: get_filled_orders for {account_id} ({s_date} to {e_date}): {e}")
 
-                    raw_sym = getattr(o, 'symbol', None)
-                    if not raw_sym and hasattr(o, 'contract'):
-                        raw_sym = getattr(o.contract, 'symbol', '')
-                    sym = str(raw_sym or '').upper().strip()
+        # 2. client.get_orders with OrderStatus.FILLED
+        try:
+            from tigeropen.common.consts import OrderStatus
+            gen_orders = client.get_orders(account=account_id, states=[OrderStatus.FILLED], start_time=s_ts, end_time=e_ts)
+            if gen_orders:
+                orders_list = gen_orders.result if hasattr(gen_orders, 'result') else (gen_orders if isinstance(gen_orders, list) else [])
+                for o in orders_list:
+                    _parse_and_append_order(o, account_id, all_orders, seen_order_ids)
+        except Exception as e:
+            pass
 
-                    action = str(getattr(o, 'action', 'BUY')).upper()
-                    raw_filled = float(getattr(o, 'filled', getattr(o, 'filled_quantity', 0.0)) or 0.0)
-                    pos_scale = float(getattr(o, 'quantity_scale', getattr(o, 'filled_scale', 1.0)) or 1.0)
-                    filled_qty = raw_filled / pos_scale if pos_scale > 1.0 else raw_filled
-
-                    avg_p = float(getattr(o, 'avg_fill_price', 0.0) or 0.0)
-                    comm = float(getattr(o, 'commission', 0.0) or 0.0)
-                    pnl = float(getattr(o, 'realized_pnl', 0.0) or 0.0)
-                    t_time = format_ts(getattr(o, 'trade_time', getattr(o, 'order_time', '')))
-
-                    all_orders.append({
-                        "order_id": o_id,
-                        "account": account_id,
-                        "date": t_time[:10] if t_time else "",
-                        "time": t_time,
-                        "ticker": sym,
-                        "action": action,
-                        "shares": filled_qty,
-                        "price": avg_p,
-                        "total_value": round(filled_qty * avg_p, 2),
-                        "commission": comm,
-                        "realized_pnl": pnl,
-                        "status": str(getattr(o, 'status', 'FILLED'))
-                    })
-
-                # Check if there is next page
-                page_token = getattr(orders, 'page_token', None)
-                if not page_token:
-                    break
-            except Exception as e:
-                print(f"⚠️ Error querying filled orders for {account_id} ({s_date} to {e_date}): {e}")
-                break
+        # 3. For Prime Account (e.g. 638812), query get_transactions
+        try:
+            s_yyyymmdd = s_date.replace("-", "")
+            e_yyyymmdd = e_date.replace("-", "")
+            txs = client.get_transactions(account=account_id, since_date=s_yyyymmdd, to_date=e_yyyymmdd)
+            if txs:
+                tx_list = txs.result if hasattr(txs, 'result') else (txs if isinstance(txs, list) else [])
+                for tx in tx_list:
+                    _parse_and_append_order(tx, account_id, all_orders, seen_order_ids)
+        except Exception:
+            pass
 
     # Sort chronologically
     all_orders.sort(key=lambda x: (x["time"], x["order_id"]))
@@ -136,6 +151,7 @@ def fetch_tiger_historical_funding(conn: TigerBrokerConnector, account_id: str) 
 
     client = conn._client
     funding_records = []
+    seen_keys = set()
 
     # 1. get_funding_history
     try:
@@ -143,36 +159,44 @@ def fetch_tiger_historical_funding(conn: TigerBrokerConnector, account_id: str) 
         if f_list is not None:
             if isinstance(f_list, list) and len(f_list) > 0:
                 for item in f_list:
-                    d_str = str(getattr(item, 'date', getattr(item, 'updated_at', '')))[:10]
+                    raw_d = getattr(item, 'date', getattr(item, 'updated_at', ''))
+                    d_str = format_ts(raw_d)[:10] if raw_d else ""
                     t_type = str(getattr(item, 'type', getattr(item, 'funding_type', ''))).upper()
                     amt = float(getattr(item, 'amount', 0.0) or 0.0)
                     desc = str(getattr(item, 'remark', getattr(item, 'comment', '')))
                     curr = str(getattr(item, 'currency', 'USD'))
-                    funding_records.append({
-                        "source": "get_funding_history",
-                        "account": account_id,
-                        "date": d_str,
-                        "type": t_type,
-                        "amount": amt,
-                        "currency": curr,
-                        "description": desc
-                    })
+                    key = (account_id, d_str, t_type, round(amt, 2), curr)
+                    if key not in seen_keys:
+                        seen_keys.add(key)
+                        funding_records.append({
+                            "source": "get_funding_history",
+                            "account": account_id,
+                            "date": d_str,
+                            "type": t_type,
+                            "amount": amt,
+                            "currency": curr,
+                            "description": desc
+                        })
             elif hasattr(f_list, 'empty') and not f_list.empty:
                 for _, r in f_list.iterrows():
-                    d_str = str(r.get('date', r.get('updated_at', '')))[:10]
+                    raw_d = r.get('date', r.get('updated_at', ''))
+                    d_str = format_ts(raw_d)[:10] if raw_d else ""
                     t_type = str(r.get('type', r.get('funding_type', ''))).upper()
                     amt = float(r.get('amount', 0.0) or 0.0)
                     desc = str(r.get('remark', r.get('comment', '')))
                     curr = str(r.get('currency', 'USD'))
-                    funding_records.append({
-                        "source": "get_funding_history",
-                        "account": account_id,
-                        "date": d_str,
-                        "type": t_type,
-                        "amount": amt,
-                        "currency": curr,
-                        "description": desc
-                    })
+                    key = (account_id, d_str, t_type, round(amt, 2), curr)
+                    if key not in seen_keys:
+                        seen_keys.add(key)
+                        funding_records.append({
+                            "source": "get_funding_history",
+                            "account": account_id,
+                            "date": d_str,
+                            "type": t_type,
+                            "amount": amt,
+                            "currency": curr,
+                            "description": desc
+                        })
     except Exception as e:
         print(f"⚠️ get_funding_history ({account_id}) exception: {e}")
 
@@ -189,24 +213,28 @@ def fetch_tiger_historical_funding(conn: TigerBrokerConnector, account_id: str) 
             )
             if res_df is not None and hasattr(res_df, 'empty') and not res_df.empty:
                 for _, r in res_df.iterrows():
-                    d_str = str(r.get('business_date', r.get('date', '')))[:10]
+                    raw_d = r.get('business_date', r.get('date', ''))
+                    d_str = format_ts(raw_d)[:10] if raw_d else ""
                     rec_type = str(r.get('type', r.get('fund_type', f_type or 'FUNDING'))).upper()
                     amt = float(r.get('amount', 0.0) or 0.0)
                     curr = str(r.get('currency', 'USD'))
                     desc = str(r.get('desc', r.get('remark', '')))
-                    funding_records.append({
-                        "source": "get_fund_details",
-                        "account": account_id,
-                        "date": d_str,
-                        "type": rec_type,
-                        "amount": amt,
-                        "currency": curr,
-                        "description": desc
-                    })
-        except Exception as e:
-            # Not all accounts support all fund_type queries
+                    key = (account_id, d_str, rec_type, round(amt, 2), curr)
+                    if key not in seen_keys:
+                        seen_keys.add(key)
+                        funding_records.append({
+                            "source": "get_fund_details",
+                            "account": account_id,
+                            "date": d_str,
+                            "type": rec_type,
+                            "amount": amt,
+                            "currency": curr,
+                            "description": desc
+                        })
+        except Exception:
             pass
 
+    funding_records.sort(key=lambda x: (x["date"], x["amount"]))
     return funding_records
 
 
@@ -224,22 +252,35 @@ def fetch_tiger_asset_analytics(conn: TigerBrokerConnector, account_id: str) -> 
             end_date=datetime.date.today().strftime("%Y-%m-%d")
         )
         if analytics:
-            if isinstance(analytics, list):
-                for a in analytics:
-                    records.append({
-                        "account": account_id,
-                        "date": str(getattr(a, 'date', getattr(a, 'business_date', ''))),
-                        "total_equity": float(getattr(a, 'net_liquidation', getattr(a, 'total_equity', 0.0)) or 0.0),
-                        "cash": float(getattr(a, 'cash', 0.0) or 0.0),
-                        "gross_position_value": float(getattr(a, 'gross_position_value', 0.0) or 0.0)
-                    })
-            elif hasattr(analytics, 'to_dict'):
-                records.append(analytics.to_dict())
-            else:
-                records.append(str(analytics))
+            history_list = []
+            if isinstance(analytics, dict) and 'history' in analytics:
+                history_list = analytics['history'] or []
+            elif hasattr(analytics, 'history'):
+                history_list = getattr(analytics, 'history', [])
+            elif isinstance(analytics, list):
+                history_list = analytics
+
+            for item in history_list:
+                raw_d = item.get('dt') if isinstance(item, dict) else getattr(item, 'dt', None)
+                if not raw_d:
+                    raw_ts = item.get('date') if isinstance(item, dict) else getattr(item, 'date', None)
+                    raw_d = format_ts(raw_ts)[:10] if raw_ts else ""
+                
+                tot_eq = float(item.get('net_liquidation', item.get('total_equity', 0.0)) if isinstance(item, dict) else getattr(item, 'net_liquidation', getattr(item, 'total_equity', 0.0)) or 0.0)
+                cash_val = float(item.get('cash', 0.0) if isinstance(item, dict) else getattr(item, 'cash', 0.0) or 0.0)
+                gp_val = float(item.get('gross_position_value', 0.0) if isinstance(item, dict) else getattr(item, 'gross_position_value', 0.0) or 0.0)
+
+                records.append({
+                    "account": account_id,
+                    "date": str(raw_d),
+                    "total_equity": tot_eq,
+                    "cash": cash_val,
+                    "gross_position_value": gp_val
+                })
     except Exception as e:
         print(f"⚠️ get_analytics_asset ({account_id}) exception: {e}")
 
+    records.sort(key=lambda x: x["date"])
     return records
 
 
@@ -417,8 +458,20 @@ def run_full_audit():
         print(f"   • ID {cr['id']} | Date: {cr['date']} | Type: {cr['type']:<10} | Amount: ${cr['amount']:>10.2f} | Notes: {cr.get('notes', '')}")
 
     print(f"\nBroker Funding records fetched: {len(all_broker_funding)} rows")
-    for bf in all_broker_funding[:10]:
+    funding_2026 = [bf for bf in all_broker_funding if str(bf.get('date', '')) >= '2026-01-01']
+    print(f"Broker Funding in 2026: {len(funding_2026)} records")
+    for bf in funding_2026[:15]:
         print(f"   • [{bf['source']}] Date: {bf['date']} | Type: {bf['type']:<12} | Amount: ${bf['amount']} {bf['currency']} | Acc: {bf['account']} | Desc: {bf['description']}")
+
+    # 5b. Compare NAV History
+    print("\n" + "=" * 80)
+    print("📈 3. DAILY NAV HISTORY AUDIT")
+    print("=" * 80)
+    print(f"Current DB nav_history: {len(df_db_nav)} rows ({df_db_nav['date'].min()} to {df_db_nav['date'].max()})")
+    if all_broker_analytics:
+        print(f"Broker Daily Analytics fetched: {len(all_broker_analytics)} rows")
+        for sb in all_broker_analytics[-10:]:
+            print(f"   • Date: {sb['date']} | Total Equity: ${sb['total_equity']:,.2f} | Cash: ${sb['cash']:,.2f} | Acc: {sb['account']}")
 
     # 6. Save Complete Audit Artifacts
     os.makedirs("data", exist_ok=True)
