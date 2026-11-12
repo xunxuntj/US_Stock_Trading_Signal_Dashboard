@@ -272,12 +272,16 @@ if not df_nav_real.empty and 'total_equity' in df_nav_real.columns:
         total_combined_nav += 1500.0
     live_nav_latest = float(latest_nav_row['strategy_equity'])
     hk_cum_profit = float(latest_nav_row['hk_pnl_cum']) if pd.notnull(latest_nav_row['hk_pnl_cum']) else 11208.10
-    real_max_dd = float(df_nav_real_valid['drawdown_pct'].min())
+    df_nav_2026_dd = df_nav_real_valid[pd.to_datetime(df_nav_real_valid['date']) >= '2026-01-15']
+    if not df_nav_2026_dd.empty:
+        real_max_dd = float(df_nav_2026_dd['drawdown_pct'].min())
+    else:
+        real_max_dd = -7.81
 else:
     live_nav_latest = 127784.73
     hk_cum_profit = 11208.10
     total_combined_nav = 149434.88
-    real_max_dd = -7.89
+    real_max_dd = -7.81
 
 # Trades realized PnL (Strictly filter for pure quant strategy trades, excluding manual / non-strategy tickers)
 STRATEGY_CORE_TICKERS = {'SPY', 'QQQ', 'SOXX', 'QLD', 'GLD', 'TLT', 'DBC', 'BITO', 'JEPQ', 'SGOV', 'QUAL'}
@@ -1956,25 +1960,25 @@ with tab_stats:
         )
         st.plotly_chart(fig_attr, use_container_width=True)
 
-        # ── 4. NAV Drawdown ────────────────────────
-        st.markdown("##### 资产净值回撤分析 (Drawdown Analysis)")
+        # ── 4. NAV Drawdown (Strictly 2026 Strategy Lifecycle >= 2026-01-15) ─────
+        st.markdown("##### 资产净值回撤分析 (Drawdown Analysis · 2026-01-15 起算)")
         df_nav_real = get_nav_history()
         if not df_nav_real.empty and 'drawdown_pct' in df_nav_real.columns:
             df_nav_real = df_nav_real[df_nav_real['drawdown_pct'].notnull()].copy()
             df_nav_real["date"] = pd.to_datetime(df_nav_real["date"])
-            df_nav_real = df_nav_real.sort_values("date")
+            df_nav_real = df_nav_real[df_nav_real["date"] >= '2026-01-15'].sort_values("date")
             max_dd = df_nav_real['drawdown_pct'].min()
             max_dd_date = df_nav_real.loc[df_nav_real['drawdown_pct'].idxmin(), 'date'].strftime('%Y-%m-%d')
             current_dd  = df_nav_real['drawdown_pct'].iloc[-1]
 
             dd1, dd2, dd3 = st.columns(3)
-            dd1.metric("历史最大回撤", f"{max_dd:.2f}%", delta="回测基准 -10.75%", delta_color="inverse")
+            dd1.metric("策略区间最大回撤 (2026)", f"{max_dd:.2f}%", delta="回测基准 -10.75%", delta_color="inverse")
             dd2.metric("最大回撤发生日", max_dd_date)
             dd3.metric("当前回撤状态", f"{current_dd:.2f}%")
 
             fig_dd = go.Figure()
-            df_brok_dd = df_nav_real[df_nav_real['source'] == 'BROKERAGE']
-            df_calc_dd = df_nav_real[df_nav_real['source'].isin(['CALCULATED', 'INITIAL'])]
+            df_brok_dd = df_nav_real[df_nav_real['source'].isin(['BROKERAGE', 'BROKER_CALIBRATED', 'BROKER_SYNC'])]
+            df_calc_dd = df_nav_real[~df_nav_real['source'].isin(['BROKERAGE', 'BROKER_CALIBRATED', 'BROKER_SYNC'])]
             if not df_brok_dd.empty:
                 fig_dd.add_trace(go.Scatter(
                     x=df_brok_dd["date"], y=df_brok_dd["drawdown_pct"],

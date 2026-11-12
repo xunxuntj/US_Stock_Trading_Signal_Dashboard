@@ -33,7 +33,7 @@ def compute_strategy_metrics(conn: Optional[sqlite3.Connection] = None) -> Dict[
 
     try:
         df = pd.read_sql(
-            "SELECT date, nav, total_equity, strategy_equity, hk_pnl_cum, drawdown_pct FROM nav_history ORDER BY date ASC",
+            "SELECT date, nav, total_equity, strategy_equity, hk_pnl_cum, drawdown_pct FROM nav_history WHERE date >= '2026-01-15' ORDER BY date ASC",
             conn
         )
         try:
