@@ -44,7 +44,7 @@ def format_ts(val: Any) -> str:
 
 
 def fetch_tiger_historical_orders(conn: TigerBrokerConnector, account_id: str) -> List[Dict[str, Any]]:
-    """Fetch all filled orders across 90-day time windows from 2026-01-01 to present."""
+    """Fetch all filled orders across 45-day time windows from 2026-01-01 to present."""
     if not conn._client:
         return []
 
@@ -52,13 +52,14 @@ def fetch_tiger_historical_orders(conn: TigerBrokerConnector, account_id: str) -
     all_orders = []
     seen_order_ids = set()
 
-    # Quarterly intervals from 2026-01-01
-    intervals = [
-        ("2026-01-01", "2026-03-31"),
-        ("2026-04-01", "2026-06-30"),
-        ("2026-07-01", "2026-09-30"),
-        ("2026-10-01", datetime.date.today().strftime("%Y-%m-%d")),
-    ]
+    # Generate 45-day sliding windows from 2026-01-01 to today
+    intervals = []
+    cur_d = datetime.date(2026, 1, 1)
+    today = datetime.date.today()
+    while cur_d < today:
+        next_d = min(cur_d + datetime.timedelta(days=45), today)
+        intervals.append((cur_d.strftime("%Y-%m-%d"), next_d.strftime("%Y-%m-%d")))
+        cur_d = next_d + datetime.timedelta(days=1)
 
     for s_date, e_date in intervals:
         page_token = None
@@ -66,6 +67,8 @@ def fetch_tiger_historical_orders(conn: TigerBrokerConnector, account_id: str) -
             try:
                 kwargs = {
                     "account": account_id,
+                    "start_date": s_date,
+                    "end_date": e_date,
                     "start_time": s_date,
                     "end_time": e_date,
                     "limit": 100
@@ -137,22 +140,39 @@ def fetch_tiger_historical_funding(conn: TigerBrokerConnector, account_id: str) 
     # 1. get_funding_history
     try:
         f_list = client.get_funding_history()
-        if f_list:
-            for item in f_list:
-                d_str = str(getattr(item, 'date', getattr(item, 'updated_at', '')))[:10]
-                t_type = str(getattr(item, 'type', getattr(item, 'funding_type', ''))).upper()
-                amt = float(getattr(item, 'amount', 0.0) or 0.0)
-                desc = str(getattr(item, 'remark', getattr(item, 'comment', '')))
-                curr = str(getattr(item, 'currency', 'USD'))
-                funding_records.append({
-                    "source": "get_funding_history",
-                    "account": account_id,
-                    "date": d_str,
-                    "type": t_type,
-                    "amount": amt,
-                    "currency": curr,
-                    "description": desc
-                })
+        if f_list is not None:
+            if isinstance(f_list, list) and len(f_list) > 0:
+                for item in f_list:
+                    d_str = str(getattr(item, 'date', getattr(item, 'updated_at', '')))[:10]
+                    t_type = str(getattr(item, 'type', getattr(item, 'funding_type', ''))).upper()
+                    amt = float(getattr(item, 'amount', 0.0) or 0.0)
+                    desc = str(getattr(item, 'remark', getattr(item, 'comment', '')))
+                    curr = str(getattr(item, 'currency', 'USD'))
+                    funding_records.append({
+                        "source": "get_funding_history",
+                        "account": account_id,
+                        "date": d_str,
+                        "type": t_type,
+                        "amount": amt,
+                        "currency": curr,
+                        "description": desc
+                    })
+            elif hasattr(f_list, 'empty') and not f_list.empty:
+                for _, r in f_list.iterrows():
+                    d_str = str(r.get('date', r.get('updated_at', '')))[:10]
+                    t_type = str(r.get('type', r.get('funding_type', ''))).upper()
+                    amt = float(r.get('amount', 0.0) or 0.0)
+                    desc = str(r.get('remark', r.get('comment', '')))
+                    curr = str(r.get('currency', 'USD'))
+                    funding_records.append({
+                        "source": "get_funding_history",
+                        "account": account_id,
+                        "date": d_str,
+                        "type": t_type,
+                        "amount": amt,
+                        "currency": curr,
+                        "description": desc
+                    })
     except Exception as e:
         print(f"⚠️ get_funding_history ({account_id}) exception: {e}")
 
