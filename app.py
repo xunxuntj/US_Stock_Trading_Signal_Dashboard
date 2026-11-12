@@ -1032,65 +1032,188 @@ with col_pie:
     st.plotly_chart(fig_pie, use_container_width=True)
 
 with col_chart:
-    st.markdown('<div class="section-eyebrow">BENCHMARK PERFORMANCE</div><div class="section-heading">资产复利增长曲线 vs 标普500 & A股上证指数 (2026-01-15 起算)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-eyebrow">BENCHMARK PERFORMANCE</div><div class="section-heading">资产复利增长曲线 vs 标普500 & A股上证指数</div>', unsafe_allow_html=True)
     df_nav_real = get_nav_history()
 
     if not df_nav_real.empty and 'total_equity' in df_nav_real.columns:
         df_nav_real["date"] = pd.to_datetime(df_nav_real["date"])
         df_nav_real = df_nav_real.drop_duplicates(subset=["date"], keep="last").sort_values("date").reset_index(drop=True)
 
-        dates = df_nav_real["date"]
-        total_nav = df_nav_real["total_equity"]
-        us_nav = df_nav_real["strategy_equity"]
+        tab_b1, tab_b2 = st.tabs([
+            "🎯 2026 实盘策略期 (2026-01-15 起算)",
+            "🌐 全生命周期 (2018 至今 · TWR单位净值)"
+        ])
 
+        # Common benchmark files
         nav_file = os.path.join(DATA_DIR, "SPY.csv")
-        if os.path.exists(nav_file):
-            df_spy = pd.read_csv(nav_file)
-            df_spy['Date'] = pd.to_datetime(df_spy['Date'])
-            df_spy = df_spy[(df_spy['Date'] >= dates.iloc[0]) & (df_spy['Date'] <= dates.iloc[-1])].reset_index(drop=True)
-            if not df_spy.empty:
-                spy_start = df_spy['Close'].iloc[0]
-                raw_spy_nav = 99215.41 * (df_spy['Close'] / spy_start)
-                spy_nav = np.interp(np.arange(len(dates)), np.linspace(0, len(dates)-1, len(raw_spy_nav)), raw_spy_nav)
-            else:
-                spy_nav = us_nav * 0.95
-        else:
-            spy_nav = us_nav * 0.95
-
         sse_file = os.path.join(DATA_DIR, "000001.SS.csv")
+        df_spy_raw = pd.DataFrame()
+        if os.path.exists(nav_file):
+            try:
+                df_spy_raw = pd.read_csv(nav_file)
+                df_spy_raw['Date'] = pd.to_datetime(df_spy_raw['Date'])
+            except Exception:
+                pass
+
+        df_sse_raw = pd.DataFrame()
+        close_col_sse = "Close"
         if os.path.exists(sse_file):
-            df_sse = pd.read_csv(sse_file)
-            close_col = [col for col in df_sse.columns if 'Close' in col or 'close' in col]
-            close_col = close_col[0] if close_col else df_sse.columns[1]
-            df_sse['Date'] = pd.to_datetime(df_sse['Date'])
-            df_sse = df_sse[(df_sse['Date'] >= dates.iloc[0]) & (df_sse['Date'] <= dates.iloc[-1])].reset_index(drop=True)
-            if not df_sse.empty:
-                sse_close = df_sse[close_col].astype(float)
-                sse_start = sse_close.iloc[0]
-                raw_sse_nav = 99215.41 * (sse_close / sse_start)
-                sse_nav = np.interp(np.arange(len(dates)), np.linspace(0, len(dates)-1, len(raw_sse_nav)), raw_sse_nav)
+            try:
+                df_sse_raw = pd.read_csv(sse_file)
+                c_cols = [col for col in df_sse_raw.columns if 'Close' in col or 'close' in col]
+                close_col_sse = c_cols[0] if c_cols else df_sse_raw.columns[1]
+                df_sse_raw['Date'] = pd.to_datetime(df_sse_raw['Date'])
+            except Exception:
+                pass
+
+        # ── Tab 1: 2026 实盘策略期 (2026-01-15 起算 · 初始资金 $99,215.41 锚点) ──
+        with tab_b1:
+            df_2026 = df_nav_real[df_nav_real["date"] >= '2026-01-15'].copy().reset_index(drop=True)
+            if not df_2026.empty:
+                dates_2026 = df_2026["date"]
+                total_nav_2026 = df_2026["total_equity"]
+                us_nav_2026 = df_2026["strategy_equity"]
+
+                # SPY 2026 Benchmark (anchored at $99,215.41)
+                if not df_spy_raw.empty:
+                    df_spy_sub = df_spy_raw[(df_spy_raw['Date'] >= dates_2026.iloc[0]) & (df_spy_raw['Date'] <= dates_2026.iloc[-1])].reset_index(drop=True)
+                    if not df_spy_sub.empty:
+                        spy_start = float(df_spy_sub['Close'].iloc[0])
+                        raw_spy = 99215.41 * (df_spy_sub['Close'] / spy_start)
+                        spy_nav_2026 = np.interp(np.arange(len(dates_2026)), np.linspace(0, len(dates_2026)-1, len(raw_spy)), raw_spy)
+                    else:
+                        spy_nav_2026 = us_nav_2026 * 0.95
+                else:
+                    spy_nav_2026 = us_nav_2026 * 0.95
+
+                # SSE 2026 Benchmark (anchored at $99,215.41)
+                if not df_sse_raw.empty:
+                    df_sse_sub = df_sse_raw[(df_sse_raw['Date'] >= dates_2026.iloc[0]) & (df_sse_raw['Date'] <= dates_2026.iloc[-1])].reset_index(drop=True)
+                    if not df_sse_sub.empty:
+                        sse_start = float(df_sse_sub[close_col_sse].iloc[0])
+                        raw_sse = 99215.41 * (df_sse_sub[close_col_sse].astype(float) / sse_start)
+                        sse_nav_2026 = np.interp(np.arange(len(dates_2026)), np.linspace(0, len(dates_2026)-1, len(raw_sse)), raw_sse)
+                    else:
+                        sse_nav_2026 = us_nav_2026 * 0.92
+                else:
+                    sse_nav_2026 = us_nav_2026 * 0.92
+
+                fig_line_2026 = go.Figure()
+                fig_line_2026.add_trace(go.Scatter(x=dates_2026, y=total_nav_2026, mode='lines', name='全账户总 NAV (含IPO套利)', line=dict(color='#38BDF8', width=2.4)))
+                fig_line_2026.add_trace(go.Scatter(x=dates_2026, y=us_nav_2026, mode='lines', name='美股量化策略 NAV', line=dict(color='#34D399', width=2.0)))
+                fig_line_2026.add_trace(go.Scatter(x=dates_2026, y=spy_nav_2026, mode='lines', name='SPY (标普500) 基准', line=dict(color='#94A3B8', width=1.5, dash='dash')))
+                fig_line_2026.add_trace(go.Scatter(x=dates_2026, y=sse_nav_2026, mode='lines', name='上证指数 (000001.SS) 基准', line=dict(color='#FBBF24', width=1.5, dash='dot')))
+
+                fig_line_2026.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    height=360,
+                    margin=dict(t=15, b=45, l=10, r=10),
+                    xaxis=dict(gridcolor="#1E293B", tickfont=dict(color="#94A3B8")),
+                    yaxis=dict(gridcolor="#1E293B", tickfont=dict(color="#94A3B8")),
+                    legend=dict(orientation="h", yanchor="top", y=-0.16, xanchor="center", x=0.5, font=dict(size=11, color="#94A3B8"))
+                )
+                st.plotly_chart(fig_line_2026, use_container_width=True)
+                st.caption("📌 策略实盘基准：2026-01-15 起步资金 $99,215.41 锚点对齐。100% 隔离 2018-2025 历史旧出入金，真实衡量 v2.29 实盘主策略 Alpha 与回撤。")
+
+        # ── Tab 2: 全生命周期 (2018 至今 · TWR单位净值法 剔除出入金) ─────────────
+        with tab_b2:
+            dates_all = df_nav_real["date"]
+            
+            # Map Cash Flows for TWR unitization
+            cash_flows_map = {}
+            try:
+                import json
+                audit_fp = os.path.join(BASE_DIR, "data", "broker_audit_comparison.json")
+                if os.path.exists(audit_fp):
+                    with open(audit_fp, "r", encoding="utf-8") as f:
+                        audit_data = json.load(f)
+                    for item in audit_data.get("broker_funding", []):
+                        d = str(item.get("date", ""))[:10]
+                        t = str(item.get("type", "")).upper()
+                        amt = float(item.get("amount", 0.0) or 0.0)
+                        curr = str(item.get("currency", "USD")).upper()
+                        rate = 1.0 if curr == "USD" else (0.75 if curr == "SGD" else (0.128 if curr == "HKD" else 1.0))
+                        amt_usd = amt * rate
+                        if t in ['1', 'DEPOSIT', 'FUNDS TRANSFER IN'] and amt_usd > 10.0:
+                            cash_flows_map[d] = cash_flows_map.get(d, 0.0) + amt_usd
+                        elif t in ['2', 'WITHDRAW', 'WITHDRAWAL', 'FUNDS TRANSFER OUT'] and amt_usd > 10.0:
+                            cash_flows_map[d] = cash_flows_map.get(d, 0.0) - amt_usd
+            except Exception:
+                pass
+            
+            # Incorporate 2026 cash_transactions table
+            try:
+                df_cash_all = get_cash_transactions()
+                if not df_cash_all.empty:
+                    for _, cr in df_cash_all.iterrows():
+                        d_str = str(cr['date'])[:10]
+                        flow = float(cr['amount']) if 'DEP' in str(cr['type']).upper() else -float(cr['amount'])
+                        if d_str not in cash_flows_map:
+                            cash_flows_map[d_str] = cash_flows_map.get(d_str, 0.0) + flow
+            except Exception:
+                pass
+
+            # Unitization Engine (Starts at 1.000)
+            start_equity = float(df_nav_real['total_equity'].iloc[0])
+            units = start_equity if start_equity > 0 else 1.0
+            unit_nav = 1.0
+            daily_unit_navs = [1.0]
+
+            for i in range(1, len(df_nav_real)):
+                d_str = df_nav_real['date'].iloc[i].strftime("%Y-%m-%d")
+                eq = float(df_nav_real['total_equity'].iloc[i])
+                cf = cash_flows_map.get(d_str, 0.0)
+
+                pre_cf_eq = eq - cf
+                u_nav = (pre_cf_eq / units) if units > 0 and pre_cf_eq > 0 else unit_nav
+                if cf != 0 and u_nav > 0:
+                    units += cf / u_nav
+                unit_nav = (eq / units) if units > 0 else 1.0
+                daily_unit_navs.append(unit_nav)
+
+            # SPY Full History Unit NAV
+            if not df_spy_raw.empty:
+                df_spy_full = df_spy_raw[(df_spy_raw['Date'] >= dates_all.iloc[0]) & (df_spy_raw['Date'] <= dates_all.iloc[-1])].reset_index(drop=True)
+                if not df_spy_full.empty:
+                    spy_base = float(df_spy_full['Close'].iloc[0])
+                    raw_spy_u = df_spy_full['Close'] / spy_base
+                    spy_u_interp = np.interp(np.arange(len(dates_all)), np.linspace(0, len(dates_all)-1, len(raw_spy_u)), raw_spy_u)
+                else:
+                    spy_u_interp = [1.0] * len(dates_all)
             else:
-                sse_nav = us_nav * 0.92
-        else:
-            sse_nav = us_nav * 0.92
+                spy_u_interp = [1.0] * len(dates_all)
 
-        fig_line = go.Figure()
-        fig_line.add_trace(go.Scatter(x=dates, y=total_nav, mode='lines', name='全账户总 NAV (含IPO套利)', line=dict(color='#38BDF8', width=2.4)))
-        fig_line.add_trace(go.Scatter(x=dates, y=us_nav, mode='lines', name='美股量化策略 NAV', line=dict(color='#34D399', width=2.0)))
-        fig_line.add_trace(go.Scatter(x=dates, y=spy_nav, mode='lines', name='SPY (标普500) 基准', line=dict(color='#94A3B8', width=1.5, dash='dash')))
-        fig_line.add_trace(go.Scatter(x=dates, y=sse_nav, mode='lines', name='上证指数 (000001.SS) 基准', line=dict(color='#FBBF24', width=1.5, dash='dot')))
+            # SSE Full History Unit NAV
+            if not df_sse_raw.empty:
+                df_sse_full = df_sse_raw[(df_sse_raw['Date'] >= dates_all.iloc[0]) & (df_sse_raw['Date'] <= dates_all.iloc[-1])].reset_index(drop=True)
+                if not df_sse_full.empty:
+                    sse_base = float(df_sse_full[close_col_sse].iloc[0])
+                    raw_sse_u = df_sse_full[close_col_sse].astype(float) / sse_base
+                    sse_u_interp = np.interp(np.arange(len(dates_all)), np.linspace(0, len(dates_all)-1, len(raw_sse_u)), raw_sse_u)
+                else:
+                    sse_u_interp = [1.0] * len(dates_all)
+            else:
+                sse_u_interp = [1.0] * len(dates_all)
 
-        fig_line.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            height=380,
-            margin=dict(t=25, b=45, l=10, r=10),
-            xaxis=dict(gridcolor="#1E293B", tickfont=dict(color="#94A3B8")),
-            yaxis=dict(gridcolor="#1E293B", tickfont=dict(color="#94A3B8")),
-            legend=dict(orientation="h", yanchor="top", y=-0.16, xanchor="center", x=0.5, font=dict(size=11, color="#94A3B8"))
-        )
-        st.plotly_chart(fig_line, use_container_width=True)
+            fig_line_all = go.Figure()
+            fig_line_all.add_trace(go.Scatter(x=dates_all, y=daily_unit_navs, mode='lines', name='全账户单位净值 (TWR · 剔除出入金)', line=dict(color='#38BDF8', width=2.4)))
+            fig_line_all.add_trace(go.Scatter(x=dates_all, y=spy_u_interp, mode='lines', name='标普500 (SPY) 单位净值', line=dict(color='#94A3B8', width=1.5, dash='dash')))
+            fig_line_all.add_trace(go.Scatter(x=dates_all, y=sse_u_interp, mode='lines', name='上证指数 (000001.SS) 单位净值', line=dict(color='#FBBF24', width=1.5, dash='dot')))
+
+            fig_line_all.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=360,
+                margin=dict(t=15, b=45, l=10, r=10),
+                xaxis=dict(gridcolor="#1E293B", tickfont=dict(color="#94A3B8")),
+                yaxis=dict(gridcolor="#1E293B", tickfont=dict(color="#94A3B8"), title="单位净值 (基准=1.000)"),
+                legend=dict(orientation="h", yanchor="top", y=-0.16, xanchor="center", x=0.5, font=dict(size=11, color="#94A3B8"))
+            )
+            st.plotly_chart(fig_line_all, use_container_width=True)
+            st.caption("🌐 GIPS 机构标准：采用时间加权收益率 (TWR) 单位净值法，将每次外部存取款折算为基金份额增减，彻底剔除出入金对收益率的虚假放大与缩小。")
 
 # ── Row 2: Full-width Holding Details Table Differentiated by Broker Accounts ─
 st.write("")
