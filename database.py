@@ -532,6 +532,12 @@ def record_brokerage_nav(date_str, total_equity, hk_pnl_cum=0.0):
 
 
 def get_nav_history():
+    conn = get_connection()
+    df_local = pd.read_sql_query(
+        "SELECT * FROM nav_history WHERE total_equity IS NOT NULL ORDER BY date ASC",
+        conn)
+    conn.close()
+
     df_cloud = fetch_supabase_df("nav_history", order="date.asc")
     if df_cloud is not None and not df_cloud.empty:
         # Ensure all expected columns exist to prevent KeyError on Streamlit UI
@@ -539,14 +545,14 @@ def get_nav_history():
             if col not in df_cloud.columns:
                 df_cloud[col] = df_cloud['nav'] if 'nav' in df_cloud.columns else 0.0
         df_cloud = df_cloud[df_cloud['total_equity'].notnull()]
+        
+        # Merge cloud and local so no historical date is ever omitted
+        if not df_local.empty and not df_cloud.empty:
+            df_merged = pd.concat([df_cloud, df_local]).drop_duplicates(subset=['date'], keep='first').sort_values('date').reset_index(drop=True)
+            return df_merged
         if not df_cloud.empty:
             return df_cloud
-    conn = get_connection()
-    df = pd.read_sql_query(
-        "SELECT * FROM nav_history WHERE total_equity IS NOT NULL ORDER BY date ASC",
-        conn)
-    conn.close()
-    return df
+    return df_local
 
 def get_trades_history():
     df_cloud = fetch_supabase_df("trades", select="*", order="id.desc")
