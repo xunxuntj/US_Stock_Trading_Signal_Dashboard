@@ -7,9 +7,12 @@ directly from Tiger Brokers OpenAPI and Charles Schwab API.
 import os
 import sys
 import datetime
-from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core.broker.tiger_connector import TigerBrokerConnector
