@@ -1,0 +1,4278 @@
+{
+  "audit_timestamp": "2026-11-12T06:54:37.386395+00:00",
+  "summary": {
+    "total_broker_orders": 4,
+    "total_db_trades": 64,
+    "matched_trades": 1,
+    "broker_orders_missing_in_db": 3,
+    "db_trades_unmatched_in_api": 63,
+    "total_db_cash_txs": 6,
+    "total_broker_funding_records": 145,
+    "total_broker_analytics_records": 314
+  },
+  "matched_trades": [
+    {
+      "db_id": 67,
+      "date": "2026-10-07",
+      "ticker": "NVDY",
+      "action": "BUY",
+      "db_shares": 8.0,
+      "broker_shares": 8.0,
+      "db_price": 13.12,
+      "broker_price": 13.12,
+      "price_diff": 0.0,
+      "db_fee": 2.98,
+      "broker_fee": 2.98,
+      "fee_diff": 0.0,
+      "broker_order_id": "234",
+      "account": "U9959007",
+      "db_notes": "API Auto-Sync (TIGER)"
+    }
+  ],
+  "unmatched_broker_orders": [
+    {
+      "order_id": "228",
+      "account": "U9959007",
+      "date": "2026-05-06",
+      "time": "2026-05-06 16:25:30",
+      "ticker": "NVDY",
+      "action": "BUY",
+      "shares": 8.0,
+      "price": 13.78,
+      "total_value": 110.24,
+      "commission": 2.98,
+      "realized_pnl": 0.0,
+      "status": "OrderStatus.FILLED"
+    },
+    {
+      "order_id": "229",
+      "account": "U9959007",
+      "date": "2026-05-06",
+      "time": "2026-05-06 16:25:46",
+      "ticker": "NVDY",
+      "action": "BUY",
+      "shares": 1.0,
+      "price": 13.79,
+      "total_value": 13.79,
+      "commission": 2.98,
+      "realized_pnl": 0.0,
+      "status": "OrderStatus.FILLED"
+    },
+    {
+      "order_id": "0",
+      "account": "638812",
+      "date": "2026-02-10",
+      "time": "2026-02-10 02:12:20",
+      "ticker": "00600",
+      "action": "SELL",
+      "shares": 400.0,
+      "price": 28.32,
+      "total_value": 11328.0,
+      "commission": 31.74,
+      "realized_pnl": 16.26,
+      "status": "OrderStatus.FILLED"
+    }
+  ],
+  "unmatched_db_trades": [
+    {
+      "db_id": 1,
+      "date": "2026-01-15",
+      "ticker": "SPY",
+      "action": "BUY",
+      "shares": 2.00482,
+      "price": 574.5,
+      "fee": 0.0,
+      "reason": "初始持仓",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 2,
+      "date": "2026-01-15",
+      "ticker": "SOXX",
+      "action": "BUY",
+      "shares": 31.0,
+      "price": 321.72,
+      "fee": 0.0,
+      "reason": "初始持仓",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 3,
+      "date": "2026-01-16",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 1151.0,
+      "price": 59.15,
+      "fee": 14.25,
+      "reason": "",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 4,
+      "date": "2026-01-16",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 50.0,
+      "price": 59.14,
+      "fee": 0.0,
+      "reason": "",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 5,
+      "date": "2026-01-16",
+      "ticker": "JEPQ",
+      "action": "SELL",
+      "shares": 152.0,
+      "price": 59.12,
+      "fee": 2.58,
+      "reason": "持仓比例超出，立刻卖出",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 6,
+      "date": "2026-01-16",
+      "ticker": "SPY",
+      "action": "BUY",
+      "shares": 13.0,
+      "price": 693.7,
+      "fee": 2.04,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 7,
+      "date": "2026-01-20",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 94.0,
+      "price": 58.7,
+      "fee": 2.36,
+      "reason": "",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 8,
+      "date": "2026-01-21",
+      "ticker": "SPY",
+      "action": "SELL",
+      "shares": 15.00482,
+      "price": 682.59,
+      "fee": 2.05,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 9,
+      "date": "2026-01-23",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 245.0,
+      "price": 58.94,
+      "fee": 2.95,
+      "reason": "",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 10,
+      "date": "2026-01-23",
+      "ticker": "JEPQ",
+      "action": "SELL",
+      "shares": 728.0,
+      "price": 59.33,
+      "fee": 8.63,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 11,
+      "date": "2026-01-23",
+      "ticker": "QUAL",
+      "action": "BUY",
+      "shares": 128.0,
+      "price": 203.14,
+      "fee": 2.49,
+      "reason": "",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 12,
+      "date": "2026-01-28",
+      "ticker": "QQQ",
+      "action": "BUY",
+      "shares": 15.0,
+      "price": 635.88,
+      "fee": 2.05,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 13,
+      "date": "2026-02-06",
+      "ticker": "QQQ",
+      "action": "SELL",
+      "shares": 15.0,
+      "price": 599.3,
+      "fee": 2.05,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 14,
+      "date": "2026-02-06",
+      "ticker": "SOXX",
+      "action": "SELL",
+      "shares": 31.0,
+      "price": 336.55,
+      "fee": 2.11,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 15,
+      "date": "2026-02-07",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 4.77541,
+      "price": 57.93,
+      "fee": 2.01,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 16,
+      "date": "2026-02-26",
+      "ticker": "SOXX",
+      "action": "BUY",
+      "shares": 28.0,
+      "price": 366.88,
+      "fee": 2.1,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 17,
+      "date": "2026-03-04",
+      "ticker": "SOXX",
+      "action": "SELL",
+      "shares": 28.0,
+      "price": 329.01,
+      "fee": 2.1,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 18,
+      "date": "2026-03-07",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 5.32394,
+      "price": 57.18,
+      "fee": 2.01,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 19,
+      "date": "2026-03-24",
+      "ticker": "QUAL",
+      "action": "BUY",
+      "shares": 0.24931,
+      "price": 194.01,
+      "fee": 0.48,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 20,
+      "date": "2026-04-08",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 6.06026,
+      "price": 55.58,
+      "fee": 2.01,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 21,
+      "date": "2026-04-09",
+      "ticker": "SOXX",
+      "action": "BUY",
+      "shares": 26.0,
+      "price": 373.79,
+      "fee": 2.09,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 22,
+      "date": "2026-04-15",
+      "ticker": "SPY",
+      "action": "BUY",
+      "shares": 14.0,
+      "price": 695.17,
+      "fee": 2.04,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 23,
+      "date": "2026-04-15",
+      "ticker": "QQQ",
+      "action": "BUY",
+      "shares": 6.0,
+      "price": 628.74,
+      "fee": 2.01,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 24,
+      "date": "2026-04-15",
+      "ticker": "JEPQ",
+      "action": "SELL",
+      "shares": 100.15961,
+      "price": 58.44,
+      "fee": 2.51,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 25,
+      "date": "2026-04-15",
+      "ticker": "JEPQ",
+      "action": "SELL",
+      "shares": 26.0,
+      "price": 58.43,
+      "fee": 2.12,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 26,
+      "date": "2026-04-15",
+      "ticker": "QQQ",
+      "action": "BUY",
+      "shares": 10.0,
+      "price": 629.37,
+      "fee": 2.03,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 27,
+      "date": "2026-04-15",
+      "ticker": "QQQ",
+      "action": "BUY",
+      "shares": 10.0,
+      "price": 629.3,
+      "fee": 2.03,
+      "reason": "",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 28,
+      "date": "2026-04-15",
+      "ticker": "QQQ",
+      "action": "SELL",
+      "shares": 10.0,
+      "price": 629.18,
+      "fee": 2.16,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 29,
+      "date": "2026-04-15",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 189.0,
+      "price": 58.38,
+      "fee": 2.73,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 30,
+      "date": "2026-04-15",
+      "ticker": "JEPQ",
+      "action": "SELL",
+      "shares": 289.0,
+      "price": 58.66,
+      "fee": 3.78,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 31,
+      "date": "2026-04-18",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 250.0,
+      "price": 58.64,
+      "fee": 2.97,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 32,
+      "date": "2026-05-07",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 6.27067,
+      "price": 59.36,
+      "fee": 2.01,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 33,
+      "date": "2026-05-07",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 37.0,
+      "price": 59.36,
+      "fee": 2.13,
+      "reason": "调整持仓比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 34,
+      "date": "2026-05-19",
+      "ticker": "SOXX",
+      "action": "SELL",
+      "shares": 26.0,
+      "price": 478.53,
+      "fee": 2.35,
+      "reason": "未能理解策略细节，错误止损",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 35,
+      "date": "2026-05-20",
+      "ticker": "SOXX",
+      "action": "BUY",
+      "shares": 26.0,
+      "price": 515.88,
+      "fee": 2.09,
+      "reason": "修正上述错误买回",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 36,
+      "date": "2026-06-06",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 6.30574,
+      "price": 59.55,
+      "fee": 2.01,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 37,
+      "date": "2026-06-08",
+      "ticker": "QQQ",
+      "action": "SELL",
+      "shares": 16.0,
+      "price": 716.23,
+      "fee": 2.29,
+      "reason": "策略卖出信号",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 38,
+      "date": "2026-06-08",
+      "ticker": "SOXX",
+      "action": "SELL",
+      "shares": 26.0,
+      "price": 566.49,
+      "fee": 2.39,
+      "reason": "策略卖出信号",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 39,
+      "date": "2026-06-08",
+      "ticker": "SPY",
+      "action": "SELL",
+      "shares": 14.0,
+      "price": 741.99,
+      "fee": 2.26,
+      "reason": "策略卖出信号",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 40,
+      "date": "2026-06-17",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 200.0,
+      "price": 61.05,
+      "fee": 2.77,
+      "reason": "按策略调整L0+比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 41,
+      "date": "2026-06-17",
+      "ticker": "QUAL",
+      "action": "BUY",
+      "shares": 43.0,
+      "price": 218.24,
+      "fee": 2.16,
+      "reason": "按策略调整L0+比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 42,
+      "date": "2026-06-22",
+      "ticker": "JEPQ",
+      "action": "SELL",
+      "shares": 139.57641,
+      "price": 61.5,
+      "fee": 2.72,
+      "reason": "按策略调整L0+比例",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 43,
+      "date": "2026-06-22",
+      "ticker": "SOXX",
+      "action": "BUY",
+      "shares": 20.0,
+      "price": 648.0,
+      "fee": 2.07,
+      "reason": "策略买入信号",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 44,
+      "date": "2026-06-23",
+      "ticker": "QUAL",
+      "action": "BUY",
+      "shares": 0.20467,
+      "price": 215.37,
+      "fee": 0.44,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 45,
+      "date": "2026-06-25",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 21.0,
+      "price": 60.63,
+      "fee": 2.07,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 46,
+      "date": "2026-06-26",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 81.0,
+      "price": 59.93,
+      "fee": 2.31,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 47,
+      "date": "2026-06-26",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 57.0,
+      "price": 59.83,
+      "fee": 2.21,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 48,
+      "date": "2026-06-26",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 38.0,
+      "price": 59.81,
+      "fee": 2.14,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 49,
+      "date": "2026-06-26",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 20.0,
+      "price": 59.89,
+      "fee": 2.07,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 50,
+      "date": "2026-06-26",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 27.0,
+      "price": 59.79,
+      "fee": 2.1,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 51,
+      "date": "2026-06-26",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 160.0,
+      "price": 59.78,
+      "fee": 2.61,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 52,
+      "date": "2026-07-09",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 11.67491,
+      "price": 59.4,
+      "fee": 2.04,
+      "reason": "红利复投",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 53,
+      "date": "2026-07-20",
+      "ticker": "SOXX",
+      "action": "SELL",
+      "shares": 20.0,
+      "price": 528.88,
+      "fee": 2.29,
+      "reason": "策略卖出信号",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 54,
+      "date": "2026-07-22",
+      "ticker": "JEPQ",
+      "action": "BUY",
+      "shares": 170.0,
+      "price": 59.18,
+      "fee": 2.65,
+      "reason": "扩大现金复利",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 55,
+      "date": "2026-07-23",
+      "ticker": "JEPQ",
+      "action": "SELL",
+      "shares": 170.0,
+      "price": 59.33,
+      "fee": 2.87,
+      "reason": "操作失误，弥补现金欠款",
+      "category": "STRATEGY"
+    },
+    {
+      "db_id": 56,
+      "date": "2026-07-29",
+      "ticker": "QUAL",
+      "action": "SELL",
+      "shares": 171.45398,
+      "price": 217.41,
+      "fee": 3.44,
+      "reason": "v2.24 -> v2.29 策略升级清仓 QUAL",
+      "category": "STRATEGY_L0"
+    },
+    {
+      "db_id": 57,
+      "date": "2026-07-29",
+      "ticker": "SGOV",
+      "action": "BUY",
+      "shares": 470.0,
+      "price": 100.67,
+      "fee": 5.57,
+      "reason": "v2.29 实盘买入 SGOV 贴息底仓",
+      "category": "STRATEGY_L0"
+    },
+    {
+      "db_id": 58,
+      "date": "2026-08-05",
+      "ticker": "SGOV",
+      "action": "SELL",
+      "shares": 240.0,
+      "price": 100.44,
+      "fee": 3.43,
+      "reason": "资金变现",
+      "category": "STRATEGY_L0"
+    },
+    {
+      "db_id": 59,
+      "date": "2026-08-05",
+      "ticker": "SPY",
+      "action": "BUY",
+      "shares": 16.0,
+      "price": 774.7,
+      "fee": 2.05,
+      "reason": "L1 Entry (SPY) 实盘建仓",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 60,
+      "date": "2026-08-05",
+      "ticker": "QQQ",
+      "action": "BUY",
+      "shares": 16.0,
+      "price": 726.08,
+      "fee": 2.05,
+      "reason": "L1 Entry (QQQ) 实盘建仓",
+      "category": "STRATEGY_L1"
+    },
+    {
+      "db_id": 64,
+      "date": "2026-08-06",
+      "ticker": "SGOV",
+      "action": "SELL",
+      "shares": 95.0,
+      "price": 100.45,
+      "fee": 2.42,
+      "reason": "变现 SGOV 资金源以建仓 QLD",
+      "category": "STRATEGY_L0"
+    },
+    {
+      "db_id": 65,
+      "date": "2026-08-06",
+      "ticker": "QLD",
+      "action": "BUY",
+      "shares": 111.0,
+      "price": 90.42,
+      "fee": 2.42,
+      "reason": "L2 Entry (QLD): Parent L1 (QQQ) Bullish, ST Bullish (+1), S5FI (66.8%) >= 55%",
+      "category": "STRATEGY_L2"
+    },
+    {
+      "db_id": 66,
+      "date": "2026-11-10",
+      "ticker": "SGOV",
+      "action": "BUY",
+      "shares": 17829.0,
+      "price": 100.4992,
+      "fee": 0.9,
+      "reason": "API Auto-Sync (TIGER)",
+      "category": "STRATEGY_SGOV"
+    }
+  ],
+  "broker_funding": [
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2018-11-28",
+      "type": "1",
+      "amount": 22970.02,
+      "currency": "USD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2018-12-11",
+      "type": "1",
+      "amount": 16906.89,
+      "currency": "USD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2019-05-15",
+      "type": "1",
+      "amount": 18230.0,
+      "currency": "USD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2020-04-14",
+      "type": "1",
+      "amount": 5593.58,
+      "currency": "SGD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2020-07-14",
+      "type": "1",
+      "amount": 6100.0,
+      "currency": "SGD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2021-11-03",
+      "type": "1",
+      "amount": 10000.0,
+      "currency": "SGD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2021-11-03",
+      "type": "1",
+      "amount": 54351.1,
+      "currency": "SGD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-10-25",
+      "type": "1",
+      "amount": 5000.0,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-11-03",
+      "type": "1",
+      "amount": 10887.97,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-11-04",
+      "type": "1",
+      "amount": 542.0,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-11-05",
+      "type": "1",
+      "amount": 10880.26,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-11-06",
+      "type": "1",
+      "amount": 10890.46,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-11-10",
+      "type": "1",
+      "amount": 32697.25,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-11-12",
+      "type": "1",
+      "amount": 32682.06,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-11-25",
+      "type": "1",
+      "amount": 41111.71,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-12-04",
+      "type": "1",
+      "amount": 14121.86,
+      "currency": "USD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-12-07",
+      "type": "1",
+      "amount": 21982.98,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2025-12-09",
+      "type": "1",
+      "amount": 10986.34,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2026-01-16",
+      "type": "1",
+      "amount": 20000.0,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2026-01-20",
+      "type": "1",
+      "amount": 12000.0,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2026-03-19",
+      "type": "1",
+      "amount": 5000.0,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2026-05-07",
+      "type": "1",
+      "amount": 34878.0,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_funding_history",
+      "account": "638812",
+      "date": "2026-05-12",
+      "type": "1",
+      "amount": 23001.0,
+      "currency": "HKD",
+      "description": ""
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-18",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-18",
+      "type": "OTHER TRIPARTITE FEES",
+      "amount": -0.99,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-18",
+      "type": "COMMISSION",
+      "amount": -0.48,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "COMMISSION",
+      "amount": -75.4,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "SETTLEMENT FEE",
+      "amount": -10.92,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "STAMP DUTY",
+      "amount": -6.0,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "COMMISSION",
+      "amount": -1.51,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "EXCHANGE FEE",
+      "amount": -0.29,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.22,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "TRANSACTION LEVY",
+      "amount": -0.14,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-21",
+      "type": "AFRC TRANSACTION LEVY",
+      "amount": -0.01,
+      "currency": "HKD",
+      "description": "Sell-06727"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-22",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-22",
+      "type": "OTHER TRIPARTITE FEES",
+      "amount": -0.99,
+      "currency": "USD",
+      "description": "Buy-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-22",
+      "type": "COMMISSION",
+      "amount": -0.7,
+      "currency": "USD",
+      "description": "Sell-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-22",
+      "type": "PLATFORM FEE",
+      "amount": -0.56,
+      "currency": "USD",
+      "description": "Sell-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-22",
+      "type": "SEC FEE",
+      "amount": -0.37,
+      "currency": "USD",
+      "description": "Sell-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-22",
+      "type": "COMMISSION",
+      "amount": -0.07,
+      "currency": "USD",
+      "description": "Buy-SOXX"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-22",
+      "type": "COMMISSION",
+      "amount": -0.05,
+      "currency": "USD",
+      "description": "Buy-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-09-29",
+      "type": "DIVIDEND TAX",
+      "amount": -0.3,
+      "currency": "USD",
+      "description": "QLD-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-01",
+      "type": "DIVIDEND TAX",
+      "amount": -0.5,
+      "currency": "USD",
+      "description": "NVDA-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-01",
+      "type": "PLATFORM FEE",
+      "amount": -0.03,
+      "currency": "USD",
+      "description": "Buy-QLD"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-05",
+      "type": "DIVIDEND TAX",
+      "amount": -70.93,
+      "currency": "USD",
+      "description": "JEPQ-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-05",
+      "type": "PLATFORM FEE",
+      "amount": -0.04,
+      "currency": "USD",
+      "description": "Buy-NVDA"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-06",
+      "type": "FINANCING INTEREST",
+      "amount": -600.63,
+      "currency": "HKD",
+      "description": "nan"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-07",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-07",
+      "type": "COMMISSION",
+      "amount": -0.04,
+      "currency": "USD",
+      "description": "Buy-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-07",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.03,
+      "currency": "USD",
+      "description": "Buy-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-08",
+      "type": "DIVIDEND TAX",
+      "amount": -1.2,
+      "currency": "USD",
+      "description": "QQQ-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-12",
+      "type": "PLATFORM FEE",
+      "amount": -0.11,
+      "currency": "USD",
+      "description": "Buy-QQQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "TRADE",
+      "amount": -22019.55,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "COMMISSION",
+      "amount": -0.85,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.66,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "COMMISSION",
+      "amount": -0.43,
+      "currency": "USD",
+      "description": "Sell-QLD"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.33,
+      "currency": "USD",
+      "description": "Sell-QLD"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "SEC FEE",
+      "amount": -0.24,
+      "currency": "USD",
+      "description": "Sell-QQQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "SEC FEE",
+      "amount": -0.21,
+      "currency": "USD",
+      "description": "Sell-QLD"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "PLATFORM FEE",
+      "amount": -0.1,
+      "currency": "USD",
+      "description": "Sell-QQQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "COMMISSION",
+      "amount": -0.06,
+      "currency": "USD",
+      "description": "Sell-QQQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.05,
+      "currency": "USD",
+      "description": "Sell-QQQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "PLATFORM FEE",
+      "amount": -0.02,
+      "currency": "USD",
+      "description": "Sell-QLD"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "TRADE",
+      "amount": 2.49,
+      "currency": "USD",
+      "description": "Sell-QLD"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-15",
+      "type": "TRADE",
+      "amount": 10.31,
+      "currency": "USD",
+      "description": "Sell-QQQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-16",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 347.45,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-20",
+      "type": "FUNDS TRANSFER OUT",
+      "amount": -3.52,
+      "currency": "USD",
+      "description": "Transfer To FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-20",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 0.01,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "TRADE",
+      "amount": -8757.36,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "COMMISSION",
+      "amount": -0.34,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.26,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "SEC FEE",
+      "amount": -0.18,
+      "currency": "USD",
+      "description": "Sell-SOXX"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "COMMISSION",
+      "amount": -0.07,
+      "currency": "USD",
+      "description": "Sell-SOXX"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.05,
+      "currency": "USD",
+      "description": "Sell-SOXX"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-23",
+      "type": "TRADE",
+      "amount": 8666.51,
+      "currency": "USD",
+      "description": "Sell-SOXX"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-10-26",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 94.72,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "TRADE",
+      "amount": -9841.71,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "DIVIDEND TAX",
+      "amount": -3.02,
+      "currency": "USD",
+      "description": "SPY-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "COMMISSION",
+      "amount": -0.38,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.29,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "SEC FEE",
+      "amount": -0.2,
+      "currency": "USD",
+      "description": "Sell-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "COMMISSION",
+      "amount": -0.05,
+      "currency": "USD",
+      "description": "Sell-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.04,
+      "currency": "USD",
+      "description": "Sell-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "DIVIDEND",
+      "amount": 30.22,
+      "currency": "USD",
+      "description": "SPY-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-02",
+      "type": "TRADE",
+      "amount": 9886.19,
+      "currency": "USD",
+      "description": "Sell-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-03",
+      "type": "FUNDS TRANSFER OUT",
+      "amount": -69.7,
+      "currency": "USD",
+      "description": "Transfer To FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-03",
+      "type": "TRADE",
+      "amount": -26.93,
+      "currency": "USD",
+      "description": "Buy-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-03",
+      "type": "PLATFORM FEE",
+      "amount": -0.27,
+      "currency": "USD",
+      "description": "Buy-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "TRADE",
+      "amount": -13158.95,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "DIVIDEND TAX",
+      "amount": -68.04,
+      "currency": "USD",
+      "description": "JEPQ-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "COMMISSION",
+      "amount": -0.8,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "PLATFORM FEE",
+      "amount": -0.62,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.62,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "COMMISSION",
+      "amount": -0.51,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.39,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "COMMISSION",
+      "amount": -0.39,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.3,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "PLATFORM FEE",
+      "amount": -0.27,
+      "currency": "USD",
+      "description": "Sell-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "SEC FEE",
+      "amount": -0.14,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "SEC FEE",
+      "amount": -0.07,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "SEC FEE",
+      "amount": -0.01,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "TRADE",
+      "amount": 27.17,
+      "currency": "USD",
+      "description": "Sell-SPY"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 27.48,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "TRADE",
+      "amount": 32.42,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "DIVIDEND",
+      "amount": 680.36,
+      "currency": "USD",
+      "description": "JEPQ-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "TRADE",
+      "amount": 3248.0,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-04",
+      "type": "TRADE",
+      "amount": 6658.4,
+      "currency": "USD",
+      "description": "Sell-DBC"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-05",
+      "type": "FUNDS TRANSFER OUT",
+      "amount": -48.44,
+      "currency": "USD",
+      "description": "Transfer To FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-05",
+      "type": "DIVIDEND TAX",
+      "amount": -10.05,
+      "currency": "USD",
+      "description": "SGOV-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-05",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 0.01,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-05",
+      "type": "DIVIDEND",
+      "amount": 100.55,
+      "currency": "USD",
+      "description": "SGOV-DIVIDEND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-06",
+      "type": "FUNDS TRANSFER OUT",
+      "amount": -612.33,
+      "currency": "USD",
+      "description": "Transfer To FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-06",
+      "type": "TRADE",
+      "amount": -611.11,
+      "currency": "USD",
+      "description": "Buy-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-06",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Buy-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-06",
+      "type": "COMMISSION",
+      "amount": -0.04,
+      "currency": "USD",
+      "description": "Buy-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-06",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.03,
+      "currency": "USD",
+      "description": "Buy-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-06",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 0.01,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-09",
+      "type": "TRADE",
+      "amount": -89.59,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-09",
+      "type": "PLATFORM FEE",
+      "amount": -0.9,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-09",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 527.12,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "TRADE",
+      "amount": -73780.8,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "PLATFORM FEE",
+      "amount": -5.09,
+      "currency": "USD",
+      "description": "Sell-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "COMMISSION",
+      "amount": -4.96,
+      "currency": "USD",
+      "description": "Sell-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "SETTLEMENT FEE",
+      "amount": -3.82,
+      "currency": "USD",
+      "description": "Sell-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "PLATFORM FEE",
+      "amount": -2.94,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "COMMISSION",
+      "amount": -2.86,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "SETTLEMENT FEE",
+      "amount": -2.2,
+      "currency": "USD",
+      "description": "Buy-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "SEC FEE",
+      "amount": -1.45,
+      "currency": "USD",
+      "description": "Sell-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "PLATFORM FEE",
+      "amount": -1.0,
+      "currency": "USD",
+      "description": "Sell-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "COMMISSION",
+      "amount": -0.08,
+      "currency": "USD",
+      "description": "Sell-NVDA"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "SEC FEE",
+      "amount": -0.07,
+      "currency": "USD",
+      "description": "Sell-NVDA"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "SETTLEMENT FEE",
+      "amount": -0.06,
+      "currency": "USD",
+      "description": "Sell-NVDA"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "SEC FEE",
+      "amount": -0.01,
+      "currency": "USD",
+      "description": "Sell-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "TRADE",
+      "amount": 6.9,
+      "currency": "USD",
+      "description": "Sell-NVDA"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "TRADE",
+      "amount": 54.1,
+      "currency": "USD",
+      "description": "Sell-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 85.91,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "TRADE",
+      "amount": 89.6,
+      "currency": "USD",
+      "description": "Sell-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "TRADE",
+      "amount": 100.51,
+      "currency": "USD",
+      "description": "Sell-SGOV"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "TRADE",
+      "amount": 3348.2,
+      "currency": "USD",
+      "description": "Sell-NVDA"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-10",
+      "type": "TRADE",
+      "amount": 70430.64,
+      "currency": "USD",
+      "description": "Sell-JEPQ"
+    },
+    {
+      "source": "get_fund_details",
+      "account": "638812",
+      "date": "2026-11-11",
+      "type": "FUNDS TRANSFER IN",
+      "amount": 100.92,
+      "currency": "USD",
+      "description": "Transfer From FUND"
+    }
+  ],
+  "broker_analytics": [
+    {
+      "account": "638812",
+      "date": "2026-01-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 31211.91
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 28753.88
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 28752.84
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 28752.96
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 29188.4
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 31636.33
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 30844.43
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 28483.53
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 30538.98
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 30538.17
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 30538.44
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 31357.66
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 27340.73
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 26788.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 27072.14
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 92482.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 92482.66
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 92481.98
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 92561.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 97155.58
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 88038.78
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 102095.02
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 85417.42
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 85416.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 85417.16
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 88419.64
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 91178.6
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 96005.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 95836.47
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 100690.74
+    },
+    {
+      "account": "638812",
+      "date": "2026-01-31",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 100694.1
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 100692.12
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 100743.83
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 93088.27
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 92884.71
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 93395.75
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 77953.03
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 77953.46
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 77953.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 76832.79
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 75388.56
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 75573.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74239.0
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74171.9
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74171.94
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74172.82
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74274.28
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74354.12
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74853.86
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74660.25
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74855.8
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74854.8
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74855.64
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74340.57
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74900.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 75586.78
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 84948.06
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 84534.0
+    },
+    {
+      "account": "638812",
+      "date": "2026-02-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 84534.29
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 84534.5
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 84058.57
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 82655.22
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73738.85
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73731.45
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73006.32
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73006.39
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73006.65
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73528.11
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73691.41
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73845.3
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 72793.19
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 72204.82
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 72202.95
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 72204.58
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 72944.96
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 73037.5
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 72158.42
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 72421.29
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 71523.39
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 71521.75
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 71523.36
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 71582.98
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 68298.16
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 67631.29
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 66086.06
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 64909.13
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 64910.24
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 64909.09
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 64577.83
+    },
+    {
+      "account": "638812",
+      "date": "2026-03-31",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 66541.42
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 66772.27
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 66936.4
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 66936.55
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 66936.45
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 66936.53
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 67274.18
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 67540.47
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 69302.73
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 79619.63
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 79896.16
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 79896.04
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 79896.06
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 80623.29
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 79905.88
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104336.68
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 105302.48
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 108124.76
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 108119.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 108125.28
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111236.62
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 103492.59
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104707.14
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 103386.07
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 106083.11
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 106083.1
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 106083.07
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 108602.38
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 103813.14
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104120.56
+    },
+    {
+      "account": "638812",
+      "date": "2026-04-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104802.59
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104723.49
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104723.49
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104723.49
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 104414.56
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 105473.25
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 107631.12
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 109391.03
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 110832.03
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 110832.03
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 110832.03
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112067.61
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112744.04
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111651.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112326.58
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 110834.54
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 110834.54
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 110834.54
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 110790.27
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 97468.33
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111585.09
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111824.66
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112974.4
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112974.36
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112974.36
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112974.44
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 114669.51
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 113858.63
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 114414.03
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 114510.01
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 114510.01
+    },
+    {
+      "account": "638812",
+      "date": "2026-05-31",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 114510.01
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 115420.43
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 117215.07
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 115614.66
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 115504.19
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111227.79
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111227.79
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111227.79
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 76293.59
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 75909.52
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 74707.51
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 76378.73
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 76792.0
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 76792.0
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 76792.0
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 78689.01
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 99960.95
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 98143.34
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 99431.83
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 99431.83
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 99431.83
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 99431.83
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 103995.91
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 101076.61
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 103713.06
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 119659.22
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125940.5
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125940.35
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125940.49
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128464.22
+    },
+    {
+      "account": "638812",
+      "date": "2026-06-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 129056.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126558.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 124777.52
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125128.15
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125128.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125128.17
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128213.29
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126307.95
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126621.83
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128373.62
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127683.05
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127683.05
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127683.05
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125673.75
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126962.1
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126733.33
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125229.18
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 123565.87
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 123565.87
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 123565.87
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 113077.68
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 114661.22
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 124496.6
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112952.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112354.5
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112354.5
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 112354.5
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111955.17
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 111509.06
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 119933.45
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126751.62
+    },
+    {
+      "account": "638812",
+      "date": "2026-07-31",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127280.72
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127280.72
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127280.72
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127359.61
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128966.2
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128587.09
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128934.85
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130745.44
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130745.44
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130745.44
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130583.95
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130397.21
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131228.13
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131954.28
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132107.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132107.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132107.08
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132256.27
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130703.11
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130658.47
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130196.17
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131869.69
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131869.47
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131869.59
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130738.53
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 129991.36
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130029.58
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131695.36
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131802.77
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131802.7
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131802.79
+    },
+    {
+      "account": "638812",
+      "date": "2026-08-31",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132132.25
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 129532.77
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 129981.69
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131237.04
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131482.48
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131482.48
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131482.48
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131482.48
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132247.73
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132151.37
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131345.02
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132130.9
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132130.9
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132130.9
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131135.87
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130780.8
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 130567.45
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 180458.68
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 180472.37
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 180472.18
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 180472.67
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 134837.16
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137478.51
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137018.53
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137123.91
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137390.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137390.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137390.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 136604.37
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 136622.6
+    },
+    {
+      "account": "638812",
+      "date": "2026-09-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 136954.42
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 136875.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137770.74
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137770.74
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137770.74
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 138375.36
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 138791.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 139111.72
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137849.48
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 138194.84
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 138194.84
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 138194.84
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-12",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137594.1
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-13",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 137557.59
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-14",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 135080.63
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-15",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 135022.48
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-16",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 133025.32
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-17",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 133025.32
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-18",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 133025.32
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-19",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 134126.6
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-20",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 133997.04
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-21",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 134963.34
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-22",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132122.95
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-23",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132477.58
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-24",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132477.58
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-25",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 132477.58
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-26",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 133266.36
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-27",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 134148.97
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-28",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 134669.6
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-29",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 133713.44
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-30",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131045.67
+    },
+    {
+      "account": "638812",
+      "date": "2026-10-31",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131045.67
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-01",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 131045.67
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-02",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128762.31
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-03",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 129319.49
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-04",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 129809.62
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-05",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 125148.34
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-06",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126676.22
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-07",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126676.22
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-08",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 126676.22
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-09",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 128851.87
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-10",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127472.04
+    }
+  ]
+}
