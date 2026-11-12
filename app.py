@@ -721,8 +721,8 @@ st.markdown("""
     flex-direction: column;
     justify-content: space-between;
     box-sizing: border-box;
-    height: 100%;
-    min-height: 110px;
+    height: 100% !important;
+    min-height: 115px;
 }
 </style>
 
@@ -1758,19 +1758,25 @@ with tab_trades:
             new_is_strat_bool = oc3.radio("是否计入量化策略绩效考核:", ["计入主策略考核", "排除在策略外 (仅归属资产)"], index=0 if curr_is_strat == 1 else 1)
             new_is_strat_val = 1 if "计入" in new_is_strat_bool else 0
 
-            new_reason = st.text_input("交易备注 / 原因说明 (Reason/Notes):", value=str(target_trade.get('reason', '')))
+            col_reason, col_pwd = st.columns([3, 1])
+            new_reason = col_reason.text_input("交易备注 / 原因说明 (Reason/Notes):", value=str(target_trade.get('reason', '')))
+            tc_pwd = col_pwd.text_input("授权校验密码:", type="password", help="请输入授权密码以确认修改订单属性")
 
             if st.button("保存订单分类与属性", type="primary"):
-                update_trade_classification(
-                    trade_id=selected_id,
-                    category=new_cat,
-                    is_strategy=new_is_strat_val,
-                    layer=new_layer,
-                    reason=new_reason
-                )
-                st.cache_data.clear()
-                st.success(f"成功更新订单 ID #{selected_id}。分类为 `{new_cat}` (层级: `{new_layer}`, 计入策略: `{new_is_strat_val}`)。")
-                st.rerun()
+                pwd_hash = hashlib.sha256(tc_pwd.encode('utf-8')).hexdigest() if tc_pwd else ""
+                if pwd_hash != HK_IPO_PWD_HASH:
+                    st.error("授权密码校验错误，无法修改订单属性。")
+                else:
+                    update_trade_classification(
+                        trade_id=selected_id,
+                        category=new_cat,
+                        is_strategy=new_is_strat_val,
+                        layer=new_layer,
+                        reason=new_reason
+                    )
+                    st.cache_data.clear()
+                    st.success(f"成功更新订单 ID #{selected_id}。分类为 `{new_cat}` (层级: `{new_layer}`, 计入策略: `{new_is_strat_val}`)。")
+                    st.rerun()
 
 # ── Tab 2: NAV History ────────────────────────────────────────────────────────
 with tab_nav:
