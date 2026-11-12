@@ -123,9 +123,9 @@ def sync_broker_positions_to_db(
             shares = float(row.get('shares', 0.0))
             cost_basis = float(row.get('cost_basis', 0.0))
             layer = str(row.get('layer', get_canonical_layer(ticker)))
-            if ticker == 'NVDA':
+            if ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
                 accounts = "老虎证券 - 环球账户 (U9959007)"
-            elif ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR', '931CVR013', 'SGOV']:
+            elif ticker in ['SGOV', '931CVR013']:
                 accounts = "老虎证券 - 综合账户 (638812)"
             else:
                 accounts = str(row.get('accounts', ''))
@@ -138,11 +138,9 @@ def sync_broker_positions_to_db(
                 update_position(ticker, shares, cost_basis, layer, account=accounts)
                 synced_items.append({"ticker": ticker, "shares": shares, "cost_basis": cost_basis, "layer": layer, "account": accounts})
 
-    # Remove positions no longer held at broker (preserve discretionary NVDA in U9959007)
+    # Remove positions no longer held at broker
     closed_tickers = db_tickers - broker_tickers
     for t in closed_tickers:
-        if t == 'NVDA':
-            continue
         update_position(t, 0.0, 0.0, "CLOSED")
 
     return {"synced": True, "updated": synced_items, "closed": list(closed_tickers)}

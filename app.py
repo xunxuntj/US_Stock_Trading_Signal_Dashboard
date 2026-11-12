@@ -683,7 +683,7 @@ with col_b1:
     <div style="background: #111827; border: 1px solid #1E293B; border-top: 3px solid #38BDF8; border-radius: 6px; padding: 14px 16px;">
         <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #38BDF8;">CHANNEL 01 · QUANTITATIVE CORE</div>
         <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 2px 0;">老虎证券 · 综合账户 (638812)</div>
-        <div style="font-size: 0.8rem; color: #94A3B8;">运行状态: 活跃 · v2.29 美股量化主策略 + SGOV 贴息储备 + 港股打新套利 + 账户内自主配置</div>
+        <div style="font-size: 0.8rem; color: #94A3B8;">运行状态: 活跃 · v2.29 美股量化主策略 + SGOV 贴息储备 + 港股打新套利</div>
     </div>
     """, unsafe_allow_html=True)
 with col_b2:
@@ -691,7 +691,7 @@ with col_b2:
     <div style="background: #111827; border: 1px solid #1E293B; border-top: 3px solid #10B981; border-radius: 6px; padding: 14px 16px;">
         <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #34D399;">CHANNEL 02 · DISCRETIONARY HOLDING</div>
         <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 2px 0;">老虎证券 · 环球账户 (U9959007)</div>
-        <div style="font-size: 0.8rem; color: #94A3B8;">运行状态: 活跃 · 独立自主持有 NVDA (不纳入量化策略考核)</div>
+        <div style="font-size: 0.8rem; color: #94A3B8;">运行状态: 活跃 · 长期自主配置 (MSFT, GOOGL, GOOG, NVDY, WBA.CVR)</div>
     </div>
     """, unsafe_allow_html=True)
 with col_b3:
@@ -706,11 +706,10 @@ with col_b3:
 st.write("")
 
 FALLBACK_PRICES = {
-    'NVDA': 1005.66,
-    'MSFT': 420.15,
-    'GOOGL': 180.20,
-    'GOOG': 180.50,
-    'NVDY': 13.12,
+    'MSFT': 520.50,
+    'GOOGL': 294.80,
+    'GOOG': 291.39,
+    'NVDY': 8.74,
     'WBA.CVR': 0.53,
     '931CVR013': 0.00,
     'SGOV': 100.52
@@ -1053,7 +1052,7 @@ with tab_tiger_main:
 with tab_tiger_univ:
     st.markdown("##### 环球账户 (U9959007) · 长期自主配置")
     df_t2 = df_holdings_tab[df_holdings_tab["券商账户"].str.contains("环球|U9959007", na=False)]
-    val_t2 = df_t2['持仓市值'].apply(lambda x: float(str(x).replace('$', '').replace(',', '')) if '$' in str(x) else 0.0).sum() if not df_t2.empty else 20150.15
+    val_t2 = df_t2['持仓市值'].apply(lambda x: float(str(x).replace('$', '').replace(',', '')) if '$' in str(x) else 0.0).sum() if not df_t2.empty else 20146.69
     st.caption(f"资产总值 ${val_t2:,.2f} (证券市值: ${(val_t2 - cash_tiger_univ):,.2f} | 现金: ${cash_tiger_univ:,.2f}) — 独立自主运作，不计入量化主策略绩效考核")
     if not df_t2.empty:
         disp_t2 = df_t2.drop(columns=["券商账户"]).reset_index(drop=True)
