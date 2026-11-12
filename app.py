@@ -676,32 +676,59 @@ st.divider()
 # Section 1: Execution & Active Universe
 st.markdown('<div class="section-eyebrow">03 / REAL-TIME SIGNALS</div><div class="section-heading">交易执行与标的监控 (Execution & Active Universe)</div>', unsafe_allow_html=True)
 
-# Multi-Broker Status Ribbon (Institutional Layout)
-col_b1, col_b2, col_b3 = st.columns(3)
-with col_b1:
-    st.markdown("""
-    <div style="background: #111827; border: 1px solid #1E293B; border-top: 3px solid #38BDF8; border-radius: 6px; padding: 14px 16px;">
-        <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #38BDF8;">CHANNEL 01 · QUANTITATIVE CORE</div>
-        <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 2px 0;">老虎证券 · 综合账户 (638812)</div>
-        <div style="font-size: 0.8rem; color: #94A3B8;">运行状态: 活跃 · v2.29 美股量化主策略 + SGOV 贴息储备 + 港股打新套利</div>
+# Multi-Broker Status Ribbon (Institutional Layout - Synchronized Equal Heights)
+st.markdown("""
+<style>
+.channel-ribbon-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 8px;
+}
+@media (max-width: 900px) {
+    .channel-ribbon-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.channel-card {
+    background: #111827;
+    border: 1px solid #1E293B;
+    border-radius: 6px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 110px;
+}
+</style>
+
+<div class="channel-ribbon-grid">
+    <div class="channel-card" style="border-top: 3px solid #38BDF8;">
+        <div>
+            <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #38BDF8;">CHANNEL 01 · QUANTITATIVE CORE</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">老虎证券 · 综合账户 (638812)</div>
+        </div>
+        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">运行状态: 活跃 · v2.29 美股量化主策略 + SGOV 贴息储备 + 港股打新套利</div>
     </div>
-    """, unsafe_allow_html=True)
-with col_b2:
-    st.markdown("""
-    <div style="background: #111827; border: 1px solid #1E293B; border-top: 3px solid #10B981; border-radius: 6px; padding: 14px 16px;">
-        <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #34D399;">CHANNEL 02 · DISCRETIONARY HOLDING</div>
-        <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 2px 0;">老虎证券 · 环球账户 (U9959007)</div>
-        <div style="font-size: 0.8rem; color: #94A3B8;">运行状态: 活跃 · 长期自主配置 (MSFT, GOOGL, GOOG, NVDY, WBA.CVR)</div>
+    <div class="channel-card" style="border-top: 3px solid #10B981;">
+        <div>
+            <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #34D399;">CHANNEL 02 · DISCRETIONARY HOLDING</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">老虎证券 · 环球账户 (U9959007)</div>
+        </div>
+        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">运行状态: 活跃 · 长期自主配置 (MSFT, GOOGL, GOOG, NVDY, WBA.CVR)</div>
     </div>
-    """, unsafe_allow_html=True)
-with col_b3:
-    st.markdown("""
-    <div style="background: #111827; border: 1px solid #1E293B; border-top: 3px solid #F59E0B; border-radius: 6px; padding: 14px 16px;">
-        <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #FBBF24;">CHANNEL 03 · SECONDARY EXPANSION</div>
-        <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 2px 0;">Charles Schwab (嘉信理财)</div>
-        <div style="font-size: 0.8rem; color: #94A3B8;">运行状态: 待命就绪 · $1,500.00 美元现金储备待命 (防守流动性与策略建仓备用)</div>
+    <div class="channel-card" style="border-top: 3px solid #F59E0B;">
+        <div>
+            <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #FBBF24;">CHANNEL 03 · SECONDARY EXPANSION</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">Charles Schwab (嘉信理财)</div>
+        </div>
+        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">运行状态: 待命就绪 · $1,500.00 美元现金储备待命 (防守流动性与策略建仓备用)</div>
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
 st.write("")
 
