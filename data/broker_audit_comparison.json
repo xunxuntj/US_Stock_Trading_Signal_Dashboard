@@ -1,5 +1,5 @@
 {
-  "audit_timestamp": "2026-11-12T08:47:26.981263+00:00",
+  "audit_timestamp": "2026-11-12T12:02:54.290784+00:00",
   "summary": {
     "total_broker_orders": 4,
     "total_db_trades": 70,
@@ -8,7 +8,7 @@
     "db_trades_unmatched_in_api": 67,
     "total_db_cash_txs": 6,
     "total_broker_funding_records": 145,
-    "total_broker_analytics_records": 2907
+    "total_broker_analytics_records": 2908
   },
   "matched_trades": [
     {
@@ -22474,6 +22474,13 @@
       "total_equity": 0.0,
       "cash": 0.0,
       "gross_position_value": 127472.04
+    },
+    {
+      "account": "638812",
+      "date": "2026-11-11",
+      "total_equity": 0.0,
+      "cash": 0.0,
+      "gross_position_value": 127459.36
     }
   ]
 }
