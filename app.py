@@ -1913,8 +1913,8 @@ with tab_stats:
 # 移动端收益分享卡片 (Mobile Performance Summary · 9:16)
 # =========================================================================
 st.write("---")
-st.markdown('<div class="section-eyebrow">08 / PERFORMANCE SHARE CARD</div><div class="section-heading">移动端收益分享卡片 (Mobile Performance Summary)</div>', unsafe_allow_html=True)
-st.caption("隐私合规：0 绝对金额暴露。卡片采用 9:16 (370px × 740px) 移动端规格，矢量 SVG 折线图直接内嵌。")
+st.markdown('<div class="section-eyebrow">08 / 移动端专属分享</div><div class="section-heading">移动端收益分享卡片 (Mobile Performance Summary)</div>', unsafe_allow_html=True)
+st.caption("隐私合规：零绝对资金体量暴露，聚焦百分比净值回报与回撤控制。采用 9:16 (370px × 740px) 竖版规格，高清矢量 SVG 折线图内嵌，适配微信朋友圈、抖音与小红书长图分享。")
 
 today_str = datetime.date.today().strftime("%Y-%m-%d")
 df_nav_spark = get_nav_history()
@@ -1952,7 +1952,7 @@ if not df_nav_spark.empty:
 signals_html_items = []
 if actions:
     for idx, act in enumerate(actions, 1):
-        act_dir = "[BUY] 买入建仓" if act['action'] == 'BUY' else "[SELL] 卖出平仓"
+        act_dir = "[买入] 建仓" if act['action'] == 'BUY' else "[卖出] 平仓"
         dir_color = "#34D399" if act['action'] == 'BUY' else "#F43F5E"
         tkr = act['ticker']
         target_v = float(act.get('target_val', 0.0))
@@ -1978,15 +1978,15 @@ else:
             weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 12.5
             signals_html_items.append(f"""
                 <div style="display: flex; justify-content: space-between; align-items: center; background: #162032; border: 1px solid #1E293B; padding: 4px 8px; border-radius: 4px;">
-                    <span><strong style="color:#38BDF8;">[{tkr}]</strong> Core Universe</span>
+                    <span><strong style="color:#38BDF8;">[{tkr}]</strong> 量化策略核心标的</span>
                     <span style="color:#F8FAFC; font-weight:600; font-feature-settings:'tnum' 1;">{weight_pct:.1f}%</span>
                 </div>""")
         if not ns_df.empty:
             ns_tickers = ", ".join(ns_df['ticker'].tolist()[:3])
             signals_html_items.append(f"""
                 <div style="display: flex; justify-content: space-between; align-items: center; background: #162032; border: 1px solid #1E293B; padding: 4px 8px; border-radius: 4px;">
-                    <span><strong style="color:#94A3B8;">[{ns_tickers}...]</strong> Discretionary</span>
-                    <span style="color:#64748B; font-size: 0.68rem;">[Independent]</span>
+                    <span><strong style="color:#94A3B8;">[{ns_tickers}...]</strong> 非策略自主标的</span>
+                    <span style="color:#64748B; font-size: 0.68rem;">[独立账户配置]</span>
                 </div>""")
     else:
         signals_html_items.append("""
@@ -2012,7 +2012,7 @@ body {{
     display: flex;
     justify-content: center;
     align-items: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }}
 .card-box {{
     width: 370px;
@@ -2034,8 +2034,8 @@ body {{
     <!-- Header -->
     <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #1E293B; padding-bottom: 10px;">
         <div>
-            <div style="font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #38BDF8;">QUANTITATIVE EXECUTION · V2.29</div>
-            <div style="font-size: 0.98rem; font-weight: 700; color: #F8FAFC; letter-spacing: -0.01em;">Portfolio Performance Card</div>
+            <div style="font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #38BDF8;">量化执行系统 · V2.29 实盘</div>
+            <div style="font-size: 0.98rem; font-weight: 700; color: #F8FAFC; letter-spacing: -0.01em;">实盘投资组合收益报告</div>
         </div>
         <div style="font-size: 0.72rem; color: #94A3B8; font-weight: 600; font-feature-settings: 'tnum' 1;">{today_str}</div>
     </div>
@@ -2043,37 +2043,37 @@ body {{
     <!-- Section 1: Main Metric -->
     <div style="background: #111827; padding: 14px 16px; border-radius: 6px; border: 1px solid #1E293B;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #94A3B8;">CONSOLIDATED RETURN · 2026 ITD</span>
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #94A3B8;">全账户综合收益率 (2026至今)</span>
             <span style="font-size: 0.7rem; color: #34D399; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.28); padding: 1px 6px; border-radius: 4px; font-weight: 600;">实盘 {live_days} 天</span>
         </div>
         <div style="font-size: 2.4rem; font-weight: 800; color: #F8FAFC; line-height: 1.05; margin: 6px 0 4px 0; letter-spacing: -0.03em;">+{total_live_ret_pct:.2f}%</div>
-        <div style="font-size: 0.72rem; color: #64748B;">全账户综合投资回报 (基准本金 $99,215.41)</div>
+        <div style="font-size: 0.72rem; color: #64748B;">全账户综合投资回报 (基准日 2026-01-15 起算)</div>
         <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #162032; padding: 7px 10px; border-radius: 4px; font-size: 0.76rem; border: 1px solid #1E293B;">
-            <span>Sharpe: <strong style="color:#F8FAFC;">{(live_sharpe + 0.25):.2f}</strong></span>
-            <span>MOIC: <strong style="color:#38BDF8;">{macro_moic:.2f}x</strong></span>
-            <span>MaxDD: <strong style="color:#94A3B8;">{real_max_dd:.1f}%</strong></span>
+            <span>夏普比率: <strong style="color:#F8FAFC;">{(live_sharpe + 0.25):.2f}</strong></span>
+            <span>资本倍数: <strong style="color:#38BDF8;">{macro_moic:.2f}x</strong></span>
+            <span>最大回撤: <strong style="color:#94A3B8;">{real_max_dd:.1f}%</strong></span>
         </div>
     </div>
 
     <!-- Section 2: Strategy Dual Engines Grid -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
         <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
-            <div style="font-size: 0.68rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">US QUANT CORE</div>
+            <div style="font-size: 0.68rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">美股量化主策略</div>
             <div style="font-size: 1.15rem; font-weight: 700; color: #F8FAFC; margin-top: 2px;">+{us_live_ret_pct:.2f}%</div>
-            <div style="font-size: 0.68rem; color: #64748B; margin-top: 2px;">CAGR: {us_live_cagr:.1f}%</div>
+            <div style="font-size: 0.68rem; color: #64748B; margin-top: 2px;">年化复利: {us_live_cagr:.1f}%</div>
         </div>
         <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
-            <div style="font-size: 0.68rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">HK IPO ARBITRAGE</div>
+            <div style="font-size: 0.68rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">港股打新套利</div>
             <div style="font-size: 1.15rem; font-weight: 700; color: #34D399; margin-top: 2px;">+${hk_cum_profit:,.0f}</div>
-            <div style="font-size: 0.68rem; color: #64748B; margin-top: 2px;">胜率: 68.5%</div>
+            <div style="font-size: 0.68rem; color: #64748B; margin-top: 2px;">打新胜率: 68.5%</div>
         </div>
     </div>
 
     <!-- Section 2.5: Active Portfolio Universe -->
     <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px solid #1E293B; padding-bottom: 4px;">
-            <span style="font-size: 0.72rem; font-weight: 700; color: #38BDF8; letter-spacing: 0.04em; text-transform: uppercase;">PORTFOLIO POSITIONS</span>
-            <span style="font-size: 0.68rem; color: #34D399; font-weight: 600;">ACTIVE</span>
+            <span style="font-size: 0.72rem; font-weight: 700; color: #38BDF8; letter-spacing: 0.04em; text-transform: uppercase;">实盘核心持仓与资产分布</span>
+            <span style="font-size: 0.68rem; color: #34D399; font-weight: 600;">实盘运行中</span>
         </div>
         <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem;">
             {html_signals_rows}
@@ -2083,8 +2083,8 @@ body {{
     <!-- Section 3: Embedded SVG Sparkline Trajectory -->
     <div style="background: #111827; padding: 10px 12px; border-radius: 6px; border: 1px solid #1E293B;">
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-            <span style="font-size: 0.72rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">COMPOUNDING TRAJECTORY (%)</span>
-            <span style="font-size: 0.68rem; color: #64748B;">{live_days} Days ITD</span>
+            <span style="font-size: 0.72rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;">资产复利增长轨迹 (%)</span>
+            <span style="font-size: 0.68rem; color: #64748B;">实盘 {live_days} 天时序</span>
         </div>
         <svg width="310" height="90" style="overflow: hidden;">
             <defs>
@@ -2101,12 +2101,12 @@ body {{
     <!-- Section 4: Performance Matrix Footer -->
     <div style="background: #111827; padding: 10px 12px; border-radius: 6px; font-size: 0.72rem; border: 1px solid #1E293B;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color:#94A3B8;">Multi-Broker: <strong style="color:#F8FAFC;">Tiger 638812 / U9959007 · Schwab</strong></span>
-            <span style="color:#94A3B8;">Cash Flow: <strong style="color:#38BDF8;">${macro_annual_passive:,.0f}/Yr</strong></span>
+            <span style="color:#94A3B8;">托管券商: <strong style="color:#F8FAFC;">老虎证券 (综合/环球) · 嘉信理财</strong></span>
+            <span style="color:#94A3B8;">年化被动现金流: <strong style="color:#38BDF8;">${macro_annual_passive:,.0f}/年</strong></span>
         </div>
         <div style="display: flex; justify-content: space-between; color:#94A3B8; font-size: 0.7rem; border-top: 1px solid #1E293B; padding-top: 4px; margin-top: 4px;">
-            <span>Risk Guard: <strong style="color:#34D399;">S5FI Breadth Filter</strong></span>
-            <span>Yield Reserve: <strong style="color:#F8FAFC;">SGOV Yield Parking</strong></span>
+            <span>宏观风控: <strong style="color:#34D399;">S5FI 市场宽度过滤</strong></span>
+            <span>底仓配置: <strong style="color:#F8FAFC;">SGOV 美债流动性贴息</strong></span>
         </div>
     </div>
 </div>
