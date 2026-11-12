@@ -265,11 +265,17 @@ def get_positions():
             df['account'] = ''
         def _assign_acc(row):
             acc = str(row.get('account') or '').strip()
-            if acc:
-                return acc
             t = str(row.get('ticker') or '').upper().strip()
             if t == 'NVDA':
                 return '老虎证券 - 环球账户 (U9959007)'
+            if t in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR', '931CVR013', 'SGOV']:
+                return '老虎证券 - 综合账户 (638812)'
+            if acc and ('638812' in acc or '综合' in acc):
+                return '老虎证券 - 综合账户 (638812)'
+            if acc and ('U9959007' in acc or '环球' in acc):
+                return '老虎证券 - 环球账户 (U9959007)'
+            if acc:
+                return acc
             return '老虎证券 - 综合账户 (638812)'
         df['account'] = df.apply(_assign_acc, axis=1)
         return df
