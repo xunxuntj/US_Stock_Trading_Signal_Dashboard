@@ -1,4 +1,2 @@
 order_id,account,date,time,ticker,action,shares,price,total_value,commission,realized_pnl,status
-228,U9959007,2026-05-06,2026-05-06 16:25:30,NVDY,BUY,8.0,13.78,110.24,2.98,0.0,OrderStatus.FILLED
-229,U9959007,2026-05-06,2026-05-06 16:25:46,NVDY,BUY,1.0,13.79,13.79,2.98,0.0,OrderStatus.FILLED
 0,638812,2026-02-10,2026-02-10 02:12:20,00600,SELL,400.0,28.32,11328.0,31.74,16.26,OrderStatus.FILLED
