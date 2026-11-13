@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import datetime
 import hashlib
 import importlib
@@ -9,6 +10,17 @@ import numpy as np
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+
+def clean_account_label(val) -> str:
+    if val is None or pd.isna(val):
+        return ""
+    s = str(val)
+    s = s.replace("(638812)", "").replace("638812", "")
+    s = s.replace("(U9959007)", "").replace("U9959007", "")
+    s = s.replace("(56169533)", "").replace("56169533", "")
+    s = re.sub(r'\s*\(\s*\)', '', s)
+    s = re.sub(r'\s*-\s*$', '', s).strip()
+    return s
 
 # Ensure current directory is on sys.path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -241,7 +253,7 @@ st.markdown("""
         </div>
         <div style="text-align: right;">
             <div style="font-size: 0.85rem; font-weight: 600; color: #F8FAFC;">多券商统一对账托管 (Multi-Broker Consolidated)</div>
-            <div style="font-size: 0.75rem; color: #94A3B8; font-feature-settings: 'tnum' 1;">老虎综合 638812 · 老虎环球 U9959007 · 嘉信理财 Charles Schwab</div>
+            <div style="font-size: 0.75rem; color: #94A3B8; font-feature-settings: 'tnum' 1;">老虎综合账户 · 老虎环球账户 · 嘉信理财 Charles Schwab</div>
         </div>
     </div>
     <div style="font-size: 0.84rem; color: #94A3B8; margin-top: 10px; line-height: 1.5;">
@@ -362,7 +374,7 @@ with r1_c1:
         label="全账户总资产 (Consolidated NAV)",
         value=f"${total_combined_nav:,.2f}",
         delta=f"+{total_live_ret_pct:.2f}% 实盘区间累计",
-        help="全账户实际资产总和 (老虎综合账户 638812 + 老虎环球账户 U9959007 + 嘉信理财 Charles Schwab，起始于 2026-01-15 $99,215.41)"
+        help="全账户实际资产总和 (老虎综合账户 + 老虎环球账户 + 嘉信理财 Charles Schwab，起始于 2026-01-15 $99,215.41)"
     )
 
 with r1_c2:
@@ -677,7 +689,7 @@ if actions:
         action_border = "rgba(16, 185, 129, 0.3)" if is_buy else "rgba(244, 63, 94, 0.3)"
         badge_color = "#34D399" if is_buy else "#F43F5E"
         funding_info = "(资金来源: 优先变现 SGOV 贴息储备)" if is_buy else "(变现资金自动归集至 SGOV 贴息储备)"
-        target_broker = "老虎证券 - 综合账户 (638812) / Charles Schwab"
+        target_broker = "老虎证券 - 综合账户 / Charles Schwab"
         
         item_str = f'<div style="background: {action_bg}; border: 1px solid {action_border}; padding: 12px 14px; border-radius: 6px; margin-bottom: 10px;"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; margin-bottom: 6px;"><span style="font-size: 0.95rem; font-weight: 700; color: {badge_color};">指令 {idx}: {action_tag} {act["ticker"]}</span><span style="font-size: 0.88rem; font-weight: 600; color: #FBBF24; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums;">目标金额: ${act["target_val"]:,.2f}</span></div><div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 4px;"><strong>执行路径:</strong> {funding_info} | <strong>执行账户:</strong> {target_broker}</div><div style="font-size: 0.78rem; color: #94A3B8; background: rgba(0,0,0,0.2); padding: 5px 8px; border-radius: 4px;"><strong>逻辑说明:</strong> {act["reason"]}</div></div>'
         action_items_html += item_str + "\n"
@@ -730,14 +742,14 @@ st.markdown("""
     <div class="channel-card" style="border-top: 3px solid #38BDF8;">
         <div>
             <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #38BDF8;">CHANNEL 01 · QUANTITATIVE CORE</div>
-            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">老虎证券 · 综合账户 (638812)</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">老虎证券 · 综合账户</div>
         </div>
         <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">运行状态: 活跃 · v2.29 美股量化主策略 + SGOV 贴息储备 + 港股打新套利</div>
     </div>
     <div class="channel-card" style="border-top: 3px solid #10B981;">
         <div>
             <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #34D399;">CHANNEL 02 · DISCRETIONARY HOLDING</div>
-            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">老虎证券 · 环球账户 (U9959007)</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">老虎证券 · 环球账户</div>
         </div>
         <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">运行状态: 活跃 · 长期自主配置 (MSFT, GOOGL, GOOG, NVDY, WBA.CVR)</div>
     </div>
@@ -761,7 +773,7 @@ if not strat_pos_df.empty:
         curr_p = 1005.66 if tkr == 'NVDA' else (get_live_price(tkr) or float(pos_row['cost_basis']))
         mkt_val = shares * curr_p
         weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
-        acc_tag = pos_row.get('account', '老虎证券 - 综合账户 (638812)')
+        acc_tag = clean_account_label(pos_row.get('account', '老虎证券 - 综合账户'))
         layer_role = pos_row.get('layer', 'TREND')
         if tkr == 'JEPQ':
             layer_role = 'L0 高股息底仓'
@@ -778,12 +790,12 @@ if not non_strat_pos_df.empty:
         curr_p = 1005.66 if tkr == 'NVDA' else (get_live_price(tkr) or float(pos_row['cost_basis']))
         mkt_val = shares * curr_p
         weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
-        acc_tag = pos_row.get('account', '老虎证券 - 综合账户 (638812)')
+        acc_tag = clean_account_label(pos_row.get('account', '老虎证券 - 综合账户'))
         non_strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#64748B;font-weight:600;width:12%;">非策略 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#CBD5E1;font-size:0.95rem;">{tkr}</strong></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#CBD5E1;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">仓位占比 <strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">{weight_pct:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
 
 cash_command_items = [
-    {"label": "现金 1", "ticker": "美元现金 (老虎综合)", "role": "综合账户贴息与打新备用金", "amount": 325.37, "account": "老虎证券 - 综合账户 (638812)"},
-    {"label": "现金 2", "ticker": "美元现金 (老虎环球)", "role": "环球账户流动现金与股息", "amount": 14.42, "account": "老虎证券 - 环球账户 (U9959007)"},
+    {"label": "现金 1", "ticker": "美元现金 (老虎综合)", "role": "综合账户贴息与打新备用金", "amount": 325.37, "account": "老虎证券 - 综合账户"},
+    {"label": "现金 2", "ticker": "美元现金 (老虎环球)", "role": "环球账户流动现金与股息", "amount": 14.42, "account": "老虎证券 - 环球账户"},
     {"label": "现金 3", "ticker": "美元现金 (嘉信理财)", "role": "独立海外宏观防守现金储备", "amount": 1500.00, "account": "Charles Schwab (嘉信理财)"}
 ]
 cash_rows_html = ""
@@ -826,7 +838,7 @@ if not pos_df.empty:
         t = row['ticker']
         s = float(row['shares'])
         c = float(row['cost_basis'])
-        acc = str(row.get('account') or '老虎证券 - 综合账户 (638812)')
+        acc = clean_account_label(str(row.get('account') or '老虎证券 - 综合账户'))
         if s > 0.001:
             live_p = get_live_price(t)
             if t == 'NVDA':
@@ -872,7 +884,7 @@ pos_details.append({
     "price": None,
     "mkt_val": cash_tiger_main,
     "layer": "CASH",
-    "account": "老虎证券 - 综合账户 (638812)",
+    "account": "老虎证券 - 综合账户",
     "is_strategy": True,
     "is_cash": True
 })
@@ -883,7 +895,7 @@ pos_details.append({
     "price": None,
     "mkt_val": cash_tiger_univ,
     "layer": "CASH",
-    "account": "老虎证券 - 环球账户 (U9959007)",
+    "account": "老虎证券 - 环球账户",
     "is_strategy": False,
     "is_cash": True
 })
@@ -1224,14 +1236,14 @@ st.write("")
 st.markdown('<div class="section-eyebrow">04 / HOLDINGS STRUCTURE</div><div class="section-heading">持仓结构与标的明细 (Portfolio Composition & Allocations)</div>', unsafe_allow_html=True)
 
 tab_tiger_main, tab_tiger_univ, tab_schwab, tab_all = st.tabs([
-    "老虎证券 · 综合账户 (638812)",
-    "老虎证券 · 环球账户 (U9959007)",
+    "老虎证券 · 综合账户",
+    "老虎证券 · 环球账户",
     "Charles Schwab (嘉信理财)",
     "全账户合并总览"
 ])
 
 with tab_tiger_main:
-    st.markdown("##### 综合账户 (638812) · 量化主策略与贴息储备")
+    st.markdown("##### 综合账户 · 量化主策略与贴息储备")
     df_t1 = df_holdings_tab[df_holdings_tab["所属账户"].str.contains("综合|638812", na=False)]
     val_t1 = df_t1['持仓市值'].apply(lambda x: float(str(x).replace('$', '').replace(',', '')) if '$' in str(x) else 0.0).sum() if not df_t1.empty else 127784.73
     st.caption(f"实盘总值 ${val_t1:,.2f} | 美股量化主策略权益: ${(val_t1 - hk_cum_profit):,.2f} | 港股打新累积: ${hk_cum_profit:,.2f}")
@@ -1243,7 +1255,7 @@ with tab_tiger_main:
         st.info("暂无综合账户持仓数据")
 
 with tab_tiger_univ:
-    st.markdown("##### 环球账户 (U9959007) · 长期自主配置")
+    st.markdown("##### 环球账户 · 长期自主配置")
     df_t2 = df_holdings_tab[df_holdings_tab["所属账户"].str.contains("环球|U9959007", na=False)]
     val_t2 = df_t2['持仓市值'].apply(lambda x: float(str(x).replace('$', '').replace(',', '')) if '$' in str(x) else 0.0).sum() if not df_t2.empty else 20146.69
     st.caption(f"资产总值 ${val_t2:,.2f} (证券市值: ${(val_t2 - cash_tiger_univ):,.2f} | 现金: ${cash_tiger_univ:,.2f}) — 独立自主运作，不计入量化主策略绩效考核")
@@ -1256,7 +1268,7 @@ with tab_tiger_univ:
 
 with tab_schwab:
     st.markdown("##### Charles Schwab (嘉信理财) · 备用拓展通道")
-    st.caption("账户状态: 已完成入金激活 (账号 56169533) · 充裕防守流动性准备就绪")
+    st.caption("账户状态: 已完成入金激活 · 充裕防守流动性准备就绪")
     st.markdown(f"""
     <div style="background: #111827; border: 1px solid #1E293B; border-left: 3px solid #38BDF8; border-radius: 6px; padding: 16px 18px; color: #F8FAFC; margin-bottom: 12px;">
         <div style="font-size: 0.95rem; font-weight: 700; color: #38BDF8; margin-bottom: 6px;">账户状态：已完成入金激活，充裕流动性防守就绪</div>
@@ -1705,6 +1717,8 @@ with tab_trades:
 
         col_order = ["ID", "交易日期", "标的", "买卖", "股数", "单价($)", "交易金额($)", "已实现盈亏($)", "手续费($)", "层级", "订单分类", "策略归属", "备注", "所属账户"]
         disp_cols = [c for c in col_order if c in df_display_trades.columns]
+        if "所属账户" in df_display_trades.columns:
+            df_display_trades["所属账户"] = df_display_trades["所属账户"].apply(clean_account_label)
         st.dataframe(df_display_trades[disp_cols], use_container_width=True, height=450)
 
         total_fee = df_trades_full["fee"].sum() if "fee" in df_trades_full.columns else 0
@@ -1873,6 +1887,8 @@ with tab_cash:
         df_cash_disp["金额($USD)"] = df_cash_disp["金额($USD)"].apply(lambda x: f"${x:,.2f}")
         col_c_order = ["ID", "日期", "类型", "金额($USD)", "备注", "所属账户"]
         disp_c_cols = [c for c in col_c_order if c in df_cash_disp.columns]
+        if "所属账户" in df_cash_disp.columns:
+            df_cash_disp["所属账户"] = df_cash_disp["所属账户"].apply(clean_account_label)
         st.dataframe(df_cash_disp[disp_c_cols], use_container_width=True)
 
         total_deposit = df_cash_full[df_cash_full["type"] == "DEPOSIT"]["amount"].sum()

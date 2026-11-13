@@ -34,11 +34,11 @@ class MultiBrokerManager:
         tiger_connectors = []
         for idx, acc in enumerate(tiger_accounts, 1):
             if "U9959007" in acc or "UNIVERSAL" in acc.upper():
-                acc_label = f"老虎证券 - 环球账户 ({acc})"
+                acc_label = "老虎证券 - 环球账户"
             elif "638812" in acc or "CONSOLIDATED" in acc.upper():
-                acc_label = f"老虎证券 - 综合账户 ({acc})"
+                acc_label = "老虎证券 - 综合账户"
             else:
-                acc_label = f"老虎证券 ({acc})"
+                acc_label = "老虎证券"
 
             conn = TigerBrokerConnector(
                 account_id=acc,

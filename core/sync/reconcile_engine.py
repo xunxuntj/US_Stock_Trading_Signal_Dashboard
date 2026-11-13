@@ -124,15 +124,15 @@ def sync_broker_positions_to_db(
             cost_basis = float(row.get('cost_basis', 0.0))
             layer = str(row.get('layer', get_canonical_layer(ticker)))
             if ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
-                accounts = "老虎证券 - 环球账户 (U9959007)"
+                accounts = "老虎证券 - 环球账户"
             elif ticker in ['SGOV', '931CVR013']:
-                accounts = "老虎证券 - 综合账户 (638812)"
+                accounts = "老虎证券 - 综合账户"
             else:
                 accounts = str(row.get('accounts', ''))
                 if not accounts and 'account' in row:
                     accounts = str(row.get('account', ''))
                 if not accounts:
-                    accounts = "老虎证券 - 综合账户 (638812)"
+                    accounts = "老虎证券 - 综合账户"
             if shares > 0.0001:
                 broker_tickers.add(ticker)
                 update_position(ticker, shares, cost_basis, layer, account=accounts)
@@ -233,7 +233,7 @@ def ingest_broker_orders(
                 update_position(o.ticker, new_shares, curr_cost if new_shares > 0 else 0.0, layer_norm)
 
             # Record trade into trades table (SQLite + Supabase Cloud)
-            acc_lbl = "老虎证券 - 环球账户 (U9959007)" if o.ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR'] else "老虎证券 - 综合账户 (638812)"
+            acc_lbl = "老虎证券 - 环球账户" if o.ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR'] else "老虎证券 - 综合账户"
             record_trade(
                 date_str=trade_date,
                 ticker=o.ticker,
@@ -293,7 +293,7 @@ def ingest_broker_cash_transactions(
             notes += f" ({ctx.raw_type})"
 
         acc_label = "Charles Schwab (嘉信理财)" if ("Schwab" in str(ctx.broker.value) or "56169533" in str(ctx.account_id)) else (
-            "老虎证券 - 环球账户 (U9959007)" if "U9959007" in str(ctx.account_id) else "老虎证券 - 综合账户 (638812)"
+            "老虎证券 - 环球账户" if "U9959007" in str(ctx.account_id) else "老虎证券 - 综合账户"
         )
 
         cursor.execute("PRAGMA table_info(cash_transactions)")

@@ -174,7 +174,7 @@ def init_db():
 
 def record_cash_transaction(date_str, trans_type, amount, notes="", account=None):
     if not account:
-        account = "Charles Schwab (嘉信理财)" if ("Schwab" in str(notes) or "嘉信" in str(notes)) else "老虎证券 - 综合账户 (638812)"
+        account = "Charles Schwab (嘉信理财)" if ("Schwab" in str(notes) or "嘉信" in str(notes)) else "老虎证券 - 综合账户"
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("PRAGMA table_info(cash_transactions)")
@@ -285,16 +285,16 @@ def get_positions():
             acc = str(row.get('account') or '').strip()
             t = str(row.get('ticker') or '').upper().strip()
             if t in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
-                return '老虎证券 - 环球账户 (U9959007)'
+                return '老虎证券 - 环球账户'
             if t in ['SGOV', '931CVR013']:
-                return '老虎证券 - 综合账户 (638812)'
+                return '老虎证券 - 综合账户'
             if acc and ('U9959007' in acc or '环球' in acc):
-                return '老虎证券 - 环球账户 (U9959007)'
+                return '老虎证券 - 环球账户'
             if acc and ('638812' in acc or '综合' in acc):
-                return '老虎证券 - 综合账户 (638812)'
+                return '老虎证券 - 综合账户'
             if acc:
                 return acc
-            return '老虎证券 - 综合账户 (638812)'
+            return '老虎证券 - 综合账户'
         df['account'] = df.apply(_assign_acc, axis=1)
         return df
 

@@ -9,6 +9,7 @@ Provides standard templates for:
 
 from typing import Dict, List, Optional, Any
 import datetime
+import re
 from .telegram_dispatcher import TelegramDispatcher
 from .feishu_dispatcher import FeishuDispatcher
 from core.sanity.signal_guard import is_signal_already_sent, mark_signal_sent
@@ -161,6 +162,8 @@ class ProactiveNotifier:
         text += "📂 **各券商账户明细分布**:\n"
         for acc in accounts_detail:
             acc_name = acc.get('account_name', '券商账户')
+            acc_name = re.sub(r'\s*\(?(?:638812|U9959007|56169533|[0-9]{5,}|U[0-9]{6,})\)?', '', acc_name).strip()
+            acc_name = re.sub(r'\s*\(\s*\)', '', acc_name).strip()
             eq = acc.get('equity', 0.0)
             c_val = acc.get('cash', 0.0)
             m_val = acc.get('market_value', 0.0)
