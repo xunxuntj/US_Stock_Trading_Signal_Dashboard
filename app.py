@@ -87,7 +87,29 @@ st.markdown("""
     [data-testid="stAppDeployButton"] {display: none !important;}
     [data-testid="stDecoration"] {display: none !important;}
 
-    /* Global Workspace Layout */
+    /* Global Workspace Layout & Native Dark UI */
+    :root, html {
+        color-scheme: dark;
+        --scrollbar-thumb: #334155;
+        --scrollbar-track: #0B0F19;
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        scrollbar-width: thin;
+    }
+
+    @supports not (scrollbar-color: auto) {
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+        }
+    }
+
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         background-color: #0B0F19 !important;
@@ -108,6 +130,9 @@ st.markdown("""
         color: #38BDF8;
         margin-bottom: 4px;
         margin-top: 20px;
+    }
+    .section-heading, h1, h2, h3, h4, h5 {
+        text-wrap: balance;
     }
     .section-heading {
         font-size: 1.25rem;
@@ -187,11 +212,19 @@ st.markdown("""
         border: 1px solid #334155 !important;
         background-color: #1E293B !important;
         color: #F8FAFC !important;
-        transition: all 0.15s ease !important;
+        transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out, scale 150ms ease-out !important;
     }
     .stButton>button:hover {
         border-color: #38BDF8 !important;
         color: #38BDF8 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+    }
+    .stButton>button:active {
+        scale: 0.98 !important;
+    }
+    .stButton>button:focus-visible {
+        outline: 2px solid #38BDF8 !important;
+        outline-offset: 2px !important;
     }
     .stButton>button[kind="primary"] {
         background-color: #0284C7 !important;
@@ -201,6 +234,22 @@ st.markdown("""
     .stButton>button[kind="primary"]:hover {
         background-color: #0369A1 !important;
         border-color: #0369A1 !important;
+    }
+
+    /* Accessible Responsive Table Wrapper */
+    .holdings-table-wrap {
+        background: #0B0F19;
+        border-radius: 6px;
+        padding: 4px 8px;
+        border: 1px solid #1E293B;
+        overflow-x: auto;
+        max-inline-size: 100%;
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        scrollbar-width: thin;
+    }
+    .holdings-table-wrap:focus-visible {
+        outline: 2px solid #38BDF8;
+        outline-offset: 2px;
     }
 
     /* Clean Expander */
@@ -806,17 +855,17 @@ for c_item in cash_command_items:
 
 holdings_blocks_html = f"""
 <div style="background:#111827;border:1px solid #1E293B;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
-    <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#38BDF8;margin-bottom:8px;">01. 量化策略标的 (QUANTITATIVE STRATEGY CORE)</div>
-    <div style="background:#0B0F19;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
-        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{strat_rows_html}</tbody></table>
+    <div id="tbl-strat-cap" style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#38BDF8;margin-bottom:8px;">01. 量化策略标的 (QUANTITATIVE STRATEGY CORE)</div>
+    <div class="holdings-table-wrap" tabindex="0" role="region" aria-labelledby="tbl-strat-cap" style="margin-bottom:14px;">
+        <table style="width:100%;min-width:660px;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{strat_rows_html}</tbody></table>
     </div>
-    <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:8px;">02. 独立自主管理 / 非策略标的 (DISCRETIONARY NON-STRATEGY)</div>
-    <div style="background:#0B0F19;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;margin-bottom:14px;">
-        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{non_strat_rows_html}</tbody></table>
+    <div id="tbl-nonstrat-cap" style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#94A3B8;margin-bottom:8px;">02. 独立自主管理 / 非策略标的 (DISCRETIONARY NON-STRATEGY)</div>
+    <div class="holdings-table-wrap" tabindex="0" role="region" aria-labelledby="tbl-nonstrat-cap" style="margin-bottom:14px;">
+        <table style="width:100%;min-width:660px;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{non_strat_rows_html}</tbody></table>
     </div>
-    <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#FBBF24;margin-bottom:8px;">03. 全账户各通道现金储备 (CASH & LIQUIDITY RESERVES)</div>
-    <div style="background:#0B0F19;border-radius:6px;padding:4px 8px;border:1px solid #1E293B;">
-        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{cash_rows_html}</tbody></table>
+    <div id="tbl-cash-cap" style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#FBBF24;margin-bottom:8px;">03. 全账户各通道现金储备 (CASH & LIQUIDITY RESERVES)</div>
+    <div class="holdings-table-wrap" tabindex="0" role="region" aria-labelledby="tbl-cash-cap">
+        <table style="width:100%;min-width:660px;border-collapse:collapse;text-align:left;font-size:0.86rem;"><tbody>{cash_rows_html}</tbody></table>
     </div>
 </div>
 """
@@ -2198,8 +2247,12 @@ html_pure_card = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="dark">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
+:root {{
+    color-scheme: dark;
+}}
 body {{
     margin: 0;
     padding: 8px 0 16px 0;
@@ -2247,11 +2300,23 @@ body {{
     border-radius: 8px;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-    transition: opacity 0.2s;
+    transition: opacity 150ms ease-out, scale 150ms ease-out, box-shadow 150ms ease-out;
     font-family: inherit;
 }}
 .dl-btn:hover {{
     opacity: 0.92;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+}}
+.dl-btn:active {{
+    scale: 0.98;
+}}
+.dl-btn:focus-visible {{
+    outline: 2px solid #38BDF8;
+    outline-offset: 3px;
+}}
+.dl-btn:disabled {{
+    opacity: 0.65;
+    cursor: wait;
 }}
 </style>
 </head>
@@ -2359,6 +2424,8 @@ body {{
 function downloadPoster() {{
     const btn = document.getElementById('dl-btn');
     const card = document.getElementById('capture-card');
+    if (btn.disabled) return;
+    btn.disabled = true;
     btn.innerText = '⏳ 正在生成 3x 超清海报...';
     html2canvas(card, {{
         scale: 3,
@@ -2369,9 +2436,11 @@ function downloadPoster() {{
         link.download = 'quant_v229_report_{today_str}.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
+        btn.disabled = false;
         btn.innerText = '✅ 已保存高清海报！点击可再次导出';
         setTimeout(() => {{ btn.innerText = '📥 一键导出 9:16 高清引流海报 (PNG)'; }}, 3500);
     }}).catch(err => {{
+        btn.disabled = false;
         btn.innerText = '⚠️ 浏览器拦截下载，请长按或右键保存卡片';
     }});
 }}
