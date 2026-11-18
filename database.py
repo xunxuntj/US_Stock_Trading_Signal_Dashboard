@@ -284,6 +284,8 @@ def get_positions():
         def _assign_acc(row):
             acc = str(row.get('account') or '').strip()
             t = str(row.get('ticker') or '').upper().strip()
+            if acc and ('SCHWAB' in acc.upper() or '嘉信' in acc):
+                return 'Charles Schwab (嘉信理财)'
             if t in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
                 return '老虎证券 - 环球账户'
             if t in ['SGOV', '931CVR013']:

@@ -10,7 +10,7 @@ import datetime
 from typing import Dict, List, Optional, Any, Tuple
 import pandas as pd
 from config import DB_PATH
-from core.broker.base import FilledOrder, CashTransactionItem
+from core.broker.base import BrokerType, FilledOrder, CashTransactionItem
 from core.broker.manager import MultiBrokerManager
 from core.sanity.signal_guard import get_canonical_layer
 
@@ -123,16 +123,19 @@ def sync_broker_positions_to_db(
             shares = float(row.get('shares', 0.0))
             cost_basis = float(row.get('cost_basis', 0.0))
             layer = str(row.get('layer', get_canonical_layer(ticker)))
-            if ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
+            accounts_raw = str(row.get('accounts', '') or row.get('account', '')).strip()
+            if "Schwab" in accounts_raw or "嘉信" in accounts_raw:
+                # Preserve exact Schwab or multi-broker string; clean share suffix like " (10.0)" if single broker
+                if "老虎" not in accounts_raw:
+                    accounts = "Charles Schwab (嘉信理财)"
+                else:
+                    accounts = accounts_raw
+            elif ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
                 accounts = "老虎证券 - 环球账户"
             elif ticker in ['SGOV', '931CVR013']:
                 accounts = "老虎证券 - 综合账户"
             else:
-                accounts = str(row.get('accounts', ''))
-                if not accounts and 'account' in row:
-                    accounts = str(row.get('account', ''))
-                if not accounts:
-                    accounts = "老虎证券 - 综合账户"
+                accounts = accounts_raw or "老虎证券 - 综合账户"
             if shares > 0.0001:
                 broker_tickers.add(ticker)
                 update_position(ticker, shares, cost_basis, layer, account=accounts)
@@ -223,17 +226,23 @@ def ingest_broker_orders(
 
             trade_pnl = 0.0
             from database import update_position, record_trade
+            if o.broker == BrokerType.SCHWAB:
+                acc_lbl = "Charles Schwab (嘉信理财)"
+            elif o.ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR'] or "U9959007" in str(o.account_id):
+                acc_lbl = "老虎证券 - 环球账户"
+            else:
+                acc_lbl = "老虎证券 - 综合账户"
+
             if o.action.upper() == "BUY":
                 new_shares = curr_shares + o.shares
                 new_cost = (curr_shares * curr_cost + o.total_value + o.fee) / new_shares if new_shares > 0 else o.price
-                update_position(o.ticker, new_shares, new_cost, layer_norm)
+                update_position(o.ticker, new_shares, new_cost, layer_norm, account=acc_lbl)
             else: # SELL
                 new_shares = max(0.0, curr_shares - o.shares)
                 trade_pnl = round((o.price - curr_cost) * o.shares - o.fee, 2)
-                update_position(o.ticker, new_shares, curr_cost if new_shares > 0 else 0.0, layer_norm)
+                update_position(o.ticker, new_shares, curr_cost if new_shares > 0 else 0.0, layer_norm, account=acc_lbl)
 
             # Record trade into trades table (SQLite + Supabase Cloud)
-            acc_lbl = "老虎证券 - 环球账户" if o.ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR'] else "老虎证券 - 综合账户"
             record_trade(
                 date_str=trade_date,
                 ticker=o.ticker,

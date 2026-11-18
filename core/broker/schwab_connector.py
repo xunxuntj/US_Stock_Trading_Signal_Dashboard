@@ -33,6 +33,7 @@ class SchwabBrokerConnector(BaseBrokerConnector):
         self._access_token: Optional[str] = None
         self._token_expires_at: Optional[datetime.datetime] = None
         self._account_hash: Optional[str] = None
+        self.last_auth_error: Optional[str] = None
 
     def is_live_connected(self) -> bool:
         """Check if Schwab API credentials are configured."""
@@ -73,12 +74,18 @@ class SchwabBrokerConnector(BaseBrokerConnector):
                 if resp.status_code == 200:
                     data = resp.json()
                     self._access_token = data.get("access_token")
+                    if data.get("refresh_token"):
+                        self.refresh_token = data.get("refresh_token")
                     expires_in = int(data.get("expires_in", 1800))
                     self._token_expires_at = now + datetime.timedelta(seconds=expires_in - 60)
+                    self.last_auth_error = None
                     return self._access_token
                 else:
+                    err_msg = f"HTTP {resp.status_code}: {resp.text[:300]}"
+                    self.last_auth_error = err_msg
                     print(f"Warning: Schwab token refresh returned status {resp.status_code}: {resp.text}")
         except Exception as e:
+            self.last_auth_error = str(e)
             print(f"Warning: Schwab token refresh error: {e}")
 
         return None

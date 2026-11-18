@@ -149,7 +149,8 @@ class MultiBrokerManager:
                 r["shares"] += p.shares
                 r["total_cost"] += (p.shares * p.cost_basis)
                 r["market_value"] += p.market_value
-                r["accounts"].append(f"{conn.get_account_balance().account_name} ({p.shares})")
+                acc_lbl = getattr(conn, "account_name", name)
+                r["accounts"].append(f"{acc_lbl} ({p.shares})")
 
         rows = []
         for ticker, data in records.items():
@@ -191,3 +192,13 @@ class MultiBrokerManager:
             except Exception as e:
                 print(f"Warning: Failed to fetch cash transactions from connector {name}: {e}")
         return all_txs
+
+    def get_auth_warnings(self) -> List[str]:
+        """Collect any broker authentication/token refresh failures across connectors."""
+        warnings: List[str] = []
+        for name, conn in self.connectors.items():
+            err = getattr(conn, "last_auth_error", None)
+            if err:
+                acc_lbl = getattr(conn, "account_name", name)
+                warnings.append(f"{acc_lbl} API 授权失败（需重新授权更新 Refresh Token）: {err}")
+        return warnings

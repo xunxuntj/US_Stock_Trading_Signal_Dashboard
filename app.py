@@ -759,6 +759,42 @@ else:
     st.markdown(command_no_signal_html, unsafe_allow_html=True)
 
 # 2. Multi-Broker Status Ribbon (Institutional Layout - Synchronized Equal Heights)
+cash_tiger_main = 325.37
+cash_tiger_univ = 14.42
+cash_schwab = 1500.0
+try:
+    df_cash_tx = get_cash_transactions()
+    if not df_cash_tx.empty and 'notes' in df_cash_tx.columns:
+        schwab_tx = df_cash_tx[df_cash_tx['notes'].str.contains('Schwab|嘉信', na=False, case=False)]
+        if not schwab_tx.empty:
+            dep = float(schwab_tx[schwab_tx['type'] == 'DEPOSIT']['amount'].sum())
+            wdr = float(schwab_tx[schwab_tx['type'] == 'WITHDRAWAL']['amount'].sum())
+            cash_schwab = dep - wdr
+    df_trades_chk = get_trades_history()
+    if not df_trades_chk.empty and 'account' in df_trades_chk.columns:
+        schwab_tr = df_trades_chk[df_trades_chk['account'].astype(str).str.contains('Schwab|嘉信', na=False, case=False)]
+        if not schwab_tr.empty:
+            buys = schwab_tr[schwab_tr['action'].str.upper() == 'BUY']
+            sells = schwab_tr[schwab_tr['action'].str.upper() == 'SELL']
+            buy_out = float((buys['total_val'] + buys['fee'].fillna(0.0)).sum())
+            sell_in = float((sells['total_val'] - sells['fee'].fillna(0.0)).sum())
+            cash_schwab = cash_schwab - buy_out + sell_in
+    cash_schwab = max(0.0, cash_schwab)
+except Exception:
+    cash_schwab = 1500.0
+
+schwab_pos_rows = (
+    pos_active_df[pos_active_df['account'].astype(str).str.contains('Schwab|嘉信', na=False, case=False)]
+    if (not pos_active_df.empty and 'account' in pos_active_df.columns) else pd.DataFrame()
+)
+if not schwab_pos_rows.empty:
+    schwab_pos_rows = schwab_pos_rows[schwab_pos_rows['shares'] > 0.0001]
+if not schwab_pos_rows.empty:
+    schwab_tickers_str = ", ".join(schwab_pos_rows['ticker'].tolist())
+    schwab_status_line = f"运行状态: 活跃 · 持仓 ({schwab_tickers_str}) | 剩余可用现金 ${cash_schwab:,.2f}"
+else:
+    schwab_status_line = f"运行状态: 待命就绪 · ${cash_schwab:,.2f} 美元现金储备待命 (防守流动性与策略建仓备用)"
+
 st.markdown("""
 <style>
 .channel-ribbon-grid {
@@ -807,10 +843,10 @@ st.markdown("""
             <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #FBBF24;">CHANNEL 03 · SECONDARY EXPANSION</div>
             <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; margin: 4px 0 6px 0;">Charles Schwab (嘉信理财)</div>
         </div>
-        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">运行状态: 待命就绪 · $1,500.00 美元现金储备待命 (防守流动性与策略建仓备用)</div>
+        <div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">__SCHWAB_STATUS__</div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""".replace("__SCHWAB_STATUS__", schwab_status_line), unsafe_allow_html=True)
 
 # 3. Categorized Live Portfolio Holdings Snapshot
 strat_rows_html = ""
@@ -843,9 +879,9 @@ if not non_strat_pos_df.empty:
         non_strat_rows_html += f'<tr style="border-bottom:1px solid #1E293B;"><td style="padding:9px 12px;color:#64748B;font-weight:600;width:12%;">非策略 {idx}</td><td style="padding:9px 12px;width:16%;"><strong style="color:#CBD5E1;font-size:0.95rem;">{tkr}</strong></td><td style="padding:9px 12px;width:16%;"><span style="background:#162032;padding:2px 8px;border-radius:4px;color:#CBD5E1;font-variant-numeric:tabular-nums;">{shares_str} 股</span></td><td style="padding:9px 12px;width:18%;"><strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">${mkt_val:,.2f}</strong></td><td style="padding:9px 12px;width:16%;">仓位占比 <strong style="color:#CBD5E1;font-size:0.95rem;font-variant-numeric:tabular-nums;">{weight_pct:.1f}%</strong></td><td style="padding:9px 12px;width:22%;font-size:0.78rem;color:#94A3B8;">{acc_tag}</td></tr>'
 
 cash_command_items = [
-    {"label": "现金 1", "ticker": "美元现金 (老虎综合)", "role": "综合账户贴息与打新备用金", "amount": 325.37, "account": "老虎证券 - 综合账户"},
-    {"label": "现金 2", "ticker": "美元现金 (老虎环球)", "role": "环球账户流动现金与股息", "amount": 14.42, "account": "老虎证券 - 环球账户"},
-    {"label": "现金 3", "ticker": "美元现金 (嘉信理财)", "role": "独立海外宏观防守现金储备", "amount": 1500.00, "account": "Charles Schwab (嘉信理财)"}
+    {"label": "现金 1", "ticker": "美元现金 (老虎综合)", "role": "综合账户贴息与打新备用金", "amount": cash_tiger_main, "account": "老虎证券 - 综合账户"},
+    {"label": "现金 2", "ticker": "美元现金 (老虎环球)", "role": "环球账户流动现金与股息", "amount": cash_tiger_univ, "account": "老虎证券 - 环球账户"},
+    {"label": "现金 3", "ticker": "美元现金 (嘉信理财)", "role": "独立海外宏观防守现金储备", "amount": cash_schwab, "account": "Charles Schwab (嘉信理财)"}
 ]
 cash_rows_html = ""
 for c_item in cash_command_items:
@@ -909,21 +945,7 @@ if not pos_df.empty:
                 "is_cash": False
             })
 
-# Real Cash balances from Tiger broker API & Schwab ledger
-cash_tiger_main = 325.37
-cash_tiger_univ = 14.42
-cash_schwab = 1500.0
-try:
-    df_cash_tx = get_cash_transactions()
-    if not df_cash_tx.empty and 'notes' in df_cash_tx.columns:
-        schwab_tx = df_cash_tx[df_cash_tx['notes'].str.contains('Schwab|嘉信', na=False, case=False)]
-        if not schwab_tx.empty:
-            dep = float(schwab_tx[schwab_tx['type'] == 'DEPOSIT']['amount'].sum())
-            wdr = float(schwab_tx[schwab_tx['type'] == 'WITHDRAWAL']['amount'].sum())
-            cash_schwab = max(0.0, dep - wdr)
-except Exception:
-    cash_schwab = 1500.0
-
+# Real Cash balances from Tiger broker API & Schwab ledger (computed above)
 total_portfolio_val += (cash_tiger_main + cash_tiger_univ + cash_schwab)
 
 pos_details.append({
@@ -1316,39 +1338,29 @@ with tab_tiger_univ:
         st.info("暂无环球账户持仓数据")
 
 with tab_schwab:
-    st.markdown("##### Charles Schwab (嘉信理财) · 备用拓展通道")
-    st.caption("账户状态: 已完成入金激活 · 充裕防守流动性准备就绪")
-    st.markdown(f"""
-    <div style="background: #111827; border: 1px solid #1E293B; border-left: 3px solid #38BDF8; border-radius: 6px; padding: 16px 18px; color: #F8FAFC; margin-bottom: 12px;">
-        <div style="font-size: 0.95rem; font-weight: 700; color: #38BDF8; margin-bottom: 6px;">账户状态：已完成入金激活，充裕流动性防守就绪</div>
-        <div style="font-size: 0.84rem; color: #94A3B8; line-height: 1.6;">
-            • <strong>当前证券持仓:</strong> 0 股 (暂未建仓股票 / ETF)<br>
-            • <strong>现金流动性状态:</strong> <strong style="color:#F8FAFC;font-variant-numeric:tabular-nums;">${cash_schwab:,.2f} USD</strong> (100% 美元现金储备待命，充当宏观防守流动性安全垫与建仓备用)<br>
-            • <strong>通道职能定位:</strong> 作为海外独立券商通道，专用于承接后续策略买入建仓指令或扩容分散配置。
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("##### Charles Schwab (嘉信理财) · 独立海外券商通道")
     df_t3 = df_holdings_tab[df_holdings_tab["所属账户"].str.contains("Schwab|嘉信", na=False)]
+    df_t3_equity = df_t3[df_t3["类别"] != "现金"] if not df_t3.empty else pd.DataFrame()
+    if not df_t3_equity.empty:
+        eq_count = len(df_t3_equity)
+        eq_val_t3 = df_t3_equity['持仓市值'].apply(lambda x: float(str(x).replace('$', '').replace(',', '')) if '$' in str(x) else 0.0).sum()
+        st.caption(f"账户状态: 活跃持仓 ({eq_count} 只标的 / 证券市值 ${eq_val_t3:,.2f}) | 剩余可用现金 ${cash_schwab:,.2f}")
+    else:
+        st.caption("账户状态: 已完成入金激活 · 充裕防守流动性准备就绪")
+        st.markdown("""
+        <div style="background: #111827; border: 1px solid #1E293B; border-left: 3px solid #38BDF8; border-radius: 6px; padding: 16px 18px; color: #F8FAFC; margin-bottom: 12px;">
+            <div style="font-size: 0.95rem; font-weight: 700; color: #38BDF8; margin-bottom: 6px;">账户状态：已完成入金激活，充裕流动性防守就绪</div>
+            <div style="font-size: 0.84rem; color: #94A3B8; line-height: 1.6;">
+                • <strong>当前证券持仓:</strong> 0 股 (暂未建仓股票 / ETF)<br>
+                • <strong>现金流动性状态:</strong> <strong style="color:#F8FAFC;font-variant-numeric:tabular-nums;">${cash_schwab:,.2f} USD</strong> (100% 美元现金储备待命，充当宏观防守流动性安全垫与建仓备用)<br>
+                • <strong>通道职能定位:</strong> 作为海外独立券商通道，专用于承接后续策略买入建仓指令或扩容分散配置。
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     if not df_t3.empty:
         disp_t3 = df_t3.reset_index(drop=True)
         disp_t3.index = range(1, len(disp_t3) + 1)
         st.dataframe(disp_t3, use_container_width=True)
-    else:
-        schwab_table = pd.DataFrame([{
-            "类别": "现金",
-            "标的": "USD Cash (嘉信待命现金)",
-            "策略角色": "独立海外宏观防守现金储备",
-            "持仓股数": "-",
-            "成本单价": "-",
-            "最新现价": "-",
-            "持仓市值": f"${cash_schwab:,.2f}",
-            "资产占比": f"{(cash_schwab / total_portfolio_val * 100.0):.1f}%",
-            "未实现盈亏": "-",
-            "所属账户": "Charles Schwab (嘉信理财)"
-        }])
-        disp_schwab = schwab_table.reset_index(drop=True)
-        disp_schwab.index = range(1, len(disp_schwab) + 1)
-        st.dataframe(disp_schwab, use_container_width=True)
 
 with tab_all:
     st.markdown("##### 全账户合并总览 (Consolidated Portfolio)")

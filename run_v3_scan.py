@@ -483,6 +483,11 @@ def run_pipeline() -> Dict[str, Any]:
     else:
         print("✅ Broker Cash Flow Ingestion: No new cash flow detected.")
 
+    auth_warnings = broker_mgr.get_auth_warnings()
+    if auth_warnings:
+        print(f"🚨 Broker Auth Warnings: {auth_warnings}")
+        notifier.dispatch_technical_alert("券商 API 授权异常告警 (请及时重新授权)", auth_warnings)
+
 
 
 
