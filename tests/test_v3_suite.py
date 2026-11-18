@@ -429,5 +429,146 @@ class TestV3SystemSuite(unittest.TestCase):
 
         conn.close()
 
+    # -------------------------------------------------------------------------
+    # DOMAIN 7: Financial-Grade Regression Guards (Token, Sync, Account Schema)
+    # -------------------------------------------------------------------------
+    def test_14_fetch_supabase_df_preserves_text_and_token_columns(self):
+        from unittest.mock import patch, MagicMock
+        import database
+
+        mock_rows = [{
+            "broker": "SCHWAB",
+            "refresh_token": "j78C6Er2SAMPLE_BASE64_TOKEN_123456@",
+            "updated_at": "2026-11-18 09:17:29",
+            "account": "Charles Schwab (嘉信理财)",
+            "category": "STRATEGY_L0",
+            "shares": "27.0"
+        }]
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = mock_rows
+
+        with patch("database.get_supabase_credentials", return_value=("https://example.supabase.co", "fake_key")):
+            with patch("httpx.get", return_value=mock_resp):
+                df = database.fetch_supabase_df("broker_tokens?broker=eq.SCHWAB")
+
+        self.assertIsNotNone(df)
+        self.assertEqual(df.iloc[0]["refresh_token"], "j78C6Er2SAMPLE_BASE64_TOKEN_123456@")
+        self.assertEqual(df.iloc[0]["account"], "Charles Schwab (嘉信理财)")
+        self.assertEqual(df.iloc[0]["category"], "STRATEGY_L0")
+        self.assertEqual(float(df.iloc[0]["shares"]), 27.0)
+
+    def test_15_sync_positions_never_closes_on_auth_error(self):
+        from unittest.mock import patch
+        import pandas as pd
+        from core.sync.reconcile_engine import sync_broker_positions_to_db
+
+        existing_db_pos = pd.DataFrame([
+            {"ticker": "SGOV", "shares": 1268.0, "cost_basis": 100.5, "layer": "SGOV", "account": "老虎证券 - 综合账户"},
+            {"ticker": "JEPQ", "shares": 27.0, "cost_basis": 54.7, "layer": "L0", "account": "Charles Schwab (嘉信理财)"},
+        ])
+        partial_broker_df = pd.DataFrame([
+            {"ticker": "SGOV", "shares": 1268.0, "cost_basis": 100.5, "layer": "SGOV", "accounts": "老虎证券 - 综合账户"}
+        ])
+
+        closed_calls = []
+        def fake_update(ticker, shares, cost_basis, layer, account=""):
+            if shares == 0.0 and layer == "CLOSED":
+                closed_calls.append(ticker)
+
+        with patch("database.get_positions", return_value=existing_db_pos):
+            with patch("database.update_position", side_effect=fake_update):
+                res = sync_broker_positions_to_db(partial_broker_df, shadow_mode=False, allow_close=False)
+
+        self.assertEqual(res["closed"], [])
+        self.assertEqual(closed_calls, [])
+
+    def test_16_schwab_orders_api_includes_to_entered_time_and_attribution(self):
+        import datetime
+        from unittest.mock import patch, MagicMock
+        from core.broker.schwab_connector import SchwabBrokerConnector
+        from core.broker.base import BrokerType
+
+        conn = SchwabBrokerConnector(app_key="k", app_secret="s", refresh_token="r", account_number="56169533")
+        conn._access_token = "tok"
+        conn._token_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=20)
+        conn._account_hash = "HASH123"
+
+        captured_urls = []
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = [{
+            "orderId": "999001",
+            "orderLegCollection": [{"instrument": {"symbol": "JEPQ"}, "instruction": "BUY"}],
+            "orderActivityCollection": [{
+                "activityType": "EXECUTION",
+                "executionLegs": [{"legId": 1, "quantity": 27.0, "price": 54.7, "time": "2026-11-17T14:37:00+0000"}]
+            }]
+        }]
+
+        def fake_get(url, headers=None):
+            captured_urls.append(url)
+            return mock_resp
+
+        with patch("httpx.Client") as mock_client_cls:
+            mock_client_cls.return_value.__enter__.return_value.get.side_effect = fake_get
+            orders = conn.get_filled_orders()
+
+        self.assertEqual(len(captured_urls), 1)
+        self.assertIn("fromEnteredTime=", captured_urls[0])
+        self.assertIn("toEnteredTime=", captured_urls[0])
+        self.assertEqual(len(orders), 1)
+        self.assertEqual(orders[0].broker, BrokerType.SCHWAB)
+        self.assertEqual(orders[0].ticker, "JEPQ")
+
+    def test_17_record_trade_cloud_payload_includes_account(self):
+        import os
+        import sqlite3
+        import tempfile
+        from unittest.mock import patch, MagicMock
+        import database
+
+        fd, tmp_db = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        try:
+            c_init = sqlite3.connect(tmp_db)
+            c_init.execute("""
+                CREATE TABLE trades (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT, ticker TEXT, action TEXT, shares REAL, price REAL,
+                    total_val REAL, fee REAL, pnl REAL, layer TEXT, reason TEXT,
+                    category TEXT, is_strategy INTEGER, account TEXT
+                )
+            """)
+            c_init.commit()
+            c_init.close()
+
+            posted_payloads = []
+            mock_resp = MagicMock()
+            mock_resp.status_code = 201
+
+            def fake_post(url, json=None, headers=None, timeout=5.0):
+                posted_payloads.append(json)
+                return mock_resp
+
+            with patch("database.get_connection", side_effect=lambda: sqlite3.connect(tmp_db)):
+                with patch("database.get_supabase_credentials", return_value=("https://example.supabase.co", "fake_key")):
+                    with patch("httpx.post", side_effect=fake_post):
+                        database.record_trade(
+                            "2026-11-17", "JEPQ", "BUY", 27.0, 54.7, 1476.9,
+                            layer="L0", reason="API Auto-Sync (SCHWAB)", account=None
+                        )
+
+            c_chk = sqlite3.connect(tmp_db)
+            row = c_chk.execute("SELECT ticker, account FROM trades").fetchone()
+            c_chk.close()
+            self.assertEqual(row[0], "JEPQ")
+            self.assertEqual(row[1], "Charles Schwab (嘉信理财)")
+            self.assertEqual(len(posted_payloads), 1)
+            self.assertEqual(posted_payloads[0][0]["account"], "Charles Schwab (嘉信理财)")
+        finally:
+            if os.path.exists(tmp_db):
+                os.remove(tmp_db)
+
 if __name__ == "__main__":
     unittest.main()
