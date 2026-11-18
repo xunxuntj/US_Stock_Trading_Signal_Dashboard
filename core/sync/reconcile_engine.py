@@ -102,7 +102,8 @@ def check_position_drift(db_positions_df: pd.DataFrame, broker_positions_df: pd.
 
 def sync_broker_positions_to_db(
     broker_positions_df: pd.DataFrame,
-    shadow_mode: bool = True
+    shadow_mode: bool = True,
+    allow_close: bool = True
 ) -> Dict[str, Any]:
     """
     Synchronizes broker API positions directly into the positions table (SQLite + Supabase Cloud).
@@ -141,10 +142,12 @@ def sync_broker_positions_to_db(
                 update_position(ticker, shares, cost_basis, layer, account=accounts)
                 synced_items.append({"ticker": ticker, "shares": shares, "cost_basis": cost_basis, "layer": layer, "account": accounts})
 
-    # Remove positions no longer held at broker
-    closed_tickers = db_tickers - broker_tickers
-    for t in closed_tickers:
-        update_position(t, 0.0, 0.0, "CLOSED")
+    # Remove positions no longer held at broker (skip when a broker connector failed auth)
+    closed_tickers = set()
+    if allow_close:
+        closed_tickers = db_tickers - broker_tickers
+        for t in closed_tickers:
+            update_position(t, 0.0, 0.0, "CLOSED")
 
     return {"synced": True, "updated": synced_items, "closed": list(closed_tickers)}
 

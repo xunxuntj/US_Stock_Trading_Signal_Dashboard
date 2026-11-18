@@ -276,9 +276,14 @@ def fetch_supabase_df(table_name, select="*", order=None):
         r = httpx.get(req_url, headers=headers, timeout=5.0)
         if r.status_code == 200 and r.json():
             df = pd.DataFrame(r.json())
-            # Convert all numeric columns to float/int to prevent Streamlit UI TypeError/KeyError
+            # Convert only numeric columns; preserve all text/ID/token/account columns intact
+            str_cols = {
+                'date', 'ticker', 'action', 'layer', 'reason', 'notes', 'kid_name',
+                'action_type', 'ticker_name', 'market', 'start_date', 'settle_date',
+                'source', 'type', 'updated_at', 'account', 'category', 'broker', 'refresh_token'
+            }
             for col in df.columns:
-                if col not in ['date', 'ticker', 'action', 'layer', 'reason', 'notes', 'kid_name', 'action_type', 'ticker_name', 'market', 'start_date', 'settle_date', 'source', 'type', 'updated_at']:
+                if col not in str_cols:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
             return df
     except Exception as e:
@@ -291,9 +296,36 @@ def get_positions():
             return df
         if 'account' not in df.columns:
             df['account'] = ''
+
+        # Build fallback account map from local positions and recent trades (handles Supabase tables lacking 'account' col)
+        trade_acc_map = {}
+        if (df['account'].fillna('').astype(str).str.strip() == '').any():
+            try:
+                conn_loc = get_connection()
+                loc_rows = conn_loc.execute("SELECT ticker, account FROM positions WHERE account IS NOT NULL AND account != ''").fetchall()
+                conn_loc.close()
+                for tk, ac in loc_rows:
+                    trade_acc_map[str(tk).upper().strip()] = str(ac).strip()
+            except Exception:
+                pass
+            try:
+                df_tr_acc = get_trades_history()
+                if df_tr_acc is not None and not df_tr_acc.empty and 'account' in df_tr_acc.columns:
+                    for _, trow in df_tr_acc.iterrows():
+                        tk = str(trow.get('ticker') or '').upper().strip()
+                        ac = str(trow.get('account') or '').strip()
+                        if tk and tk not in trade_acc_map and ac:
+                            trade_acc_map[tk] = ac
+            except Exception:
+                pass
+
         def _assign_acc(row):
             acc = str(row.get('account') or '').strip()
+            if acc.lower() == 'nan':
+                acc = ''
             t = str(row.get('ticker') or '').upper().strip()
+            if not acc and t in trade_acc_map:
+                acc = trade_acc_map[t]
             if acc and ('SCHWAB' in acc.upper() or '嘉信' in acc):
                 if '老虎' in acc or '综合' in acc or '环球' in acc:
                     return acc
@@ -582,6 +614,22 @@ def get_trades_history():
             df_cloud['is_strategy'] = 1
         else:
             df_cloud['is_strategy'] = pd.to_numeric(df_cloud['is_strategy'].fillna(1), errors='coerce').astype(int)
+        if 'account' not in df_cloud.columns:
+            df_cloud['account'] = ''
+
+        def _infer_trade_acc(row):
+            acc = str(row.get('account') or '').strip()
+            if acc and acc.lower() != 'nan':
+                return acc
+            rsn = str(row.get('reason') or '').upper()
+            tk = str(row.get('ticker') or '').upper().strip()
+            if 'SCHWAB' in rsn or '嘉信' in rsn:
+                return 'Charles Schwab (嘉信理财)'
+            if tk in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
+                return '老虎证券 - 环球账户'
+            return '老虎证券 - 综合账户'
+
+        df_cloud['account'] = df_cloud.apply(_infer_trade_acc, axis=1)
         return df_cloud
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM trades ORDER BY id DESC", conn)

@@ -463,9 +463,14 @@ def run_pipeline() -> Dict[str, Any]:
         print("✅ No Position Drift: Broker positions match local database 100%.")
 
     # In Live Auto-Data Mode (SHADOW_MODE=False), synchronize positions directly
+    auth_warnings = broker_mgr.get_auth_warnings()
     if not SHADOW_MODE and not aggregated_positions.empty:
         print("🔄 Live Auto-Data Mode: Synchronizing real broker positions to portfolio database & Supabase Cloud...")
-        sync_res = sync_broker_positions_to_db(aggregated_positions, shadow_mode=False)
+        sync_res = sync_broker_positions_to_db(
+            aggregated_positions,
+            shadow_mode=False,
+            allow_close=(len(auth_warnings) == 0)
+        )
         print(f"✅ Positions Synced: {len(sync_res.get('updated', []))} active positions updated, {len(sync_res.get('closed', []))} closed.")
         # Re-fetch active positions for subsequent calculations
         db_pos_df = get_positions()
@@ -493,9 +498,10 @@ def run_pipeline() -> Dict[str, Any]:
 
     if auth_warnings:
         print(f"🚨 Broker Auth Warnings: {auth_warnings}")
+        safe_warnings = [f"`{w.replace('`', '')}`" for w in auth_warnings]
         if schwab_auth_url:
-            auth_warnings.append(f"👉 点击一键登录完成嘉信续约（登录后自动回传生效）：{schwab_auth_url}")
-        notifier.dispatch_technical_alert("券商 API 授权异常告警 (请点击链接一键续约)", auth_warnings)
+            safe_warnings.append(f"[点击一键登录完成嘉信续约]({schwab_auth_url})")
+        notifier.dispatch_technical_alert("券商 API 授权异常告警 (请点击链接一键续约)", safe_warnings)
     else:
         # Proactive 5.5-day renewal reminder before the 7-day hard expiry
         try:
