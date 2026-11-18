@@ -15,7 +15,8 @@ __all__ = [
     "get_latest_kids_returns", "init_kids_ledger_table",
     "record_kids_cash_transaction", "get_kids_cash_ledger", "get_kids_account_summary",
     "get_cloud_market_prices_latest_dates", "fetch_cloud_market_prices", "upsert_cloud_market_price_rows",
-    "get_supabase_credentials", "fetch_supabase_df"
+    "get_supabase_credentials", "fetch_supabase_df",
+    "save_broker_refresh_token", "get_broker_refresh_token"
 ]
 
 def get_connection():
@@ -166,6 +167,15 @@ def init_db():
         amount REAL,
         balance_after REAL,
         notes TEXT
+    )
+    """)
+
+    # 9. Broker OAuth Tokens Table (e.g. Charles Schwab 7-day refresh token sync)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS broker_tokens (
+        broker TEXT PRIMARY KEY,
+        refresh_token TEXT NOT NULL,
+        updated_at TEXT NOT NULL
     )
     """)
 
@@ -920,3 +930,77 @@ def get_kids_account_summary(kid_name):
         'total_withdrawal': tot_wd,
         'lifetime_total_profit': lifetime_total_profit
     }
+
+
+def save_broker_refresh_token(broker: str, refresh_token: str):
+    """Persist latest broker OAuth refresh token to local SQLite and Supabase Cloud."""
+    broker_key = str(broker).upper().strip()
+    now_iso = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS broker_tokens (
+            broker TEXT PRIMARY KEY,
+            refresh_token TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """)
+        cur.execute("""
+        INSERT INTO broker_tokens (broker, refresh_token, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(broker) DO UPDATE SET
+            refresh_token = excluded.refresh_token,
+            updated_at = excluded.updated_at
+        """, (broker_key, refresh_token, now_iso))
+        conn.commit()
+    finally:
+        conn.close()
+
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            import httpx
+            headers = {
+                "apikey": str(key),
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            }
+            payload = [{"broker": broker_key, "refresh_token": refresh_token, "updated_at": now_iso}]
+            r = httpx.post(
+                f"{url}/rest/v1/broker_tokens?on_conflict=broker",
+                json=payload, headers=headers, timeout=10.0
+            )
+            if r.status_code < 400:
+                return True, "synced_to_cloud"
+            return False, f"Supabase HTTP {r.status_code}: {r.text[:200]}"
+        except Exception as e:
+            return False, str(e)
+    return False, "no_supabase_credentials"
+
+
+def get_broker_refresh_token(broker: str = "SCHWAB"):
+    """Fetch latest broker refresh token (Cloud first, fallback to local SQLite). Returns (token, updated_at)."""
+    broker_key = str(broker).upper().strip()
+    df_cloud = fetch_supabase_df(f"broker_tokens?broker=eq.{broker_key}")
+    if df_cloud is not None and not df_cloud.empty:
+        row = df_cloud.iloc[0]
+        tok = str(row.get("refresh_token") or "").strip()
+        upd = str(row.get("updated_at") or "").strip()
+        if tok:
+            return tok, upd
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT refresh_token, updated_at FROM broker_tokens WHERE broker = ?", (broker_key,))
+        row = cur.fetchone()
+        if row and row[0]:
+            return str(row[0]).strip(), str(row[1] or "").strip()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+    return None, None

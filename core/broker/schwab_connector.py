@@ -6,11 +6,83 @@ Automatically discovers account hash values via /accounts/accountNumbers.
 """
 
 import os
+import base64
 import datetime
+import urllib.parse
 from typing import List, Optional, Dict, Any
 import httpx
 from .base import BaseBrokerConnector, BrokerType, AccountBalance, PositionItem, FilledOrder, CashTransactionItem
 from core.sanity.signal_guard import get_canonical_layer
+
+DEFAULT_SCHWAB_REDIRECT_URI = "https://usstocktradingsignaldashboard.streamlit.app"
+
+
+def get_schwab_authorize_url(app_key: str, redirect_uri: Optional[str] = None) -> str:
+    """Build Charles Schwab OAuth authorization URL."""
+    r_uri = (redirect_uri or os.getenv("SCHWAB_REDIRECT_URI") or DEFAULT_SCHWAB_REDIRECT_URI).strip()
+    params = urllib.parse.urlencode({"client_id": app_key.strip(), "redirect_uri": r_uri})
+    return f"https://api.schwabapi.com/v1/oauth/authorize?{params}"
+
+
+def exchange_schwab_auth_code(
+    code: str,
+    app_key: str,
+    app_secret: str,
+    redirect_uri: Optional[str] = None,
+    proxy: Optional[str] = None
+) -> Dict[str, Any]:
+    """Exchange Schwab OAuth authorization code for access_token & refresh_token."""
+    raw_code = str(code or "").strip()
+    if not raw_code or not app_key or not app_secret:
+        return {"ok": False, "error": "Missing authorization code, app_key, or app_secret."}
+
+    code_variants = []
+    c1 = raw_code.replace("%40", "@")
+    code_variants.append(c1)
+    c2 = urllib.parse.unquote(raw_code)
+    if c2 not in code_variants:
+        code_variants.append(c2)
+    if raw_code not in code_variants:
+        code_variants.append(raw_code)
+
+    base_uri = (redirect_uri or os.getenv("SCHWAB_REDIRECT_URI") or DEFAULT_SCHWAB_REDIRECT_URI).strip()
+    uri_variants = [base_uri]
+    alt_uri = base_uri[:-1] if base_uri.endswith("/") else f"{base_uri}/"
+    if alt_uri not in uri_variants:
+        uri_variants.append(alt_uri)
+
+    creds = f"{app_key.strip()}:{app_secret.strip()}".encode("utf-8")
+    basic_auth = base64.b64encode(creds).decode("utf-8")
+    headers = {
+        "Authorization": f"Basic {basic_auth}",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    token_url = "https://api.schwabapi.com/v1/oauth/token"
+
+    last_err = "Unknown error"
+    for r_uri in uri_variants:
+        for c_val in code_variants:
+            payload = {
+                "grant_type": "authorization_code",
+                "code": c_val,
+                "redirect_uri": r_uri,
+            }
+            try:
+                with httpx.Client(timeout=15.0, proxy=proxy) as client:
+                    resp = client.post(token_url, headers=headers, data=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        return {
+                            "ok": True,
+                            "access_token": data.get("access_token"),
+                            "refresh_token": data.get("refresh_token"),
+                            "expires_in": data.get("expires_in"),
+                        }
+                    last_err = f"HTTP {resp.status_code}: {resp.text[:300]}"
+            except Exception as e:
+                last_err = str(e)
+
+    return {"ok": False, "error": last_err}
 
 
 class SchwabBrokerConnector(BaseBrokerConnector):
@@ -26,7 +98,14 @@ class SchwabBrokerConnector(BaseBrokerConnector):
     ):
         self.app_key = app_key or os.getenv("SCHWAB_APP_KEY")
         self.app_secret = app_secret or os.getenv("SCHWAB_APP_SECRET")
-        self.refresh_token = refresh_token or os.getenv("SCHWAB_REFRESH_TOKEN")
+        cloud_rt = None
+        if not refresh_token:
+            try:
+                from database import get_broker_refresh_token
+                cloud_rt, _ = get_broker_refresh_token("SCHWAB")
+            except Exception:
+                cloud_rt = None
+        self.refresh_token = refresh_token or cloud_rt or os.getenv("SCHWAB_REFRESH_TOKEN")
         self.account_id = account_number or os.getenv("SCHWAB_ACCOUNT_NUMBER", "")
         self.account_name = account_name
         self.broker = BrokerType.SCHWAB
@@ -74,8 +153,13 @@ class SchwabBrokerConnector(BaseBrokerConnector):
                 if resp.status_code == 200:
                     data = resp.json()
                     self._access_token = data.get("access_token")
-                    if data.get("refresh_token"):
+                    if data.get("refresh_token") and data.get("refresh_token") != self.refresh_token:
                         self.refresh_token = data.get("refresh_token")
+                        try:
+                            from database import save_broker_refresh_token
+                            save_broker_refresh_token("SCHWAB", self.refresh_token)
+                        except Exception:
+                            pass
                     expires_in = int(data.get("expires_in", 1800))
                     self._token_expires_at = now + datetime.timedelta(seconds=expires_in - 60)
                     self.last_auth_error = None

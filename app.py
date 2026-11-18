@@ -67,6 +67,51 @@ record_kids_cash_transaction = getattr(database, "record_kids_cash_transaction",
 get_kids_cash_ledger = getattr(database, "get_kids_cash_ledger", lambda: pd.DataFrame())
 get_kids_account_summary = getattr(database, "get_kids_account_summary", lambda *args, **kwargs: {})
 update_trade_classification = getattr(database, "update_trade_classification", lambda *args, **kwargs: None)
+save_broker_refresh_token = getattr(database, "save_broker_refresh_token", lambda *args, **kwargs: (False, "unavailable"))
+get_broker_refresh_token = getattr(database, "get_broker_refresh_token", lambda *args, **kwargs: (None, None))
+
+
+def _get_app_secret(key_name: str, default: str = "") -> str:
+    val = os.getenv(key_name, "").strip()
+    if val:
+        return val
+    try:
+        return str(st.secrets.get(key_name, default) or "").strip()
+    except Exception:
+        return default
+
+
+# Auto-handle Charles Schwab OAuth callback (?code=...) when redirected back to Dashboard
+_oauth_code = st.query_params.get("code")
+if _oauth_code and _oauth_code != st.session_state.get("_handled_schwab_code"):
+    st.session_state["_handled_schwab_code"] = _oauth_code
+    _s_key = _get_app_secret("SCHWAB_APP_KEY")
+    _s_sec = _get_app_secret("SCHWAB_APP_SECRET")
+    _s_uri = _get_app_secret("SCHWAB_REDIRECT_URI", "https://usstocktradingsignaldashboard.streamlit.app")
+    if _s_key and _s_sec:
+        try:
+            from core.broker.schwab_connector import exchange_schwab_auth_code, get_schwab_authorize_url
+            _ex_res = exchange_schwab_auth_code(
+                code=str(_oauth_code),
+                app_key=_s_key,
+                app_secret=_s_sec,
+                redirect_uri=_s_uri,
+            )
+            if _ex_res.get("ok") and _ex_res.get("refresh_token"):
+                _cloud_ok, _cloud_msg = save_broker_refresh_token("SCHWAB", _ex_res["refresh_token"])
+                st.query_params.clear()
+                if _cloud_ok:
+                    st.success("✅ 嘉信 (Charles Schwab) OAuth 授权续约成功！最新 Refresh Token 已自动同步至云端，有效期重置 7 天。")
+                else:
+                    st.warning(f"⚠️ 已成功换取新 Refresh Token 并保存至本地，但云端写入提示：{_cloud_msg}")
+            else:
+                _retry_url = get_schwab_authorize_url(_s_key, _s_uri)
+                st.query_params.clear()
+                st.error(f"❌ 嘉信授权码换取失败（可能已超时 60 秒）：{_ex_res.get('error')}。[点击重新登录授权]({_retry_url})")
+        except Exception as _cb_err:
+            st.error(f"❌ 嘉信回调处理异常: {_cb_err}")
+    else:
+        st.warning("⚠️ 检测到嘉信回调 `code`，但未配置 `SCHWAB_APP_KEY` 或 `SCHWAB_APP_SECRET`（请在 Streamlit Secrets 中补充）。")
 
 try:
     from core.sync.macro_metrics import compute_macro_wealth_metrics

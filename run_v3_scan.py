@@ -484,9 +484,37 @@ def run_pipeline() -> Dict[str, Any]:
         print("✅ Broker Cash Flow Ingestion: No new cash flow detected.")
 
     auth_warnings = broker_mgr.get_auth_warnings()
+    schwab_app_key = os.getenv("SCHWAB_APP_KEY", "").strip()
+    schwab_redirect = os.getenv("SCHWAB_REDIRECT_URI", "https://usstocktradingsignaldashboard.streamlit.app").strip()
+    schwab_auth_url = ""
+    if schwab_app_key:
+        from core.broker.schwab_connector import get_schwab_authorize_url
+        schwab_auth_url = get_schwab_authorize_url(schwab_app_key, schwab_redirect)
+
     if auth_warnings:
         print(f"🚨 Broker Auth Warnings: {auth_warnings}")
-        notifier.dispatch_technical_alert("券商 API 授权异常告警 (请及时重新授权)", auth_warnings)
+        if schwab_auth_url:
+            auth_warnings.append(f"👉 点击一键登录完成嘉信续约（登录后自动回传生效）：{schwab_auth_url}")
+        notifier.dispatch_technical_alert("券商 API 授权异常告警 (请点击链接一键续约)", auth_warnings)
+    else:
+        # Proactive 5.5-day renewal reminder before the 7-day hard expiry
+        try:
+            from database import get_broker_refresh_token
+            from core.sanity.signal_guard import is_signal_already_sent, mark_signal_sent
+            _, tok_upd = get_broker_refresh_token("SCHWAB")
+            if tok_upd:
+                upd_dt = datetime.datetime.strptime(tok_upd[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.timezone.utc)
+                age_hours = (datetime.datetime.now(datetime.timezone.utc) - upd_dt).total_seconds() / 3600.0
+                if age_hours >= 132.0 and not is_signal_already_sent(date_str, "SCHWAB_TOKEN_RENEWAL", "ALERT", 0.0):
+                    days_used = age_hours / 24.0
+                    rem_msg = [
+                        f"Charles Schwab (嘉信理财) Refresh Token 已使用 {days_used:.1f} 天（官方有效期 7 天），即将过期。",
+                        f"👉 请在手机或电脑点击以下链接完成一次登录，看板将自动接收回调并重置 7 天有效期：\n{schwab_auth_url}" if schwab_auth_url else "请重新登录嘉信授权续约。"
+                    ]
+                    notifier.dispatch_technical_alert("⏰ 嘉信授权即将到期提醒 (一键点击续约)", rem_msg)
+                    mark_signal_sent(date_str, "SCHWAB_TOKEN_RENEWAL", "ALERT", 0.0)
+        except Exception as e:
+            print(f"Note: Schwab token age check skipped: {e}")
 
 
 
