@@ -78,7 +78,16 @@ def generate_v229_signals():
         s5fi_val = 50.0
     
     positions_df = get_positions()
-    current_positions = {row['ticker']: row for _, row in positions_df.iterrows()} if not positions_df.empty else {}
+    current_positions = {}
+    if not positions_df.empty:
+        for _, row in positions_df.iterrows():
+            tk = str(row['ticker']).upper().strip()
+            sh = float(row.get('shares', 0.0) or 0.0)
+            if tk not in current_positions:
+                current_positions[tk] = dict(row)
+                current_positions[tk]['shares'] = sh
+            else:
+                current_positions[tk]['shares'] += sh
     
     actions = []
     
