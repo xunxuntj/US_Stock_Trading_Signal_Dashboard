@@ -591,7 +591,7 @@ def run_pipeline() -> Dict[str, Any]:
 
         vault_balance=aggregated_balances.get("total_vault_balance", 0.0),
 
-        positions_df=aggregated_positions,
+        positions_df=per_account_positions,
 
         cash_transactions_df=cash_tx_df,
 
