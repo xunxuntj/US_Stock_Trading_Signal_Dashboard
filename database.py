@@ -402,7 +402,14 @@ def update_position(ticker, shares, cost_basis, layer, account=""):
 
 def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason="", category="STRATEGY", is_strategy=1, account=None):
     if not account:
-        account = _assign_acc(ticker)
+        t_u = str(ticker or "").upper().strip()
+        r_u = str(reason or "").upper()
+        if "SCHWAB" in r_u or "嘉信" in r_u:
+            account = "Charles Schwab (嘉信理财)"
+        elif t_u in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
+            account = "老虎证券 - 环球账户"
+        else:
+            account = "老虎证券 - 综合账户"
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("PRAGMA table_info(trades)")
@@ -434,6 +441,7 @@ def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pn
             full_payload = dict(base_payload)
             full_payload["category"] = category
             full_payload["is_strategy"] = int(is_strategy)
+            full_payload["account"] = str(account)
             r = httpx.post(f"{url}/rest/v1/trades", json=[full_payload], headers=headers, timeout=5.0)
             if r.status_code >= 400:
                 httpx.post(f"{url}/rest/v1/trades", json=[base_payload], headers=headers, timeout=5.0)
