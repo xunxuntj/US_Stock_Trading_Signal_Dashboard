@@ -215,14 +215,21 @@ class SchwabBrokerConnector(BaseBrokerConnector):
             try:
                 acc_hash = self._get_account_hash(token)
                 if not start_date:
-                    start_date = (datetime.datetime.now() - datetime.timedelta(days=85)).strftime('%Y-%m-%d')
+                    # Schwab /orders enforces a max lookback window (~60 days) and requires toEnteredTime
+                    start_date = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=59)).strftime('%Y-%m-%d')
                 from_entered_time = f"{start_date}T00:00:00.000Z"
+                to_entered_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
                 headers = {"Authorization": f"Bearer {token}"}
-                url = f"{self.SCHWAB_BASE_URL}/accounts/{acc_hash}/orders?fromEnteredTime={from_entered_time}&status=FILLED"
+                url = (
+                    f"{self.SCHWAB_BASE_URL}/accounts/{acc_hash}/orders"
+                    f"?fromEnteredTime={from_entered_time}&toEnteredTime={to_entered_time}&status=FILLED"
+                )
                 with httpx.Client(timeout=15.0, proxy=self._get_proxy()) as client:
                     resp = client.get(url, headers=headers)
-                    if resp.status_code == 200:
+                    if resp.status_code != 200:
+                        print(f"Warning: Schwab get_filled_orders returned status {resp.status_code}: {resp.text[:300]}")
+                    else:
                         order_list = resp.json()
                         for o in order_list:
                             order_id = str(o.get("orderId", ""))

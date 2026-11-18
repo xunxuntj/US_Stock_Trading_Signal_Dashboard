@@ -285,6 +285,8 @@ def get_positions():
             acc = str(row.get('account') or '').strip()
             t = str(row.get('ticker') or '').upper().strip()
             if acc and ('SCHWAB' in acc.upper() or '嘉信' in acc):
+                if '老虎' in acc or '综合' in acc or '环球' in acc:
+                    return acc
                 return 'Charles Schwab (嘉信理财)'
             if t in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
                 return '老虎证券 - 环球账户'
