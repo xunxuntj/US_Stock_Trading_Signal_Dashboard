@@ -72,21 +72,21 @@ def check_position_drift(db_positions_df: pd.DataFrame, broker_positions_df: pd.
     """
     report = DriftReport()
 
-    db_map = {}
-    if not db_positions_df.empty:
+    db_map: Dict[str, float] = {}
+    if db_positions_df is not None and not db_positions_df.empty:
         for _, row in db_positions_df.iterrows():
             t = str(row['ticker']).upper().strip()
             s = float(row.get('shares', 0.0))
             if s > 0.0001:
-                db_map[t] = s
+                db_map[t] = db_map.get(t, 0.0) + s
 
-    broker_map = {}
-    if not broker_positions_df.empty:
+    broker_map: Dict[str, float] = {}
+    if broker_positions_df is not None and not broker_positions_df.empty:
         for _, row in broker_positions_df.iterrows():
             t = str(row['ticker']).upper().strip()
             s = float(row.get('shares', 0.0))
             if s > 0.0001:
-                broker_map[t] = s
+                broker_map[t] = broker_map.get(t, 0.0) + s
 
     all_tickers = sorted(list(set(db_map.keys()) | set(broker_map.keys())))
 
@@ -114,8 +114,13 @@ def sync_broker_positions_to_db(
 
     from database import update_position, get_positions
     db_pos = get_positions()
-    db_tickers = set(db_pos['ticker'].tolist()) if not db_pos.empty else set()
-    broker_tickers = set()
+    db_keys = set()
+    if not db_pos.empty:
+        for _, drow in db_pos.iterrows():
+            dt = str(drow['ticker']).upper().strip()
+            da = str(drow.get('account') or '老虎证券 - 综合账户').strip()
+            db_keys.add((dt, da))
+    broker_keys = set()
 
     synced_items = []
     if not broker_positions_df.empty:
@@ -124,32 +129,20 @@ def sync_broker_positions_to_db(
             shares = float(row.get('shares', 0.0))
             cost_basis = float(row.get('cost_basis', 0.0))
             layer = str(row.get('layer', get_canonical_layer(ticker)))
-            accounts_raw = str(row.get('accounts', '') or row.get('account', '')).strip()
-            if "Schwab" in accounts_raw or "嘉信" in accounts_raw:
-                # Preserve exact Schwab or multi-broker string; clean share suffix like " (10.0)" if single broker
-                if "老虎" not in accounts_raw:
-                    accounts = "Charles Schwab (嘉信理财)"
-                else:
-                    accounts = accounts_raw
-            elif ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
-                accounts = "老虎证券 - 环球账户"
-            elif ticker in ['SGOV', '931CVR013']:
-                accounts = "老虎证券 - 综合账户"
-            else:
-                accounts = accounts_raw or "老虎证券 - 综合账户"
+            acc_val = str(row.get('account') or row.get('accounts') or '老虎证券 - 综合账户').strip()
             if shares > 0.0001:
-                broker_tickers.add(ticker)
-                update_position(ticker, shares, cost_basis, layer, account=accounts)
-                synced_items.append({"ticker": ticker, "shares": shares, "cost_basis": cost_basis, "layer": layer, "account": accounts})
+                broker_keys.add((ticker, acc_val))
+                update_position(ticker, shares, cost_basis, layer, account=acc_val)
+                synced_items.append({"ticker": ticker, "shares": shares, "cost_basis": cost_basis, "layer": layer, "account": acc_val})
 
     # Remove positions no longer held at broker (skip when a broker connector failed auth)
-    closed_tickers = set()
+    closed_keys = set()
     if allow_close:
-        closed_tickers = db_tickers - broker_tickers
-        for t in closed_tickers:
-            update_position(t, 0.0, 0.0, "CLOSED")
+        closed_keys = db_keys - broker_keys
+        for t, acc in closed_keys:
+            update_position(t, 0.0, 0.0, "CLOSED", account=acc)
 
-    return {"synced": True, "updated": synced_items, "closed": list(closed_tickers)}
+    return {"synced": True, "updated": synced_items, "closed": [f"{t} ({a})" for t, a in closed_keys]}
 
 
 def ingest_broker_orders(
@@ -217,10 +210,17 @@ def ingest_broker_orders(
                 except Exception:
                     trade_date = datetime.date.today().strftime("%Y-%m-%d")
             
-            # Fetch current position for cost/pnl calculation
+            if o.broker == BrokerType.SCHWAB:
+                acc_lbl = "Charles Schwab (嘉信理财)"
+            elif "U9959007" in str(o.account_id) or "UNIVERSAL" in str(o.account_id).upper():
+                acc_lbl = "老虎证券 - 环球账户"
+            else:
+                acc_lbl = "老虎证券 - 综合账户"
+
+            # Fetch current position for this specific (ticker, account) pair
             c_pos = sqlite3.connect(DB_PATH, timeout=30.0)
             cur_pos = c_pos.cursor()
-            cur_pos.execute("SELECT shares, cost_basis FROM positions WHERE ticker = ?", (o.ticker,))
+            cur_pos.execute("SELECT shares, cost_basis FROM positions WHERE ticker = ? AND account = ?", (o.ticker, acc_lbl))
             pos_row = cur_pos.fetchone()
             c_pos.close()
 
@@ -229,12 +229,6 @@ def ingest_broker_orders(
 
             trade_pnl = 0.0
             from database import update_position, record_trade
-            if o.broker == BrokerType.SCHWAB:
-                acc_lbl = "Charles Schwab (嘉信理财)"
-            elif o.ticker in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR'] or "U9959007" in str(o.account_id):
-                acc_lbl = "老虎证券 - 环球账户"
-            else:
-                acc_lbl = "老虎证券 - 综合账户"
 
             if o.action.upper() == "BUY":
                 new_shares = curr_shares + o.shares

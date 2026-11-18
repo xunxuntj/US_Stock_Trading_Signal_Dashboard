@@ -570,5 +570,41 @@ class TestV3SystemSuite(unittest.TestCase):
             if os.path.exists(tmp_db):
                 os.remove(tmp_db)
 
+    def test_18_multi_account_same_ticker_isolation(self):
+        import os
+        import sqlite3
+        import tempfile
+        from unittest.mock import patch
+        import pandas as pd
+        import database
+        from core.sync.reconcile_engine import check_position_drift, sync_broker_positions_to_db
+
+        fd, tmp_db = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        try:
+            with patch("database.DB_PATH", tmp_db):
+                with patch("database.get_connection", side_effect=lambda: sqlite3.connect(tmp_db)):
+                    with patch("database.get_supabase_credentials", return_value=(None, None)):
+                        database.init_db()
+                        broker_df = pd.DataFrame([
+                            {"ticker": "WBA.CVR", "shares": 100.0, "cost_basis": 0.5, "layer": "TREND", "account": "老虎证券 - 综合账户"},
+                            {"ticker": "WBA.CVR", "shares": 154.0, "cost_basis": 0.53, "layer": "TREND", "account": "老虎证券 - 环球账户"},
+                            {"ticker": "JEPQ", "shares": 27.0, "cost_basis": 54.7, "layer": "L0", "account": "Charles Schwab (嘉信理财)"},
+                        ])
+                        res = sync_broker_positions_to_db(broker_df, shadow_mode=False, allow_close=True)
+                        self.assertEqual(len(res["updated"]), 3)
+
+                        c_chk = sqlite3.connect(tmp_db)
+                        rows = c_chk.execute("SELECT ticker, shares, account FROM positions ORDER BY account, ticker").fetchall()
+                        c_chk.close()
+                        self.assertEqual(len(rows), 3)
+
+                        db_df = pd.DataFrame(rows, columns=["ticker", "shares", "account"])
+                        drift = check_position_drift(db_df, broker_df)
+                        self.assertFalse(drift.has_drift)
+        finally:
+            if os.path.exists(tmp_db):
+                os.remove(tmp_db)
+
 if __name__ == "__main__":
     unittest.main()

@@ -171,6 +171,33 @@ class MultiBrokerManager:
             df = df.sort_values(by="market_value", ascending=False).reset_index(drop=True)
         return df
 
+    def get_per_account_positions(self) -> pd.DataFrame:
+        """
+        Return real positions broken down per (ticker, account) without merging across accounts,
+        so identical tickers held in multiple accounts remain distinct and accurately attributed.
+        """
+        rows = []
+        for name, conn in self.connectors.items():
+            acc_lbl = getattr(conn, "account_name", name)
+            for p in conn.get_positions():
+                ticker = p.ticker.upper().strip()
+                if p.shares <= 0.0001:
+                    continue
+                rows.append({
+                    "ticker": ticker,
+                    "shares": round(float(p.shares), 4),
+                    "cost_basis": round(float(p.cost_basis), 4),
+                    "market_price": float(p.market_price),
+                    "market_value": round(float(p.market_value), 2),
+                    "layer": get_canonical_layer(ticker, p.layer),
+                    "account": acc_lbl
+                })
+
+        df = pd.DataFrame(rows)
+        if not df.empty:
+            df = df.sort_values(by=["account", "market_value"], ascending=[True, False]).reset_index(drop=True)
+        return df
+
     def get_all_filled_orders(self, start_date: Optional[str] = None) -> List[FilledOrder]:
         """Collect all filled orders across all broker accounts."""
         all_orders: List[FilledOrder] = []

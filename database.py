@@ -26,20 +26,50 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # 1. Current Positions Table
+    # 1. Current Positions Table (Composite PK: ticker + account so multi-broker holdings never collide)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS positions (
-        ticker TEXT PRIMARY KEY,
+        ticker TEXT NOT NULL,
         shares REAL NOT NULL,
         cost_basis REAL NOT NULL,
         layer TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        account TEXT NOT NULL DEFAULT '老虎证券 - 综合账户',
+        PRIMARY KEY (ticker, account)
     )
     """)
-    try:
-        cursor.execute("ALTER TABLE positions ADD COLUMN account TEXT DEFAULT ''")
-    except Exception:
-        pass
+    cursor.execute("PRAGMA table_info(positions)")
+    pos_cols_info = cursor.fetchall()
+    pk_cols = [r[1] for r in pos_cols_info if r[5] > 0]
+    col_names = [r[1] for r in pos_cols_info]
+    if "account" not in col_names or pk_cols == ["ticker"]:
+        # Seamless migration from single-ticker PK to composite (ticker, account) PK
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS positions_v2 (
+            ticker TEXT NOT NULL,
+            shares REAL NOT NULL,
+            cost_basis REAL NOT NULL,
+            layer TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            account TEXT NOT NULL DEFAULT '老虎证券 - 综合账户',
+            PRIMARY KEY (ticker, account)
+        )
+        """)
+        if "account" in col_names:
+            cursor.execute("""
+            INSERT OR REPLACE INTO positions_v2 (ticker, shares, cost_basis, layer, updated_at, account)
+            SELECT ticker, shares, cost_basis, layer, updated_at,
+                   CASE WHEN account IS NULL OR TRIM(account) = '' THEN '老虎证券 - 综合账户' ELSE account END
+            FROM positions
+            """)
+        else:
+            cursor.execute("""
+            INSERT OR REPLACE INTO positions_v2 (ticker, shares, cost_basis, layer, updated_at, account)
+            SELECT ticker, shares, cost_basis, layer, updated_at, '老虎证券 - 综合账户'
+            FROM positions
+            """)
+        cursor.execute("DROP TABLE positions")
+        cursor.execute("ALTER TABLE positions_v2 RENAME TO positions")
     
     # 2. Trades History Table
     cursor.execute("""
@@ -330,13 +360,9 @@ def get_positions():
                 if '老虎' in acc or '综合' in acc or '环球' in acc:
                     return acc
                 return 'Charles Schwab (嘉信理财)'
-            if t in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
+            if acc and ('U9959007' in acc or '环球' in acc) and ('综合' not in acc):
                 return '老虎证券 - 环球账户'
-            if t in ['SGOV', '931CVR013']:
-                return '老虎证券 - 综合账户'
-            if acc and ('U9959007' in acc or '环球' in acc):
-                return '老虎证券 - 环球账户'
-            if acc and ('638812' in acc or '综合' in acc):
+            if acc and ('638812' in acc or '综合' in acc) and ('环球' not in acc):
                 return '老虎证券 - 综合账户'
             if acc:
                 return acc
@@ -359,22 +385,25 @@ def get_positions():
     return _ensure_account(df)
 
 def update_position(ticker, shares, cost_basis, layer, account=""):
+    acc_norm = str(account or "").strip() or "老虎证券 - 综合账户"
     conn = get_connection()
     cursor = conn.cursor()
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if shares <= 0:
-        cursor.execute("DELETE FROM positions WHERE ticker = ?", (ticker,))
+        if account:
+            cursor.execute("DELETE FROM positions WHERE ticker = ? AND account = ?", (ticker, acc_norm))
+        else:
+            cursor.execute("DELETE FROM positions WHERE ticker = ?", (ticker,))
     else:
         cursor.execute("""
         INSERT INTO positions (ticker, shares, cost_basis, layer, updated_at, account)
         VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(ticker) DO UPDATE SET
+        ON CONFLICT(ticker, account) DO UPDATE SET
             shares = excluded.shares,
             cost_basis = excluded.cost_basis,
             layer = excluded.layer,
-            updated_at = excluded.updated_at,
-            account = excluded.account
-        """, (ticker, shares, cost_basis, layer, now_str, account))
+            updated_at = excluded.updated_at
+        """, (ticker, shares, cost_basis, layer, now_str, acc_norm))
     conn.commit()
     conn.close()
 
@@ -383,31 +412,40 @@ def update_position(ticker, shares, cost_basis, layer, account=""):
     if url and key:
         try:
             import httpx
+            import urllib.parse
             headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
             if shares <= 0:
-                # Fully delete the closed position from Supabase Cloud
-                httpx.delete(f"{url}/rest/v1/positions?ticker=eq.{ticker}", headers=headers, timeout=5.0)
+                if account:
+                    enc_acc = urllib.parse.quote(acc_norm, safe="")
+                    r_del = httpx.delete(
+                        f"{url}/rest/v1/positions?ticker=eq.{ticker}&account=eq.{enc_acc}",
+                        headers=headers, timeout=5.0
+                    )
+                    if r_del.status_code >= 400:
+                        httpx.delete(f"{url}/rest/v1/positions?ticker=eq.{ticker}", headers=headers, timeout=5.0)
+                else:
+                    httpx.delete(f"{url}/rest/v1/positions?ticker=eq.{ticker}", headers=headers, timeout=5.0)
             else:
                 headers["Prefer"] = "resolution=merge-duplicates"
                 base_p = {
                     "ticker": ticker, "shares": float(shares), "cost_basis": float(cost_basis), "layer": layer, "updated_at": now_str
                 }
                 full_p = dict(base_p)
-                full_p["account"] = str(account)
-                r = httpx.post(f"{url}/rest/v1/positions", json=[full_p], headers=headers, timeout=5.0)
+                full_p["account"] = acc_norm
+                r = httpx.post(f"{url}/rest/v1/positions?on_conflict=ticker,account", json=[full_p], headers=headers, timeout=5.0)
                 if r.status_code >= 400:
-                    httpx.post(f"{url}/rest/v1/positions", json=[base_p], headers=headers, timeout=5.0)
+                    # Fallback if Supabase positions table still uses single-column PK
+                    r2 = httpx.post(f"{url}/rest/v1/positions", json=[full_p], headers=headers, timeout=5.0)
+                    if r2.status_code >= 400:
+                        httpx.post(f"{url}/rest/v1/positions", json=[base_p], headers=headers, timeout=5.0)
         except Exception as e:
             print(f"Supabase update_position sync error: {e}")
 
 def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pnl=0.0, layer="TREND", reason="", category="STRATEGY", is_strategy=1, account=None):
     if not account:
-        t_u = str(ticker or "").upper().strip()
         r_u = str(reason or "").upper()
         if "SCHWAB" in r_u or "嘉信" in r_u:
             account = "Charles Schwab (嘉信理财)"
-        elif t_u in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
-            account = "老虎证券 - 环球账户"
         else:
             account = "老虎证券 - 综合账户"
     conn = get_connection()
@@ -630,11 +668,8 @@ def get_trades_history():
             if acc and acc.lower() != 'nan':
                 return acc
             rsn = str(row.get('reason') or '').upper()
-            tk = str(row.get('ticker') or '').upper().strip()
             if 'SCHWAB' in rsn or '嘉信' in rsn:
                 return 'Charles Schwab (嘉信理财)'
-            if tk in ['MSFT', 'GOOG', 'GOOGL', 'NVDY', 'WBA.CVR']:
-                return '老虎证券 - 环球账户'
             return '老虎证券 - 综合账户'
 
         df_cloud['account'] = df_cloud.apply(_infer_trade_acc, axis=1)

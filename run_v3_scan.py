@@ -449,12 +449,10 @@ def run_pipeline() -> Dict[str, Any]:
 
     print(f"💰 [Balances Detail] total_equity={aggregated_balances['total_equity']}, cash={aggregated_balances['total_cash']}, accounts={aggregated_balances['accounts']}")
 
-    aggregated_positions = broker_mgr.get_aggregated_positions()
+    per_account_positions = broker_mgr.get_per_account_positions()
 
-
-
-    # Compare DB positions vs Broker API positions
-    drift_report = check_position_drift(db_pos_df, aggregated_positions)
+    # Compare DB positions vs Broker API positions (aggregated by ticker for drift check)
+    drift_report = check_position_drift(db_pos_df, per_account_positions)
     if drift_report.has_drift:
         print(f"⚠️ Position Drift Detected ({len(drift_report.drifts)} items):")
         for line in drift_report.summary_lines:
@@ -462,12 +460,12 @@ def run_pipeline() -> Dict[str, Any]:
     else:
         print("✅ No Position Drift: Broker positions match local database 100%.")
 
-    # In Live Auto-Data Mode (SHADOW_MODE=False), synchronize positions directly
+    # In Live Auto-Data Mode (SHADOW_MODE=False), synchronize per-(ticker, account) positions directly
     auth_warnings = broker_mgr.get_auth_warnings()
-    if not SHADOW_MODE and not aggregated_positions.empty:
+    if not SHADOW_MODE and not per_account_positions.empty:
         print("🔄 Live Auto-Data Mode: Synchronizing real broker positions to portfolio database & Supabase Cloud...")
         sync_res = sync_broker_positions_to_db(
-            aggregated_positions,
+            per_account_positions,
             shadow_mode=False,
             allow_close=(len(auth_warnings) == 0)
         )
