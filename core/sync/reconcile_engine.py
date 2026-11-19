@@ -228,16 +228,13 @@ def ingest_broker_orders(
             curr_cost = float(pos_row[1]) if pos_row else o.price
 
             trade_pnl = 0.0
-            from database import update_position, record_trade
-
-            if o.action.upper() == "BUY":
-                new_shares = curr_shares + o.shares
-                new_cost = (curr_shares * curr_cost + o.total_value + o.fee) / new_shares if new_shares > 0 else o.price
-                update_position(o.ticker, new_shares, new_cost, layer_norm, account=acc_lbl)
-            else: # SELL
-                new_shares = max(0.0, curr_shares - o.shares)
+            from database import record_trade
+            if o.action.upper() == "SELL":
                 trade_pnl = round((o.price - curr_cost) * o.shares - o.fee, 2)
-                update_position(o.ticker, new_shares, curr_cost if new_shares > 0 else 0.0, layer_norm, account=acc_lbl)
+
+            # Note: positions table is exclusively synchronized via sync_broker_positions_to_db()
+            # (broker live positions are the single source of truth). Never mutate positions here
+            # to avoid double-counting shares on the same day a fill occurs.
 
             # Record trade into trades table (SQLite + Supabase Cloud)
             record_trade(

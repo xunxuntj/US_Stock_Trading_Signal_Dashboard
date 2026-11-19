@@ -28,6 +28,7 @@ class TigerBrokerConnector(BaseBrokerConnector):
         self.is_sandbox = is_sandbox
         self.broker = BrokerType.TIGER
         self._client = None
+        self.last_auth_error: Optional[str] = None
         self._init_client()
 
     def _init_client(self):
@@ -59,8 +60,10 @@ class TigerBrokerConnector(BaseBrokerConnector):
             client_config.private_key = clean_key
 
             self._client = TradeClient(client_config)
+            self.last_auth_error = None
             print(f"✅ Tiger TradeClient initialized for account {self.account_id} (Tiger ID: {self.tiger_id})")
         except Exception as e:
+            self.last_auth_error = f"Tiger client init failed: {e}"
             print(f"⚠️ Tiger client init failed for account {self.account_id}: {e}")
             self._client = None
 
@@ -225,8 +228,10 @@ class TigerBrokerConnector(BaseBrokerConnector):
                         market_value=market_val,
                         layer=get_canonical_layer(symbol)
                     ))
+                self.last_auth_error = None
                 return results
             except Exception as e:
+                self.last_auth_error = f"Tiger get_positions failed: {e}"
                 print(f"Warning: Tiger API get_positions failed ({e})")
 
         return results

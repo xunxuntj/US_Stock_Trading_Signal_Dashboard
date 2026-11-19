@@ -16,7 +16,8 @@ __all__ = [
     "record_kids_cash_transaction", "get_kids_cash_ledger", "get_kids_account_summary",
     "get_cloud_market_prices_latest_dates", "fetch_cloud_market_prices", "upsert_cloud_market_price_rows",
     "get_supabase_credentials", "fetch_supabase_df",
-    "save_broker_refresh_token", "get_broker_refresh_token"
+    "save_broker_refresh_token", "get_broker_refresh_token",
+    "save_account_balances", "get_account_balances"
 ]
 
 def get_connection():
@@ -100,11 +101,11 @@ def init_db():
     except Exception:
         pass
     try:
-        cursor.execute("ALTER TABLE trades ADD COLUMN account TEXT DEFAULT '老虎证券 - 综合账户 (638812)'")
+        cursor.execute("ALTER TABLE trades ADD COLUMN account TEXT DEFAULT '老虎证券 - 综合账户'")
     except Exception:
         pass
     try:
-        cursor.execute("ALTER TABLE cash_transactions ADD COLUMN account TEXT DEFAULT '老虎证券 - 综合账户 (638812)'")
+        cursor.execute("ALTER TABLE cash_transactions ADD COLUMN account TEXT DEFAULT '老虎证券 - 综合账户'")
     except Exception:
         pass
     
@@ -205,6 +206,18 @@ def init_db():
     CREATE TABLE IF NOT EXISTS broker_tokens (
         broker TEXT PRIMARY KEY,
         refresh_token TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """)
+
+    # 10. Per-Account Live Cash & Equity Snapshots Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS account_balances (
+        account TEXT PRIMARY KEY,
+        broker TEXT NOT NULL,
+        equity REAL NOT NULL,
+        cash REAL NOT NULL,
+        market_value REAL NOT NULL,
         updated_at TEXT NOT NULL
     )
     """)
@@ -1095,3 +1108,127 @@ def get_broker_refresh_token(broker: str = "SCHWAB"):
         conn.close()
 
     return None, None
+
+
+def _supabase_post_with_retry(req_url: str, payload: list, headers: dict, retries: int = 2, timeout: float = 10.0):
+    """Execute a Supabase REST POST with brief exponential backoff on transient failures."""
+    import time
+    import httpx
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            r = httpx.post(req_url, json=payload, headers=headers, timeout=timeout)
+            if r.status_code < 500:
+                return r
+            last_err = f"HTTP {r.status_code}: {r.text[:200]}"
+        except Exception as e:
+            last_err = str(e)
+        if attempt < retries:
+            time.sleep(0.5 * (2 ** attempt))
+    raise RuntimeError(f"Supabase POST failed after {retries + 1} attempts: {last_err}")
+
+
+def save_account_balances(accounts_detail: List[Dict[str, Any]]):
+    """Persist per-account real cash & equity snapshots to local SQLite and Supabase Cloud."""
+    if not accounts_detail:
+        return False, "empty"
+    now_iso = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    rows_to_sync = []
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS account_balances (
+            account TEXT PRIMARY KEY,
+            broker TEXT NOT NULL,
+            equity REAL NOT NULL,
+            cash REAL NOT NULL,
+            market_value REAL NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """)
+        for acc in accounts_detail:
+            acc_name = str(acc.get("account_name") or "").strip()
+            if not acc_name:
+                continue
+            broker_name = str(acc.get("broker") or "UNKNOWN").upper().strip()
+            eq = round(float(acc.get("equity", 0.0) or 0.0), 2)
+            cash = round(float(acc.get("cash", 0.0) or 0.0), 2)
+            mkt = round(float(acc.get("market_value", 0.0) or 0.0), 2)
+            cur.execute("""
+            INSERT INTO account_balances (account, broker, equity, cash, market_value, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(account) DO UPDATE SET
+                broker = excluded.broker,
+                equity = excluded.equity,
+                cash = excluded.cash,
+                market_value = excluded.market_value,
+                updated_at = excluded.updated_at
+            """, (acc_name, broker_name, eq, cash, mkt, now_iso))
+            rows_to_sync.append({
+                "account": acc_name,
+                "broker": broker_name,
+                "equity": eq,
+                "cash": cash,
+                "market_value": mkt,
+                "updated_at": now_iso,
+            })
+        conn.commit()
+    finally:
+        conn.close()
+
+    url, key = get_supabase_credentials()
+    if url and key and rows_to_sync:
+        try:
+            headers = {
+                "apikey": str(key),
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates",
+            }
+            r = _supabase_post_with_retry(
+                f"{url}/rest/v1/account_balances?on_conflict=account",
+                rows_to_sync, headers=headers
+            )
+            if r.status_code < 400:
+                return True, "synced_to_cloud"
+            return False, f"Supabase HTTP {r.status_code}: {r.text[:200]}"
+        except Exception as e:
+            return False, str(e)
+    return False, "local_only"
+
+
+def get_account_balances() -> Dict[str, Dict[str, Any]]:
+    """Fetch latest per-account balance snapshots (Cloud first, fallback to local SQLite)."""
+    df_cloud = fetch_supabase_df("account_balances")
+    if df_cloud is not None and not df_cloud.empty and "account" in df_cloud.columns:
+        return {
+            str(r["account"]).strip(): {
+                "broker": str(r.get("broker") or ""),
+                "equity": float(r.get("equity") or 0.0),
+                "cash": float(r.get("cash") or 0.0),
+                "market_value": float(r.get("market_value") or 0.0),
+                "updated_at": str(r.get("updated_at") or ""),
+            }
+            for _, r in df_cloud.iterrows()
+        }
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT account, broker, equity, cash, market_value, updated_at FROM account_balances")
+        rows = cur.fetchall()
+        return {
+            str(r[0]).strip(): {
+                "broker": str(r[1] or ""),
+                "equity": float(r[2] or 0.0),
+                "cash": float(r[3] or 0.0),
+                "market_value": float(r[4] or 0.0),
+                "updated_at": str(r[5] or ""),
+            }
+            for r in rows
+        }
+    except Exception:
+        return {}
+    finally:
+        conn.close()

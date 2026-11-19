@@ -27,8 +27,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# Encrypted SHA-256 Hash of Password '790323'
-HK_IPO_PWD_HASH = "3524c12e3f2ac91563a82dedde6816f0310b9c543dcbc0dac383220069e2c2d9"
+# Admin authorization SHA-256 hash (configure ADMIN_PWD_HASH in Streamlit Secrets / env to rotate)
+_DEFAULT_ADMIN_PWD_HASH = "3524c12e3f2ac91563a82dedde6816f0310b9c543dcbc0dac383220069e2c2d9"
 
 # Streamlit Page Config
 st.set_page_config(
@@ -69,6 +69,7 @@ get_kids_account_summary = getattr(database, "get_kids_account_summary", lambda 
 update_trade_classification = getattr(database, "update_trade_classification", lambda *args, **kwargs: None)
 save_broker_refresh_token = getattr(database, "save_broker_refresh_token", lambda *args, **kwargs: (False, "unavailable"))
 get_broker_refresh_token = getattr(database, "get_broker_refresh_token", lambda *args, **kwargs: (None, None))
+get_account_balances = getattr(database, "get_account_balances", lambda: {})
 
 
 def _get_app_secret(key_name: str, default: str = "") -> str:
@@ -79,6 +80,9 @@ def _get_app_secret(key_name: str, default: str = "") -> str:
         return str(st.secrets.get(key_name, default) or "").strip()
     except Exception:
         return default
+
+
+HK_IPO_PWD_HASH = _get_app_secret("ADMIN_PWD_HASH", _DEFAULT_ADMIN_PWD_HASH)
 
 
 # Auto-handle Charles Schwab OAuth callback (?code=...) when redirected back to Dashboard
@@ -373,9 +377,6 @@ if not df_nav_real.empty and 'total_equity' in df_nav_real.columns:
     df_nav_real_valid = df_nav_real[df_nav_real['total_equity'].notnull()].sort_values('date')
     latest_nav_row = df_nav_real_valid.iloc[-1]
     total_combined_nav = float(latest_nav_row['total_equity'])
-    # Incorporate Schwab cash ($1,500.00) into multi-broker total if not yet synced in broker record
-    if total_combined_nav < 148500.0:
-        total_combined_nav += 1500.0
     live_nav_latest = float(latest_nav_row['strategy_equity'])
     hk_cum_profit = float(latest_nav_row['hk_pnl_cum']) if pd.notnull(latest_nav_row['hk_pnl_cum']) else 11208.10
     df_nav_2026_dd = df_nav_real_valid[pd.to_datetime(df_nav_real_valid['date']) >= '2026-01-15']
@@ -804,29 +805,34 @@ else:
     st.markdown(command_no_signal_html, unsafe_allow_html=True)
 
 # 2. Multi-Broker Status Ribbon (Institutional Layout - Synchronized Equal Heights)
-cash_tiger_main = 325.37
-cash_tiger_univ = 14.42
-cash_schwab = 1500.0
-try:
-    df_cash_tx = get_cash_transactions()
-    if not df_cash_tx.empty and 'notes' in df_cash_tx.columns:
-        schwab_tx = df_cash_tx[df_cash_tx['notes'].str.contains('Schwab|嘉信', na=False, case=False)]
-        if not schwab_tx.empty:
-            dep = float(schwab_tx[schwab_tx['type'] == 'DEPOSIT']['amount'].sum())
-            wdr = float(schwab_tx[schwab_tx['type'] == 'WITHDRAWAL']['amount'].sum())
-            cash_schwab = dep - wdr
-    df_trades_chk = get_trades_history()
-    if not df_trades_chk.empty and 'account' in df_trades_chk.columns:
-        schwab_tr = df_trades_chk[df_trades_chk['account'].astype(str).str.contains('Schwab|嘉信', na=False, case=False)]
-        if not schwab_tr.empty:
-            buys = schwab_tr[schwab_tr['action'].str.upper() == 'BUY']
-            sells = schwab_tr[schwab_tr['action'].str.upper() == 'SELL']
-            buy_out = float((buys['total_val'] + buys['fee'].fillna(0.0)).sum())
-            sell_in = float((sells['total_val'] - sells['fee'].fillna(0.0)).sum())
-            cash_schwab = cash_schwab - buy_out + sell_in
-    cash_schwab = max(0.0, cash_schwab)
-except Exception:
-    cash_schwab = 1500.0
+# Prefer live per-account cash snapshots synced from broker APIs; fallback to ledger calculation if unavailable
+_acc_bal_snap = get_account_balances() or {}
+cash_tiger_main = float(_acc_bal_snap.get("老虎证券 - 综合账户", {}).get("cash", 325.37))
+cash_tiger_univ = float(_acc_bal_snap.get("老虎证券 - 环球账户", {}).get("cash", 14.42))
+if "Charles Schwab (嘉信理财)" in _acc_bal_snap:
+    cash_schwab = float(_acc_bal_snap["Charles Schwab (嘉信理财)"].get("cash", 0.0))
+else:
+    cash_schwab = 0.0
+    try:
+        df_cash_tx = get_cash_transactions()
+        if not df_cash_tx.empty and 'notes' in df_cash_tx.columns:
+            schwab_tx = df_cash_tx[df_cash_tx['notes'].str.contains('Schwab|嘉信', na=False, case=False)]
+            if not schwab_tx.empty:
+                dep = float(schwab_tx[schwab_tx['type'] == 'DEPOSIT']['amount'].sum())
+                wdr = float(schwab_tx[schwab_tx['type'] == 'WITHDRAWAL']['amount'].sum())
+                cash_schwab = dep - wdr
+        df_trades_chk = get_trades_history()
+        if not df_trades_chk.empty and 'account' in df_trades_chk.columns:
+            schwab_tr = df_trades_chk[df_trades_chk['account'].astype(str).str.contains('Schwab|嘉信', na=False, case=False)]
+            if not schwab_tr.empty:
+                buys = schwab_tr[schwab_tr['action'].str.upper() == 'BUY']
+                sells = schwab_tr[schwab_tr['action'].str.upper() == 'SELL']
+                buy_out = float((buys['total_val'] + buys['fee'].fillna(0.0)).sum())
+                sell_in = float((sells['total_val'] - sells['fee'].fillna(0.0)).sum())
+                cash_schwab = cash_schwab - buy_out + sell_in
+        cash_schwab = max(0.0, cash_schwab)
+    except Exception:
+        cash_schwab = 0.0
 
 schwab_pos_rows = (
     pos_active_df[pos_active_df['account'].astype(str).str.contains('Schwab|嘉信', na=False, case=False)]

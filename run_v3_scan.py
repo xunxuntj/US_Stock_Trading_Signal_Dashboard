@@ -486,6 +486,20 @@ def run_pipeline() -> Dict[str, Any]:
     else:
         print("✅ Broker Cash Flow Ingestion: No new cash flow detected.")
 
+    # Persist per-account live cash & equity snapshots (excluding connectors with auth errors)
+    if not SHADOW_MODE and aggregated_balances.get("accounts"):
+        healthy_accounts = []
+        for acc_item in aggregated_balances["accounts"]:
+            c_name = acc_item.get("connector")
+            conn_obj = broker_mgr.connectors.get(c_name)
+            if conn_obj and getattr(conn_obj, "last_auth_error", None):
+                continue
+            healthy_accounts.append(acc_item)
+        if healthy_accounts:
+            from database import save_account_balances
+            ab_ok, ab_msg = save_account_balances(healthy_accounts)
+            print(f"💳 Account Balances Snapshot Saved ({len(healthy_accounts)} accounts, cloud={ab_ok}: {ab_msg})")
+
     auth_warnings = broker_mgr.get_auth_warnings()
     schwab_app_key = os.getenv("SCHWAB_APP_KEY", "").strip()
     schwab_redirect = os.getenv("SCHWAB_REDIRECT_URI", "https://usstocktradingsignaldashboard.streamlit.app").strip()
