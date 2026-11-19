@@ -228,7 +228,8 @@ class SchwabBrokerConnector(BaseBrokerConnector):
                             buying_power=round(bp, 2)
                         )
             except Exception as e:
-                print(f"Warning: Schwab get_account_balance error: {e}")
+                self.last_auth_error = f"Schwab get_account_balance error: {e}"
+                print(f"Warning: {self.last_auth_error}")
 
         # Fallback to local cash transactions ledger if offline or token expired
         fallback_cash = 0.0
@@ -242,10 +243,10 @@ class SchwabBrokerConnector(BaseBrokerConnector):
                     wdr = float(schwab_tx[schwab_tx['type'] == 'WITHDRAWAL']['amount'].sum())
                     fallback_cash = max(0.0, dep - wdr)
         except Exception:
-            fallback_cash = 1500.0
+            fallback_cash = 0.0
 
         return AccountBalance(
-            account_id=self.account_id or "56169533",
+            account_id=self.account_id or "SCHWAB_UNKNOWN",
             broker=self.broker,
             account_name=self.account_name,
             total_equity=round(fallback_cash, 2),

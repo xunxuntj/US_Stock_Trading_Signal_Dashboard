@@ -25,6 +25,8 @@ class TestUIHelpers(unittest.TestCase):
         self.assertEqual(clean_account_label("老虎证券 - 环球账户 (U9959007)"), "老虎证券 - 环球账户")
         self.assertEqual(clean_account_label("Charles Schwab (56169533)"), "Charles Schwab")
         self.assertEqual(clean_account_label("Tiger - 638812"), "Tiger")
+        self.assertEqual(clean_account_label("New Broker (99887766)"), "New Broker")
+        self.assertEqual(clean_account_label("Tiger Global (U1234567)"), "Tiger Global")
         self.assertEqual(clean_account_label("Charles Schwab (嘉信理财)"), "Charles Schwab (嘉信理财)")
 
     def test_clean_account_label_handles_nulls_and_edge_cases(self):

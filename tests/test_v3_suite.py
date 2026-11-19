@@ -1112,6 +1112,21 @@ class TestV3SystemSuite(unittest.TestCase):
         self.assertEqual(res.status_code, 201)
         self.assertEqual(calls["n"], 2)
 
+    def test_24_schwab_balance_api_error_sets_auth_error_and_no_magic_fallback(self):
+        from unittest.mock import patch
+        from core.broker.schwab_connector import SchwabBrokerConnector
+
+        conn = SchwabBrokerConnector(app_key="k", app_secret="s", refresh_token="r", account_number="")
+        with patch.object(conn, "_ensure_access_token", return_value="valid_token"):
+            with patch.object(conn, "_get_account_hash", side_effect=RuntimeError("network timeout")):
+                with patch("database.get_cash_transactions", side_effect=RuntimeError("db offline")):
+                    bal = conn.get_account_balance()
+
+        self.assertIsNotNone(conn.last_auth_error)
+        self.assertIn("network timeout", conn.last_auth_error)
+        self.assertEqual(bal.total_equity, 0.0)
+        self.assertEqual(bal.account_id, "SCHWAB_UNKNOWN")
+
 if __name__ == "__main__":
 
     unittest.main()

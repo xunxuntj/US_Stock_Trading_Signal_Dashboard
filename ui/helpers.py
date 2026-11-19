@@ -10,8 +10,8 @@ def clean_account_label(val) -> str:
     if val is None or (not isinstance(val, str) and pd.isna(val)):
         return ""
     s = str(val)
-    for raw_num in ("(638812)", "638812", "(U9959007)", "U9959007", "(56169533)", "56169533"):
-        s = s.replace(raw_num, "")
+    # Strip generic numeric (5+ digits) or U-prefixed (U + 6+ digits) brokerage account IDs
+    s = re.sub(r"\s*\(?(?:U[0-9]{6,}|[0-9]{5,})\)?", "", s)
     s = re.sub(r"\s*\(\s*\)", "", s)
     s = re.sub(r"\s*-\s*$", "", s).strip()
     return s
