@@ -2,6 +2,8 @@ import os
 
 # v2.29 Strategy Configuration Parameters
 INITIAL_CAPITAL = 100000.0
+STRATEGY_START_DATE = "2026-01-15"
+STRATEGY_BASE_CAPITAL = 99215.41
 
 # Base Allocation Targets
 JEPQ_TARGET_PCT = 0.60    # 60% JEPQ Base (DRIP enabled)

@@ -1054,6 +1054,64 @@ class TestV3SystemSuite(unittest.TestCase):
             if os.path.exists(tmp_db):
                 os.remove(tmp_db)
 
+    def test_22_signal_engine_uses_data_guard_and_aggregates_multi_account_exits(self):
+        from unittest.mock import patch
+        import pandas as pd
+        import numpy as np
+        import signal_engine
+
+        dates = pd.date_range("2026-01-01", periods=60)
+        df_spy = pd.DataFrame({
+            "Close": [500.0 + i * 0.5 for i in range(60)],
+            "EMA200": [480.0] * 60,
+            "ST_trend": [1] * 60,
+        }, index=dates)
+        df_soxx = pd.DataFrame({
+            "Close": [200.0 + i * 0.2 for i in range(60)],
+            "EMA200": [190.0] * 60,
+            "ST_trend": [1] * 59 + [-1],
+        }, index=dates)
+        # Corrupted QQQ with NaN close on latest bar should be filtered out by Data Guard
+        df_qqq_bad = df_spy.copy()
+        df_qqq_bad.iloc[-1, df_qqq_bad.columns.get_loc("Close")] = np.nan
+
+        mock_data = {"SPY": df_spy, "SOXX": df_soxx, "QQQ": df_qqq_bad}
+        # Multi-account positions holding SOXX in two separate accounts (10 + 15 = 25 shares)
+        mock_pos = pd.DataFrame([
+            {"ticker": "SOXX", "shares": 10.0, "cost_basis": 200.0, "layer": "TREND", "account": "老虎证券 - 综合账户"},
+            {"ticker": "SOXX", "shares": 15.0, "cost_basis": 205.0, "layer": "TREND", "account": "Charles Schwab (嘉信理财)"},
+        ])
+
+        with patch("signal_engine.ensure_latest_market_data", return_value=None):
+            with patch("signal_engine.be.prepare_data", return_value=mock_data):
+                with patch("signal_engine.get_positions", return_value=mock_pos):
+                    _, _, _, actions = signal_engine.generate_v229_signals()
+
+        soxx_sells = [a for a in actions if a["ticker"] == "SOXX" and a["action"] == "SELL"]
+        self.assertEqual(len(soxx_sells), 1)
+        expected_val = 25.0 * float(df_soxx["Close"].iloc[-1])
+        self.assertAlmostEqual(soxx_sells[0]["target_val"], expected_val, places=2)
+        # Corrupted QQQ must NOT produce any buy/sell action
+        self.assertEqual([a for a in actions if a["ticker"] == "QQQ"], [])
+
+    def test_23_supabase_post_retry_recovers_from_transient_503(self):
+        from unittest.mock import patch, MagicMock
+        import database
+
+        r_503 = MagicMock(status_code=503, text="Service Unavailable")
+        r_201 = MagicMock(status_code=201, text="Created")
+        calls = {"n": 0}
+
+        def fake_post(url, json=None, headers=None, timeout=10.0):
+            calls["n"] += 1
+            return r_503 if calls["n"] == 1 else r_201
+
+        with patch("httpx.post", side_effect=fake_post), patch("time.sleep", return_value=None):
+            res = database._supabase_post_with_retry("https://example.supabase.co/rest/v1/test", [{"a": 1}], {}, retries=2)
+
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(calls["n"], 2)
+
 if __name__ == "__main__":
 
     unittest.main()

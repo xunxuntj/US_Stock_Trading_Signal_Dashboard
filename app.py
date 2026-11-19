@@ -38,7 +38,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-from config import DATA_DIR, INITIAL_CAPITAL
+from config import DATA_DIR, INITIAL_CAPITAL, STRATEGY_START_DATE, STRATEGY_BASE_CAPITAL
 
 try:
     import database
@@ -598,12 +598,16 @@ st.sidebar.divider()
 
 # Sidebar Section 1: US Live Trade Logging
 st.sidebar.markdown("### 券商订单与持仓同步")
-if st.sidebar.button("立即从券商接口同步订单与持仓", help="向后台工作流发送指令，从老虎证券与嘉信理财拉取最近 85 天成交明细并更新真实持仓"):
+if st.sidebar.button("立即从券商接口同步订单与持仓", help="向后台工作流发送指令，从老虎证券与嘉信理财拉取最近成交明细并更新真实持仓"):
     success = trigger_github_sync()
     if success:
-        st.sidebar.success("已向后台发送同步请求，系统正在拉取券商订单与持仓，约需 1~2 分钟，完成后请刷新页面。")
+        st.sidebar.success("已向后台发送同步请求，系统正在拉取券商订单与持仓，约需 1~2 分钟，完成后请点击下方刷新数据。")
     else:
         st.sidebar.info("后台定时任务正常运行（每个交易日盘后对账），也可在 GitHub Actions 页面手动运行 v3 工作流。")
+
+if st.sidebar.button("清除缓存并立即刷新数据", help="立即丢弃 30 分钟本地缓存，重新从 Supabase 读取最新净值、持仓与现金快照"):
+    st.cache_data.clear()
+    st.rerun()
 
 st.sidebar.info("🔒 **券商接口为唯一事实源**：美股成交单、持仓、出入金及逐日净值已通过 Tiger / Schwab OpenAPI 自动增量同步。如需为已成交订单补充**交易备注或策略分类**，请在主页面下方「07 / 历史数据库」进行属性调整。")
 
@@ -906,7 +910,7 @@ if not strat_pos_df.empty:
         tkr = pos_row['ticker']
         shares = float(pos_row['shares'])
         shares_str = f"{shares:,.0f}" if shares == int(shares) else f"{shares:,.2f}"
-        curr_p = 1005.66 if tkr == 'NVDA' else (get_live_price(tkr) or float(pos_row['cost_basis']))
+        curr_p = get_live_price(tkr) or float(pos_row['cost_basis'])
         mkt_val = shares * curr_p
         weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
         acc_tag = clean_account_label(pos_row.get('account', '老虎证券 - 综合账户'))
@@ -923,7 +927,7 @@ if not non_strat_pos_df.empty:
         tkr = pos_row['ticker']
         shares = float(pos_row['shares'])
         shares_str = f"{shares:,.0f}" if shares == int(shares) else f"{shares:,.2f}"
-        curr_p = 1005.66 if tkr == 'NVDA' else (get_live_price(tkr) or float(pos_row['cost_basis']))
+        curr_p = get_live_price(tkr) or float(pos_row['cost_basis'])
         mkt_val = shares * curr_p
         weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 0.0
         acc_tag = clean_account_label(pos_row.get('account', '老虎证券 - 综合账户'))
@@ -977,10 +981,7 @@ if not pos_df.empty:
         acc = clean_account_label(str(row.get('account') or '老虎证券 - 综合账户'))
         if s > 0.001:
             live_p = get_live_price(t)
-            if t == 'NVDA':
-                p_now = 1005.66  # Pre-split basis matching real broker market value $20,135.73
-            else:
-                p_now = live_p if live_p is not None else c
+            p_now = live_p if live_p is not None else c
             mkt_val = s * p_now
             total_portfolio_val += mkt_val
             is_strat = (t in STRATEGY_CORE_TICKERS)
@@ -2279,7 +2280,7 @@ else:
         for idx, (_, pos_row) in enumerate(s_df.head(3).iterrows(), 1):
             tkr = pos_row['ticker']
             shares = float(pos_row['shares'])
-            curr_p = 1005.66 if tkr == 'NVDA' else (get_live_price(tkr) or float(pos_row['cost_basis']))
+            curr_p = get_live_price(tkr) or float(pos_row['cost_basis'])
             mkt_val = shares * curr_p
             weight_pct = (mkt_val / live_nav_latest * 100.0) if live_nav_latest > 0 else 12.5
             signals_html_items.append(f"""

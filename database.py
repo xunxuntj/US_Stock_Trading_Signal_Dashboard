@@ -245,7 +245,20 @@ def record_cash_transaction(date_str, trans_type, amount, notes="", account=None
     conn.commit()
     conn.close()
 
+    # Best-effort Cloud Sync to Supabase cash_transactions if table exists
+    url, key = get_supabase_credentials()
+    if url and key:
+        try:
+            headers = {"apikey": str(key), "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            payload = [{"date": str(date_str), "type": trans_type.upper(), "amount": float(amount), "notes": str(notes), "account": str(account)}]
+            _supabase_post_with_retry(f"{url}/rest/v1/cash_transactions", payload, headers=headers, retries=1, timeout=5.0)
+        except Exception as e:
+            print(f"Note: Supabase cash_transactions sync skipped: {e}")
+
 def get_cash_transactions():
+    df_cloud = fetch_supabase_df("cash_transactions", order="date.asc")
+    if df_cloud is not None and not df_cloud.empty:
+        return df_cloud
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM cash_transactions ORDER BY date ASC", conn)
     conn.close()
@@ -445,12 +458,12 @@ def update_position(ticker, shares, cost_basis, layer, account=""):
                 }
                 full_p = dict(base_p)
                 full_p["account"] = acc_norm
-                r = httpx.post(f"{url}/rest/v1/positions?on_conflict=ticker,account", json=[full_p], headers=headers, timeout=5.0)
+                r = _supabase_post_with_retry(f"{url}/rest/v1/positions?on_conflict=ticker,account", [full_p], headers=headers, timeout=5.0)
                 if r.status_code >= 400:
                     # Fallback if Supabase positions table still uses single-column PK
-                    r2 = httpx.post(f"{url}/rest/v1/positions", json=[full_p], headers=headers, timeout=5.0)
+                    r2 = _supabase_post_with_retry(f"{url}/rest/v1/positions", [full_p], headers=headers, timeout=5.0)
                     if r2.status_code >= 400:
-                        httpx.post(f"{url}/rest/v1/positions", json=[base_p], headers=headers, timeout=5.0)
+                        _supabase_post_with_retry(f"{url}/rest/v1/positions", [base_p], headers=headers, timeout=5.0)
         except Exception as e:
             print(f"Supabase update_position sync error: {e}")
 
@@ -493,9 +506,9 @@ def record_trade(date_str, ticker, action, shares, price, total_val, fee=0.0, pn
             full_payload["category"] = category
             full_payload["is_strategy"] = int(is_strategy)
             full_payload["account"] = str(account)
-            r = httpx.post(f"{url}/rest/v1/trades", json=[full_payload], headers=headers, timeout=5.0)
+            r = _supabase_post_with_retry(f"{url}/rest/v1/trades", [full_payload], headers=headers, timeout=5.0)
             if r.status_code >= 400:
-                httpx.post(f"{url}/rest/v1/trades", json=[base_payload], headers=headers, timeout=5.0)
+                _supabase_post_with_retry(f"{url}/rest/v1/trades", [base_payload], headers=headers, timeout=5.0)
         except Exception as e:
             print(f"Supabase record_trade sync error: {e}")
 

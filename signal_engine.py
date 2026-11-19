@@ -9,6 +9,8 @@ from config import (
     SINGLE_POSITION_CAP_PCT, L2_POSITION_CAP_PCT
 )
 from database import get_positions, get_connection
+from core.sanity.data_guard import validate_dataframe_integrity
+from core.sanity.signal_guard import exhaustive_scan_trend_exits, get_canonical_layer
 
 def ensure_latest_market_data():
     """ Automatically check if local data CSVs are stale and fetch latest daily bars silently """
@@ -62,6 +64,17 @@ def generate_v229_signals():
     """ Runs daily scan on latest market data to check for v2.29 Buy/Sell signals """
     ensure_latest_market_data()
     data = be.prepare_data(DATA_DIR)
+    # Apply unified Data Guard integrity validation so corrupted bars never emit false signals
+    clean_data = {}
+    for t_sym, df_sym in data.items():
+        if t_sym == "S5FI":
+            clean_data[t_sym] = df_sym
+            continue
+        is_ok, _issues = validate_dataframe_integrity(t_sym, df_sym)
+        if is_ok:
+            clean_data[t_sym] = df_sym
+    data = clean_data
+
     spy_df = data["SPY"]
     latest_date = spy_df.index[-1]
     prev_date = spy_df.index[-2] if len(spy_df) >= 2 else latest_date
@@ -86,41 +99,14 @@ def generate_v229_signals():
             if tk not in current_positions:
                 current_positions[tk] = dict(row)
                 current_positions[tk]['shares'] = sh
+                current_positions[tk]['layer'] = get_canonical_layer(tk, row.get('layer'))
             else:
                 current_positions[tk]['shares'] += sh
-    
-    actions = []
-    
-    # 1. Exit Checks for Active Trend Positions
-    for ticker, pos in current_positions.items():
-        layer = pos['layer']
-        if layer in ['L0', 'L0+', 'SGOV', 'LEGACY', 'CASH']:
-            continue
-        if ticker not in data or latest_date not in data[ticker].index:
-            continue
-            
-        df_t = data[ticker]
-        st_trend = df_t.loc[latest_date, 'ST_trend']
-        
-        if layer == 'L2' or ticker == 'QLD':
-            # Check L2 self or parent ST_trend
-            parent_ticker = "QQQ" if ticker in ["SOXX", "QLD"] else "SPY"
-            parent_st = data[parent_ticker].loc[latest_date, 'ST_trend'] if parent_ticker in data and latest_date in data[parent_ticker].index else -1
-            if st_trend == -1 or parent_st == -1:
-                actions.append({
-                    "date": date_str, "ticker": ticker, "action": "SELL",
-                    "target_val": pos['shares'] * current_prices[ticker],
-                    "reason": f"Exit L2 ({ticker}): SuperTrend turned Bearish (-1)",
-                    "layer": layer
-                })
-        elif layer in ['L1', 'Non-Equity', 'TREND']:
-            if st_trend == -1:
-                actions.append({
-                    "date": date_str, "ticker": ticker, "action": "SELL",
-                    "target_val": pos['shares'] * current_prices[ticker],
-                    "reason": f"Exit {layer} ({ticker}): SuperTrend turned Bearish (-1)",
-                    "layer": layer
-                })
+
+    agg_pos_df = pd.DataFrame(list(current_positions.values())) if current_positions else pd.DataFrame()
+
+    # 1. Exit Checks via unified Signal Guard (single source of truth with run_v3_scan.py)
+    actions, _exit_warnings = exhaustive_scan_trend_exits(agg_pos_df, data, latest_date, date_str)
                 
     # Calculate Current NAV & Active Trend Capacity
     trend_val = sum(pos['shares'] * current_prices[pos['ticker']] for t, pos in current_positions.items() if pos['layer'] not in ['L0', 'SGOV'] and pos['ticker'] in current_prices)
@@ -133,7 +119,7 @@ def generate_v229_signals():
     # 2. Entry Checks
     # Equity L1
     for t in EQUITY_L1_TICKERS:
-        if t in current_positions or any(a['ticker'] == t for a in actions):
+        if t not in data or t in current_positions or any(a['ticker'] == t for a in actions):
             continue
         df_t = data[t]
         if latest_date not in df_t.index or prev_date not in df_t.index:
@@ -154,12 +140,12 @@ def generate_v229_signals():
                     
     # Equity L2
     for l1_t in EQUITY_L1_TICKERS:
-        if l1_t not in current_positions or current_positions[l1_t]['layer'] not in ['L1', 'TREND']:
+        if l1_t not in data or l1_t not in current_positions or current_positions[l1_t]['layer'] not in ['L1', 'TREND']:
             continue
-        if data[l1_t].loc[latest_date, 'ST_trend'] != 1:
+        if latest_date not in data[l1_t].index or data[l1_t].loc[latest_date, 'ST_trend'] != 1:
             continue
         for l2_t in EQUITY_L2_WHITELIST[l1_t]:
-            if l2_t in current_positions or any(a['ticker'] == l2_t for a in actions):
+            if l2_t not in data or l2_t in current_positions or any(a['ticker'] == l2_t for a in actions):
                 continue
             if latest_date not in data[l2_t].index:
                 continue
