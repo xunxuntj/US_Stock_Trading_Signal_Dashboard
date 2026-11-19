@@ -11,21 +11,14 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
-def clean_account_label(val) -> str:
-    if val is None or pd.isna(val):
-        return ""
-    s = str(val)
-    s = s.replace("(638812)", "").replace("638812", "")
-    s = s.replace("(U9959007)", "").replace("U9959007", "")
-    s = s.replace("(56169533)", "").replace("56169533", "")
-    s = re.sub(r'\s*\(\s*\)', '', s)
-    s = re.sub(r'\s*-\s*$', '', s).strip()
-    return s
-
 # Ensure current directory is on sys.path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+
+from ui.helpers import clean_account_label, get_app_secret
+from ui.styles import inject_global_terminal_styles
+from ui.poster import build_mobile_poster_html
 
 # Admin authorization SHA-256 hash (configure ADMIN_PWD_HASH in Streamlit Secrets / env to rotate)
 _DEFAULT_ADMIN_PWD_HASH = "3524c12e3f2ac91563a82dedde6816f0310b9c543dcbc0dac383220069e2c2d9"
@@ -73,13 +66,7 @@ get_account_balances = getattr(database, "get_account_balances", lambda: {})
 
 
 def _get_app_secret(key_name: str, default: str = "") -> str:
-    val = os.getenv(key_name, "").strip()
-    if val:
-        return val
-    try:
-        return str(st.secrets.get(key_name, default) or "").strip()
-    except Exception:
-        return default
+    return get_app_secret(st, key_name, default)
 
 
 HK_IPO_PWD_HASH = _get_app_secret("ADMIN_PWD_HASH", _DEFAULT_ADMIN_PWD_HASH)
@@ -125,221 +112,8 @@ except Exception:
 from signal_engine import generate_v229_signals
 from notifier import format_telegram_card
 
-# Institutional Dark Terminal Design System
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {background: transparent !important;}
-    [data-testid="stAppDeployButton"] {display: none !important;}
-    [data-testid="stDecoration"] {display: none !important;}
-
-    /* Global Workspace Layout & Native Dark UI */
-    :root, html {
-        color-scheme: dark;
-        --scrollbar-thumb: #334155;
-        --scrollbar-track: #0B0F19;
-        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-        scrollbar-width: thin;
-    }
-
-    @supports not (scrollbar-color: auto) {
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--scrollbar-thumb);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--scrollbar-track);
-        }
-    }
-
-    html, body, [data-testid="stAppViewContainer"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        background-color: #0B0F19 !important;
-        color: #F8FAFC !important;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #0D131F !important;
-        border-right: 1px solid #1E293B !important;
-    }
-
-    /* Section Eyebrow & Headings */
-    .section-eyebrow {
-        font-size: 0.72rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: #38BDF8;
-        margin-bottom: 4px;
-        margin-top: 20px;
-    }
-    .section-heading, h1, h2, h3, h4, h5 {
-        text-wrap: balance;
-    }
-    .section-heading {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #F8FAFC;
-        letter-spacing: -0.015em;
-        margin-bottom: 14px;
-        padding-bottom: 6px;
-        border-bottom: 1px solid #1E293B;
-    }
-
-    /* High-Density Tabular Metric Cards */
-    [data-testid="stMetric"] {
-        background: #111827 !important;
-        border: 1px solid #1E293B !important;
-        border-radius: 6px !important;
-        padding: 12px 14px !important;
-        box-shadow: none !important;
-    }
-    [data-testid="stMetricLabel"] {
-        font-size: 0.74rem !important;
-        font-weight: 600 !important;
-        color: #94A3B8 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.04em !important;
-    }
-    [data-testid="stMetricValue"] {
-        font-size: 1.45rem !important;
-        font-weight: 700 !important;
-        color: #F8FAFC !important;
-        letter-spacing: -0.02em !important;
-        font-feature-settings: "tnum" 1 !important;
-        font-variant-numeric: tabular-nums !important;
-        font-family: 'JetBrains Mono', 'Inter', monospace !important;
-    }
-    [data-testid="stMetricDelta"] {
-        font-size: 0.75rem !important;
-        font-weight: 500 !important;
-        font-feature-settings: "tnum" 1 !important;
-        font-variant-numeric: tabular-nums !important;
-    }
-
-    /* Content Cards & Containers */
-    .metric-card-box {
-        background-color: #111827 !important;
-        border: 1px solid #1E293B !important;
-        border-radius: 6px !important;
-        padding: 14px 16px !important;
-        margin-bottom: 12px !important;
-        color: #F8FAFC !important;
-    }
-
-    /* Tabs Styling */
-    [data-baseweb="tab-list"] {
-        border-bottom: 1px solid #1E293B !important;
-        gap: 8px !important;
-        background-color: transparent !important;
-    }
-    [data-baseweb="tab"] {
-        color: #94A3B8 !important;
-        font-weight: 600 !important;
-        font-size: 0.85rem !important;
-        padding: 8px 14px !important;
-        border-radius: 4px 4px 0 0 !important;
-        background-color: transparent !important;
-    }
-    [data-baseweb="tab"][aria-selected="true"] {
-        color: #38BDF8 !important;
-        border-bottom: 2px solid #38BDF8 !important;
-    }
-
-    /* Clean Streamlit Buttons */
-    .stButton>button {
-        border-radius: 4px !important;
-        font-weight: 600 !important;
-        font-size: 0.84rem !important;
-        border: 1px solid #334155 !important;
-        background-color: #1E293B !important;
-        color: #F8FAFC !important;
-        transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out, scale 150ms ease-out !important;
-    }
-    .stButton>button:hover {
-        border-color: #38BDF8 !important;
-        color: #38BDF8 !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-    }
-    .stButton>button:active {
-        scale: 0.98 !important;
-    }
-    .stButton>button:focus-visible {
-        outline: 2px solid #38BDF8 !important;
-        outline-offset: 2px !important;
-    }
-    .stButton>button[kind="primary"] {
-        background-color: #0284C7 !important;
-        border-color: #0284C7 !important;
-        color: #FFFFFF !important;
-    }
-    .stButton>button[kind="primary"]:hover {
-        background-color: #0369A1 !important;
-        border-color: #0369A1 !important;
-    }
-
-    /* Accessible Responsive Table Wrapper */
-    .holdings-table-wrap {
-        background: #0B0F19;
-        border-radius: 6px;
-        padding: 4px 8px;
-        border: 1px solid #1E293B;
-        overflow-x: auto;
-        max-inline-size: 100%;
-        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-        scrollbar-width: thin;
-    }
-    .holdings-table-wrap:focus-visible {
-        outline: 2px solid #38BDF8;
-        outline-offset: 2px;
-    }
-
-    /* Clean Expander */
-    [data-testid="stExpander"] {
-        background-color: #111827 !important;
-        border: 1px solid #1E293B !important;
-        border-radius: 6px !important;
-    }
-
-    /* Status Badges */
-    .badge-subtle {
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        padding: 2px 7px;
-        border-radius: 4px;
-        font-feature-settings: 'tnum' 1;
-    }
-    .badge-blue {
-        background: rgba(56, 189, 248, 0.12);
-        color: #38BDF8;
-        border: 1px solid rgba(56, 189, 248, 0.28);
-    }
-    .badge-emerald {
-        background: rgba(16, 185, 129, 0.12);
-        color: #34D399;
-        border: 1px solid rgba(16, 185, 129, 0.28);
-    }
-    .badge-amber {
-        background: rgba(245, 158, 11, 0.12);
-        color: #FBBF24;
-        border: 1px solid rgba(245, 158, 11, 0.28);
-    }
-    .badge-slate {
-        background: rgba(148, 163, 184, 0.12);
-        color: #CBD5E1;
-        border: 1px solid rgba(148, 163, 184, 0.28);
-    }
-</style>
-""", unsafe_allow_html=True)
+# Institutional Dark Terminal Design System (extracted to ui/styles.py)
+inject_global_terminal_styles(st)
 
 # App Header (Institutional Quantitative Terminal)
 st.markdown("""
@@ -2306,212 +2080,26 @@ html_signals_rows = "\n".join(signals_html_items)
 
 import streamlit.components.v1 as components
 
-# Unified 9:16 Smartphone Card (Width: 380px, Height: 760px) + html2canvas One-Click Export
-html_pure_card = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="color-scheme" content="dark">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<style>
-:root {{
-    color-scheme: dark;
-}}
-body {{
-    margin: 0;
-    padding: 8px 0 16px 0;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-}}
-.card-box {{
-    width: 380px;
-    height: 750px;
-    padding: 20px 18px;
-    background: radial-gradient(circle at 85% 8%, rgba(56, 189, 248, 0.14) 0%, rgba(13, 17, 26, 1) 45%),
-                radial-gradient(circle at 12% 92%, rgba(251, 191, 36, 0.08) 0%, rgba(13, 17, 26, 1) 50%),
-                #0B0F19;
-    border: 1px solid rgba(251, 191, 36, 0.35);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(251, 191, 36, 0.25);
-    border-radius: 12px;
-    color: #F8FAFC;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}}
-.tag-pill {{
-    display: inline-block;
-    font-size: 0.62rem;
-    font-weight: 600;
-    color: #CBD5E1;
-    background: rgba(30, 41, 59, 0.75);
-    border: 1px solid #334155;
-    padding: 2px 7px;
-    border-radius: 99px;
-}}
-.dl-btn {{
-    margin-top: 14px;
-    width: 380px;
-    padding: 11px 16px;
-    background: linear-gradient(90deg, #0284C7 0%, #2563EB 100%);
-    color: #FFFFFF;
-    font-size: 0.88rem;
-    font-weight: 700;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-    transition: opacity 150ms ease-out, scale 150ms ease-out, box-shadow 150ms ease-out;
-    font-family: inherit;
-}}
-.dl-btn:hover {{
-    opacity: 0.92;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
-}}
-.dl-btn:active {{
-    scale: 0.98;
-}}
-.dl-btn:focus-visible {{
-    outline: 2px solid #38BDF8;
-    outline-offset: 3px;
-}}
-.dl-btn:disabled {{
-    opacity: 0.65;
-    cursor: wait;
-}}
-</style>
-</head>
-<body>
-<div id="capture-card" class="card-box">
-    <!-- Top Branding & Verification Tag -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
-        <div>
-            <div style="font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #FBBF24;">★ QUANT ALPHA TERMINAL · V2.29</div>
-            <div style="font-size: 1.05rem; font-weight: 800; color: #F8FAFC; letter-spacing: -0.01em; margin-top: 2px;">美股量化实盘收益战报</div>
-        </div>
-        <div style="text-align: right;">
-            <div style="font-size: 0.64rem; color: #34D399; font-weight: 700; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px;">API实盘验证</div>
-            <div style="font-size: 0.68rem; color: #94A3B8; font-weight: 600; margin-top: 3px; font-feature-settings: 'tnum' 1;">{today_str}</div>
-        </div>
-    </div>
-
-    <!-- Hook Tags Row -->
-    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-        <span class="tag-pill">#纯量化系统</span>
-        <span class="tag-pill">#零主观预测</span>
-        <span class="tag-pill">#自动对账执行</span>
-        <span class="tag-pill">#穿越牛熊曲线</span>
-    </div>
-
-    <!-- Section 1: Hero Return & Alpha Hook -->
-    <div style="background: rgba(17, 24, 39, 0.85); padding: 13px 15px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.7rem; font-weight: 600; color: #94A3B8;">2026 年度实盘总收益率 (ITD)</span>
-            <span style="font-size: 0.68rem; color: #38BDF8; font-weight: 700;">实盘运行 {live_days} 天</span>
-        </div>
-        <div style="font-size: 2.55rem; font-weight: 800; color: #34D399; line-height: 1.05; margin: 5px 0 6px 0; letter-spacing: -0.03em; font-feature-settings: 'tnum' 1;">+{total_live_ret_pct:.2f}%</div>
-        
-        <!-- Alpha Hook vs SPY -->
-        <div style="background: linear-gradient(90deg, rgba(251, 191, 36, 0.16) 0%, rgba(251, 191, 36, 0.04) 100%); border-left: 3px solid #FBBF24; padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; color: #FDE68A; font-weight: 600; margin-bottom: 9px;">
-            🏆 跑赢标普500 +{alpha_card_pct:.1f}% <span style="color:#94A3B8;font-weight:400;">(同期 SPY +{spy_card_ret:.1f}%)</span>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; background: #0D131F; padding: 7px 10px; border-radius: 5px; font-size: 0.74rem; border: 1px solid #1E293B;">
-            <span>夏普比率: <strong style="color:#F8FAFC;">{(live_sharpe + 0.25):.2f}</strong></span>
-            <span>资本倍数: <strong style="color:#38BDF8;">{macro_moic:.2f}x</strong></span>
-            <span>最大回撤: <strong style="color:#34D399;">{real_max_dd:.1f}%</strong></span>
-        </div>
-    </div>
-
-    <!-- Section 2: Dual Engines (Zero Dollar Amounts Exposed!) -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-        <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
-            <div style="font-size: 0.66rem; font-weight: 600; color: #94A3B8;">美股量化主引擎</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC; margin-top: 2px;">+{us_live_ret_pct:.2f}%</div>
-            <div style="font-size: 0.66rem; color: #38BDF8; margin-top: 2px;">外推年化: {us_live_cagr:.1f}%</div>
-        </div>
-        <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
-            <div style="font-size: 0.66rem; font-weight: 600; color: #94A3B8;">港股打新套利贡献</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #34D399; margin-top: 2px;">+{hk_contrib_pct:.1f}%</div>
-            <div style="font-size: 0.66rem; color: #94A3B8; margin-top: 2px;">获配胜率: 68.5%</div>
-        </div>
-    </div>
-
-    <!-- Section 2.5: Active Portfolio Universe -->
-    <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #1E293B; padding-bottom: 4px;">
-            <span style="font-size: 0.7rem; font-weight: 700; color: #38BDF8;">今日信号与实盘持仓分布</span>
-            <span style="font-size: 0.66rem; color: #34D399; font-weight: 600;">● 正常运转</span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.7rem;">
-            {html_signals_rows}
-        </div>
-    </div>
-
-    <!-- Section 3: Embedded SVG Sparkline Trajectory -->
-    <div style="background: rgba(17, 24, 39, 0.85); padding: 9px 11px; border-radius: 8px; border: 1px solid #1E293B;">
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
-            <span style="font-size: 0.7rem; font-weight: 600; color: #94A3B8;">2026 复利净值增长曲线 (%)</span>
-            <span style="font-size: 0.64rem; color: #64748B;">01-15 起算 · 剔除噪音</span>
-        </div>
-        <svg width="315" height="105" style="overflow: visible;">
-            <defs>
-                <linearGradient id="grad_spark_dark" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.35" />
-                    <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.0" />
-                </linearGradient>
-            </defs>
-            <path d="{svg_fill_path}" fill="url(#grad_spark_dark)" />
-            <path d="{svg_path}" fill="none" stroke="#38BDF8" stroke-width="2.4" stroke-linecap="round" />
-            <circle cx="{end_dot_x:.1f}" cy="{end_dot_y:.1f}" r="4.0" fill="#FBBF24" stroke="#0B0F19" stroke-width="1.5" />
-        </svg>
-    </div>
-
-    <!-- Section 4: Traffic CTA & Risk Footer -->
-    <div style="background: rgba(17, 24, 39, 0.9); padding: 9px 12px; border-radius: 8px; font-size: 0.68rem; border: 1px solid rgba(251, 191, 36, 0.25);">
-        <div style="display: flex; justify-content: space-between; color:#94A3B8; margin-bottom: 5px;">
-            <span>被动股息率: <strong style="color:#38BDF8;">{cf_yield_pct:.2f}%/年</strong></span>
-            <span>宏观风控: <strong style="color:#34D399;">S5FI 宽度 + SGOV 贴息</strong></span>
-        </div>
-        <div style="border-top: 1px solid #1E293B; padding-top: 5px; text-align: center; color: #FDE68A; font-weight: 700; letter-spacing: 0.02em;">
-            💡 关注主页 · 获取美股量化信号与实盘复盘日志
-        </div>
-    </div>
-</div>
-
-<button id="dl-btn" class="dl-btn" onclick="downloadPoster()">📥 一键导出 9:16 高清引流海报 (PNG)</button>
-
-<script>
-function downloadPoster() {{
-    const btn = document.getElementById('dl-btn');
-    const card = document.getElementById('capture-card');
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.innerText = '⏳ 正在生成 3x 超清海报...';
-    html2canvas(card, {{
-        scale: 3,
-        backgroundColor: '#0B0F19',
-        useCORS: true
-    }}).then(canvas => {{
-        const link = document.createElement('a');
-        link.download = 'quant_v229_report_{today_str}.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        btn.disabled = false;
-        btn.innerText = '✅ 已保存高清海报！点击可再次导出';
-        setTimeout(() => {{ btn.innerText = '📥 一键导出 9:16 高清引流海报 (PNG)'; }}, 3500);
-    }}).catch(err => {{
-        btn.disabled = false;
-        btn.innerText = '⚠️ 浏览器拦截下载，请长按或右键保存卡片';
-    }});
-}}
-</script>
-</body>
-</html>
-"""
+# Unified 9:16 Smartphone Card (extracted to ui/poster.py)
+html_pure_card = build_mobile_poster_html(
+    today_str=today_str,
+    live_days=live_days,
+    total_live_ret_pct=total_live_ret_pct,
+    alpha_card_pct=alpha_card_pct,
+    spy_card_ret=spy_card_ret,
+    live_sharpe=live_sharpe,
+    macro_moic=macro_moic,
+    real_max_dd=real_max_dd,
+    us_live_ret_pct=us_live_ret_pct,
+    us_live_cagr=us_live_cagr,
+    hk_contrib_pct=hk_contrib_pct,
+    html_signals_rows=html_signals_rows,
+    svg_fill_path=svg_fill_path,
+    svg_path=svg_path,
+    end_dot_x=end_dot_x,
+    end_dot_y=end_dot_y,
+    cf_yield_pct=cf_yield_pct,
+)
 components.html(html_pure_card, height=840)
 
 st.divider()
